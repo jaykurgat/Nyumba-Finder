@@ -1,0 +1,20 @@
+# **App Name**: Nyumba Finder
+
+## Core Features:
+
+- Property Listing Creation: Allow landlords to create listings with location, images, descriptions, and rental details.
+- Property Search and Filtering: Enable users to search and filter properties based on location, price, and other criteria. Focus search around Kenyan locations.
+- Property Display: Display property listings with clear details, image galleries, and contact information.
+
+## Style Guidelines:
+
+- Primary color: Green (#388E3C) to evoke feelings of growth and stability, reflecting the real estate sector.
+- Secondary color: Neutral gray (#607D8B) to provide a professional and trustworthy feel.
+- Accent: Orange (#FF9800) for calls to action and highlighting key information.
+- Clean and modern sans-serif fonts for readability and a contemporary look.
+- Grid-based layout to showcase property listings in an organized and visually appealing manner.
+- Simple and recognizable icons to represent different property features and amenities.
+
+## Original User Request:
+Create an app that allows landlords to post their houses that have spaces/ units to be rented out showing location, images, and descriptions etc. Take into account that we are targeting Kenyan market
+  
