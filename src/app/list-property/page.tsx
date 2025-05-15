@@ -6,7 +6,7 @@ import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import Image from 'next/image'; // Added for image preview
+import Image from 'next/image';
 
 import { Button } from "@/components/ui/button";
 import {
@@ -24,8 +24,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
+// Removed Property type import, as it's not directly used here for DB interaction yet
 
-// Expand Kenyan locations or use a different input method later
 const kenyanLocations = [
   "Nairobi", "Mombasa", "Kisumu", "Nakuru", "Eldoret", "Thika", "Kiambu", "Machakos", "Meru", "Nyeri", "Kakamega", "Naivasha", "Kitale"
 ] as const;
@@ -42,7 +42,7 @@ const formSchema = z.object({
   bathrooms: z.coerce.number().int().min(1, "Must have at least 1 bathroom."),
   area: z.coerce.number().positive("Area must be a positive number.").optional(),
   amenities: z.array(z.string()).optional(),
-  images: z.array(z.string()).optional().default([]), // Changed to array of strings for data URIs
+  images: z.array(z.string()).optional().default([]), // Expecting array of data URIs
 });
 
 export default function ListPropertyPage() {
@@ -62,7 +62,7 @@ export default function ListPropertyPage() {
       bathrooms: undefined,
       area: undefined,
       amenities: [],
-      images: [], // Initialize as empty array
+      images: [],
     },
   });
 
@@ -82,7 +82,9 @@ export default function ListPropertyPage() {
       });
       try {
         const dataUris = await Promise.all(imagePromises);
-        form.setValue('images', dataUris, { shouldValidate: true, shouldDirty: true });
+        // Append new images to existing ones, or set if empty
+        const currentImages = form.getValues('images') || [];
+        form.setValue('images', [...currentImages, ...dataUris], { shouldValidate: true, shouldDirty: true });
       } catch (error) {
         console.error("Error reading files:", error);
         toast({
@@ -90,37 +92,45 @@ export default function ListPropertyPage() {
             description: "Could not read the selected image(s). Please try again.",
             variant: "destructive",
          });
-        form.setValue('images', [], { shouldValidate: true, shouldDirty: true });
       } finally {
         setIsUploading(false);
       }
-    } else {
-      form.setValue('images', [], { shouldValidate: true, shouldDirty: true });
     }
   };
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
-    console.log("Submitting property details:", values);
-    // `values.images` will now contain an array of base64 data URIs
-    // In a real scenario, you would upload these to a storage service and save the URLs.
+    console.log("Submitting property details to API:", values);
 
-    // Simulate API call to save property data
     try {
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      const response = await fetch('/api/properties', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(values),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || `Server responded with ${response.status}`);
+      }
+
+      const result = await response.json();
+      console.log("API Response:", result);
 
       toast({
         title: "Property Listed!",
-        description: "Your property has been successfully listed.",
+        description: result.message || "Your property has been successfully submitted.",
         variant: "default",
       });
-      router.push('/properties');
+      router.push('/properties'); // Redirect to properties page to see the (hopefully) updated list
 
     } catch (error) {
-        console.error("Failed to list property:", error);
+        console.error("Failed to list property via API:", error);
          toast({
             title: "Listing Failed",
-            description: "Could not list your property. Please try again.",
+            description: error instanceof Error ? error.message : "Could not list your property. Please try again.",
             variant: "destructive",
          });
     } finally {
@@ -306,7 +316,7 @@ export default function ListPropertyPage() {
                     <FormField
                         control={form.control}
                         name="images"
-                        render={({ field }) => ( // field.value will be an array of data URIs
+                        render={({ field }) => ( 
                           <FormItem>
                             <FormLabel>Property Images</FormLabel>
                             <FormControl>
@@ -314,13 +324,13 @@ export default function ListPropertyPage() {
                                 type="file"
                                 multiple
                                 accept="image/*"
-                                onChange={handleImageChange}
+                                onChange={handleImageChange} // Use the updated handler
                                 className="block w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-md file:border file:border-input file:bg-background file:text-sm file:font-medium file:text-foreground hover:file:bg-accent hover:file:text-accent-foreground disabled:opacity-50"
                                 disabled={isUploading}
                               />
                             </FormControl>
                              <FormDescription>
-                              Upload high-quality images of the property. (Max 5MB per image recommended)
+                              Upload high-quality images of the property. Click again to add more.
                             </FormDescription>
                             <FormMessage />
                              {isUploading && (
@@ -335,7 +345,7 @@ export default function ListPropertyPage() {
                     
                     {watchedImages && watchedImages.length > 0 && (
                       <div className="space-y-2">
-                        <p className="text-sm font-medium">Image Previews:</p>
+                        <p className="text-sm font-medium">Image Previews ({watchedImages.length} selected):</p>
                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                           {watchedImages.map((uri, index) => (
                             <div key={index} className="relative aspect-video rounded-md overflow-hidden border shadow-sm">
@@ -343,6 +353,9 @@ export default function ListPropertyPage() {
                             </div>
                           ))}
                         </div>
+                        {watchedImages.length > 0 && (
+                             <Button variant="outline" size="sm" type="button" onClick={() => form.setValue('images', [], { shouldValidate: true, shouldDirty: true })}>Clear Images</Button>
+                        )}
                       </div>
                     )}
 
@@ -364,4 +377,3 @@ export default function ListPropertyPage() {
     </div>
   );
 }
-
