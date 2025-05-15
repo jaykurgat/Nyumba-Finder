@@ -1,3 +1,4 @@
+
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -5,6 +6,7 @@ import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+import Image from 'next/image'; // Added for image preview
 
 import { Button } from "@/components/ui/button";
 import {
@@ -35,18 +37,19 @@ const formSchema = z.object({
   title: z.string().min(5, "Title must be at least 5 characters.").max(100, "Title cannot exceed 100 characters."),
   description: z.string().min(20, "Description must be at least 20 characters.").max(1000, "Description cannot exceed 1000 characters."),
   location: z.string().min(2, "Please specify a location."),
-  price: z.coerce.number().positive("Price must be a positive number."), // coerce converts string input to number
+  price: z.coerce.number().positive("Price must be a positive number."),
   bedrooms: z.coerce.number().int().min(0, "Number of bedrooms cannot be negative."),
   bathrooms: z.coerce.number().int().min(1, "Must have at least 1 bathroom."),
   area: z.coerce.number().positive("Area must be a positive number.").optional(),
   amenities: z.array(z.string()).optional(),
-  images: z.any().optional(), // Handle file uploads later
+  images: z.array(z.string()).optional().default([]), // Changed to array of strings for data URIs
 });
 
 export default function ListPropertyPage() {
   const router = useRouter();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -59,27 +62,59 @@ export default function ListPropertyPage() {
       bathrooms: undefined,
       area: undefined,
       amenities: [],
-      images: undefined,
+      images: [], // Initialize as empty array
     },
   });
+
+  const watchedImages = form.watch('images');
+
+  const handleImageChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (files && files.length > 0) {
+      setIsUploading(true);
+      const imagePromises = Array.from(files).map(file => {
+        return new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+      });
+      try {
+        const dataUris = await Promise.all(imagePromises);
+        form.setValue('images', dataUris, { shouldValidate: true, shouldDirty: true });
+      } catch (error) {
+        console.error("Error reading files:", error);
+        toast({
+            title: "Image Read Error",
+            description: "Could not read the selected image(s). Please try again.",
+            variant: "destructive",
+         });
+        form.setValue('images', [], { shouldValidate: true, shouldDirty: true });
+      } finally {
+        setIsUploading(false);
+      }
+    } else {
+      form.setValue('images', [], { shouldValidate: true, shouldDirty: true });
+    }
+  };
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
     console.log("Submitting property details:", values);
+    // `values.images` will now contain an array of base64 data URIs
+    // In a real scenario, you would upload these to a storage service and save the URLs.
 
     // Simulate API call to save property data
     try {
-       // Replace with actual API endpoint call
       await new Promise(resolve => setTimeout(resolve, 1500));
-
-      // Handle image uploads separately here in a real scenario
 
       toast({
         title: "Property Listed!",
         description: "Your property has been successfully listed.",
-        variant: "default", // Use Shadcn success style if available, else default
+        variant: "default",
       });
-      router.push('/properties'); // Redirect to properties or a 'my listings' page
+      router.push('/properties');
 
     } catch (error) {
         console.error("Failed to list property:", error);
@@ -271,25 +306,48 @@ export default function ListPropertyPage() {
                     <FormField
                         control={form.control}
                         name="images"
-                        render={({ field }) => (
+                        render={({ field }) => ( // field.value will be an array of data URIs
                           <FormItem>
                             <FormLabel>Property Images</FormLabel>
                             <FormControl>
-                              <Input type="file" multiple accept="image/*"
-                                // onChange={(e) => field.onChange(e.target.files)} // Basic handling, needs refinement
-                                disabled // Disable until upload logic is implemented
+                              <Input
+                                type="file"
+                                multiple
+                                accept="image/*"
+                                onChange={handleImageChange}
+                                className="block w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-md file:border file:border-input file:bg-background file:text-sm file:font-medium file:text-foreground hover:file:bg-accent hover:file:text-accent-foreground disabled:opacity-50"
+                                disabled={isUploading}
                               />
                             </FormControl>
                              <FormDescription>
-                              Upload high-quality images of the property (Implementation Pending).
+                              Upload high-quality images of the property. (Max 5MB per image recommended)
                             </FormDescription>
                             <FormMessage />
+                             {isUploading && (
+                                <div className="flex items-center text-sm text-muted-foreground">
+                                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                  Processing images...
+                                </div>
+                            )}
                           </FormItem>
                         )}
                       />
+                    
+                    {watchedImages && watchedImages.length > 0 && (
+                      <div className="space-y-2">
+                        <p className="text-sm font-medium">Image Previews:</p>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                          {watchedImages.map((uri, index) => (
+                            <div key={index} className="relative aspect-video rounded-md overflow-hidden border shadow-sm">
+                              <Image src={uri} alt={`Preview ${index + 1}`} fill className="object-cover" sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, 25vw" />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
 
 
-                  <Button type="submit" className="w-full" disabled={isLoading}>
+                  <Button type="submit" className="w-full" disabled={isLoading || isUploading}>
                     {isLoading ? (
                         <>
                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -298,7 +356,6 @@ export default function ListPropertyPage() {
                     ) : (
                        'List Property'
                     )}
-
                   </Button>
                 </form>
               </Form>
@@ -307,3 +364,4 @@ export default function ListPropertyPage() {
     </div>
   );
 }
+
