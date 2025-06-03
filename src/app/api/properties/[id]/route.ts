@@ -1,5 +1,5 @@
 
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/firebase-admin-config';
 import type { Property } from '@/types/property';
 import admin from 'firebase-admin'; // For FieldValue and admin.storage()
@@ -21,8 +21,8 @@ const getStringArray = (value: any): string[] => (
 );
 
 export async function GET(
-  request: Request, // Using global Request
-  { params }: { params: { id: string } } // Destructuring params from the typed second argument
+  request: NextRequest,
+  { params }: { params: { id: string } }
 ) {
   if (!db) {
     console.error('API_ROUTE_ERROR: [GET /api/properties/:id] Firestore is not initialized.');
@@ -30,7 +30,7 @@ export async function GET(
   }
 
   try {
-    const propertyId = params.id; // Accessing id via destructured params
+    const propertyId = params.id;
     if (!propertyId) {
       console.warn('API_ROUTE_WARN: [GET /api/properties/:id] Property ID is missing from params.');
       return NextResponse.json({ message: 'Property ID is required' }, { status: 400 });
@@ -74,8 +74,8 @@ export async function GET(
 }
 
 export async function PUT(
-  request: Request, // Using global Request
-  { params }: { params: { id: string } } // Destructuring params from the typed second argument
+  request: NextRequest,
+  { params }: { params: { id: string } }
 ) {
   if (!db) {
     console.error('API_ROUTE_ERROR: [PUT /api/properties/:id] Firestore is not initialized.');
@@ -83,7 +83,7 @@ export async function PUT(
   }
 
   try {
-    const propertyId = params.id; // Accessing id via destructured params
+    const propertyId = params.id;
     if (!propertyId) {
       console.warn('API_ROUTE_WARN: [PUT /api/properties/:id] Property ID is missing from params.');
       return NextResponse.json({ message: 'Property ID is required' }, { status: 400 });
@@ -156,7 +156,7 @@ export async function PUT(
 
     return NextResponse.json({ message: 'Property updated successfully', propertyId: docRef.id, property: fullUpdatedProperty }, { status: 200 });
 
-  } catch (error: any) {
+  } catch (error: any)  {
     console.error(`API_ROUTE_ERROR: [PUT /api/properties/:id] Error updating property ${params.id} in Firestore:`, error);
     if (error.code === 'NOT_FOUND' || (error.message && error.message.includes('NOT_FOUND'))) { 
       console.warn(`API_ROUTE_WARN: [PUT /api/properties/:id] Property with ID ${params.id} not found for update.`);
@@ -171,8 +171,8 @@ export async function PUT(
 }
 
 export async function DELETE(
-  request: Request, // Using global Request
-  { params }: { params: { id: string } } // Destructuring params from the typed second argument
+  request: NextRequest,
+  { params }: { params: { id: string } }
 ) {
   if (!db) {
     console.error('API_ROUTE_ERROR: [DELETE /api/properties/:id] Firestore is not initialized.');
@@ -180,7 +180,7 @@ export async function DELETE(
   }
 
   try {
-    const propertyId = params.id; // Accessing id via destructured params
+    const propertyId = params.id;
     if (!propertyId) {
       console.warn('API_ROUTE_WARN: [DELETE /api/properties/:id] Property ID is missing from params.');
       return NextResponse.json({ message: 'Property ID is required' }, { status: 400 });
@@ -193,7 +193,7 @@ export async function DELETE(
 
     if (docToDeleteSnap.exists) {
       const propertyData = docToDeleteSnap.data() as Property;
-      if (propertyData.images && propertyData.images.length > 0 && admin.apps.length) {
+      if (propertyData.images && propertyData.images.length > 0 && admin.apps.length > 0 && admin.storage().bucket) {
         const bucketName = process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET; 
         if (!bucketName) {
             console.error("API_ROUTE_ERROR: [DELETE /api/properties/:id] Firebase Storage bucket name (e.g., NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET) is not configured in environment variables. Cannot delete images from storage.");
@@ -207,7 +207,7 @@ export async function DELETE(
                 }
                 const url = new URL(imageUrl);
                 const pathName = decodeURIComponent(url.pathname);
-                const filePathRegex = /\/o\/(.+?)(?:\?|$)/; // More general regex to capture path after /o/
+                const filePathRegex = /\/o\/(.+?)(?:\?|$)/; // More robust regex to capture path before query params
                 const match = pathName.match(filePathRegex);
 
                 if (match && match[1]) {
@@ -226,6 +226,8 @@ export async function DELETE(
             await Promise.all(deletePromises);
             console.log(`API_ROUTE_INFO: [DELETE /api/properties/:id] Attempted to delete associated images from Firebase Storage (Admin SDK) for property ${propertyId}.`);
         }
+      } else if (propertyData.images && propertyData.images.length > 0 && (!admin.apps.length || !admin.storage().bucket)) {
+        console.warn("API_ROUTE_WARN: [DELETE /api/properties/:id] Firebase Admin SDK not fully initialized for storage operations, or bucket not available. Skipping image deletion from storage.");
       }
     } else {
       console.warn(`API_ROUTE_WARN: [DELETE /api/properties/:id] Property document ${propertyId} not found for deletion or image pre-check.`);
@@ -242,5 +244,3 @@ export async function DELETE(
     return NextResponse.json({ message: `Error deleting property: ${error.message || 'Unknown server error'}` }, { status: 500 });
   }
 }
-
-    
