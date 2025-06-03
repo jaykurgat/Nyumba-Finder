@@ -1,3 +1,4 @@
+
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/firebase-admin-config';
 import type { Property } from '@/types/property';
@@ -20,8 +21,8 @@ const getStringArray = (value: any): string[] => (
 );
 
 export async function GET(
-  request: Request,
-  { params }: { params: { id: string } }
+  request: Request, // Using global Request
+  { params }: { params: { id: string } } // Destructuring params from the typed second argument
 ) {
   if (!db) {
     console.error('API_ROUTE_ERROR: [GET /api/properties/:id] Firestore is not initialized.');
@@ -29,7 +30,7 @@ export async function GET(
   }
 
   try {
-    const propertyId = params.id;
+    const propertyId = params.id; // Accessing id via destructured params
     if (!propertyId) {
       console.warn('API_ROUTE_WARN: [GET /api/properties/:id] Property ID is missing from params.');
       return NextResponse.json({ message: 'Property ID is required' }, { status: 400 });
@@ -73,8 +74,8 @@ export async function GET(
 }
 
 export async function PUT(
-  request: Request,
-  { params }: { params: { id: string } }
+  request: Request, // Using global Request
+  { params }: { params: { id: string } } // Destructuring params from the typed second argument
 ) {
   if (!db) {
     console.error('API_ROUTE_ERROR: [PUT /api/properties/:id] Firestore is not initialized.');
@@ -82,7 +83,7 @@ export async function PUT(
   }
 
   try {
-    const propertyId = params.id;
+    const propertyId = params.id; // Accessing id via destructured params
     if (!propertyId) {
       console.warn('API_ROUTE_WARN: [PUT /api/properties/:id] Property ID is missing from params.');
       return NextResponse.json({ message: 'Property ID is required' }, { status: 400 });
@@ -106,7 +107,7 @@ export async function PUT(
     }
     
     if (rawData.hasOwnProperty('phoneNumber')) {
-        propertyDataToUpdate.phoneNumber = getString(rawData.phoneNumber); // Allow empty string
+        propertyDataToUpdate.phoneNumber = getString(rawData.phoneNumber); 
     }
 
     if (rawData.hasOwnProperty('area')) {
@@ -170,8 +171,8 @@ export async function PUT(
 }
 
 export async function DELETE(
-  request: Request,
-  { params }: { params: { id: string } }
+  request: Request, // Using global Request
+  { params }: { params: { id: string } } // Destructuring params from the typed second argument
 ) {
   if (!db) {
     console.error('API_ROUTE_ERROR: [DELETE /api/properties/:id] Firestore is not initialized.');
@@ -179,7 +180,7 @@ export async function DELETE(
   }
 
   try {
-    const propertyId = params.id;
+    const propertyId = params.id; // Accessing id via destructured params
     if (!propertyId) {
       console.warn('API_ROUTE_WARN: [DELETE /api/properties/:id] Property ID is missing from params.');
       return NextResponse.json({ message: 'Property ID is required' }, { status: 400 });
@@ -200,17 +201,17 @@ export async function DELETE(
             const bucket = admin.storage().bucket(bucketName);
             const deletePromises = propertyData.images.map(async (imageUrl) => {
               try {
-                if (!imageUrl.startsWith('http://') && !imageUrl.startsWith('https://')) {
-                  console.warn(`API_ROUTE_WARN: [DELETE /api/properties/:id] Image URL "${imageUrl}" is not a valid HTTP/HTTPS URL. Skipping deletion from storage.`);
+                if (!imageUrl.startsWith('http')) { 
+                  console.warn(`API_ROUTE_WARN: [DELETE /api/properties/:id] Image URL "${imageUrl}" does not look like a valid HTTP/HTTPS URL. Skipping deletion from storage.`);
                   return;
                 }
                 const url = new URL(imageUrl);
-                const pathName = url.pathname;
-                const filePathRegex = /\/o\/(.+?)(?:\?|$)/;
+                const pathName = decodeURIComponent(url.pathname);
+                const filePathRegex = /\/o\/(.+?)(?:\?|$)/; // More general regex to capture path after /o/
                 const match = pathName.match(filePathRegex);
 
                 if (match && match[1]) {
-                    const filePath = decodeURIComponent(match[1]); 
+                    const filePath = match[1]; 
                     console.log(`API_ROUTE_INFO: [DELETE /api/properties/:id] Attempting to delete image from storage via Admin SDK: gs://${bucketName}/${filePath}`);
                     await bucket.file(filePath).delete().catch(err => {
                       console.warn(`API_ROUTE_WARN: [DELETE /api/properties/:id] Failed to delete image ${filePath} from storage (Admin SDK). It might have already been deleted or path is incorrect. Error: `, err.message);
@@ -241,3 +242,5 @@ export async function DELETE(
     return NextResponse.json({ message: `Error deleting property: ${error.message || 'Unknown server error'}` }, { status: 500 });
   }
 }
+
+    
