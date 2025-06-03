@@ -1,8 +1,7 @@
-
-import { type NextRequest, NextResponse } from 'next/server';
+import { NextResponse, NextRequest } from 'next/server';
 import { db } from '@/lib/firebase-admin-config';
 import type { Property } from '@/types/property';
-import admin from 'firebase-admin'; // For FieldValue and admin.storage()
+import admin from 'firebase-admin';
 
 // Helper functions for robust type conversion
 const getString = (value: any, defaultValue: string = ''): string => (typeof value === 'string' ? value : defaultValue);
@@ -22,7 +21,7 @@ const getStringArray = (value: any): string[] => (
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: { id: string } }
 ) {
   if (!db) {
     console.error('API_ROUTE_ERROR: [GET /api/properties/:id] Firestore is not initialized.');
@@ -30,7 +29,7 @@ export async function GET(
   }
 
   try {
-    const propertyId = params.id;
+    const propertyId = context.params.id;
     if (!propertyId) {
       console.warn('API_ROUTE_WARN: [GET /api/properties/:id] Property ID is missing from params.');
       return NextResponse.json({ message: 'Property ID is required' }, { status: 400 });
@@ -68,14 +67,14 @@ export async function GET(
 
     return NextResponse.json(propertyData, { status: 200 });
   } catch (error: any) {
-    console.error(`API_ROUTE_ERROR: [GET /api/properties/:id] Error fetching property ${params.id} from Firestore:`, error);
+    console.error(`API_ROUTE_ERROR: [GET /api/properties/:id] Error fetching property ${context.params.id} from Firestore:`, error);
     return NextResponse.json({ message: `Error fetching property details: ${error.message || 'Unknown server error'}` }, { status: 500 });
   }
 }
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: { id: string } }
 ) {
   if (!db) {
     console.error('API_ROUTE_ERROR: [PUT /api/properties/:id] Firestore is not initialized.');
@@ -83,7 +82,7 @@ export async function PUT(
   }
 
   try {
-    const propertyId = params.id;
+    const propertyId = context.params.id;
     if (!propertyId) {
       console.warn('API_ROUTE_WARN: [PUT /api/properties/:id] Property ID is missing from params.');
       return NextResponse.json({ message: 'Property ID is required' }, { status: 400 });
@@ -107,7 +106,7 @@ export async function PUT(
     }
     
     if (rawData.hasOwnProperty('phoneNumber')) {
-        propertyDataToUpdate.phoneNumber = getString(rawData.phoneNumber); 
+        propertyDataToUpdate.phoneNumber = getString(rawData.phoneNumber); // Allow empty string
     }
 
     if (rawData.hasOwnProperty('area')) {
@@ -156,11 +155,11 @@ export async function PUT(
 
     return NextResponse.json({ message: 'Property updated successfully', propertyId: docRef.id, property: fullUpdatedProperty }, { status: 200 });
 
-  } catch (error: any)  {
-    console.error(`API_ROUTE_ERROR: [PUT /api/properties/:id] Error updating property ${params.id} in Firestore:`, error);
+  } catch (error: any) {
+    console.error(`API_ROUTE_ERROR: [PUT /api/properties/:id] Error updating property ${context.params.id} in Firestore:`, error);
     if (error.code === 'NOT_FOUND' || (error.message && error.message.includes('NOT_FOUND'))) { 
-      console.warn(`API_ROUTE_WARN: [PUT /api/properties/:id] Property with ID ${params.id} not found for update.`);
-      return NextResponse.json({ message: `Property with ID ${params.id} not found.` }, { status: 404 });
+      console.warn(`API_ROUTE_WARN: [PUT /api/properties/:id] Property with ID ${context.params.id} not found for update.`);
+      return NextResponse.json({ message: `Property with ID ${context.params.id} not found.` }, { status: 404 });
     }
     if (error.message && error.message.includes("Value for argument \"dataOrField\" is not a valid Firestore value.")) {
         console.error(`API_ROUTE_ERROR: [PUT /api/properties/:id] Firestore validation error. Likely an undefined value was passed for update. Details: ${error.message}`);
@@ -172,7 +171,7 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: { id: string } }
 ) {
   if (!db) {
     console.error('API_ROUTE_ERROR: [DELETE /api/properties/:id] Firestore is not initialized.');
@@ -180,7 +179,7 @@ export async function DELETE(
   }
 
   try {
-    const propertyId = params.id;
+    const propertyId = context.params.id;
     if (!propertyId) {
       console.warn('API_ROUTE_WARN: [DELETE /api/properties/:id] Property ID is missing from params.');
       return NextResponse.json({ message: 'Property ID is required' }, { status: 400 });
@@ -201,18 +200,17 @@ export async function DELETE(
             const bucket = admin.storage().bucket(bucketName);
             const deletePromises = propertyData.images.map(async (imageUrl) => {
               try {
-                if (!imageUrl.startsWith('http')) { 
-                  console.warn(`API_ROUTE_WARN: [DELETE /api/properties/:id] Image URL "${imageUrl}" does not look like a valid HTTP/HTTPS URL. Skipping deletion from storage.`);
+                if (!imageUrl.startsWith('http')) {
+                  console.warn(`API_ROUTE_WARN: [DELETE /api/properties/:id] Image URL "${imageUrl}" is not a valid HTTP/HTTPS URL. Skipping deletion from storage.`);
                   return;
                 }
                 const url = new URL(imageUrl);
                 const pathName = decodeURIComponent(url.pathname);
-                const filePathRegex = /\/o\/(.+?)(?:\?|$)/; // More robust regex to capture path before query params
+                const filePathRegex = /\/o\/(.+?)(?:\?|$)/;
                 const match = pathName.match(filePathRegex);
 
                 if (match && match[1]) {
-                    const filePath = match[1]; 
-                    console.log(`API_ROUTE_INFO: [DELETE /api/properties/:id] Attempting to delete image from storage via Admin SDK: gs://${bucketName}/${filePath}`);
+                    const filePath = match[1];
                     await bucket.file(filePath).delete().catch(err => {
                       console.warn(`API_ROUTE_WARN: [DELETE /api/properties/:id] Failed to delete image ${filePath} from storage (Admin SDK). It might have already been deleted or path is incorrect. Error: `, err.message);
                     });
@@ -240,7 +238,7 @@ export async function DELETE(
     return NextResponse.json({ message: 'Property deleted successfully', propertyId }, { status: 200 });
 
   } catch (error: any) {
-    console.error(`API_ROUTE_ERROR: [DELETE /api/properties/:id] Error deleting property ${params.id} from Firestore:`, error);
+    console.error(`API_ROUTE_ERROR: [DELETE /api/properties/:id] Error deleting property ${context.params.id} from Firestore:`, error);
     return NextResponse.json({ message: `Error deleting property: ${error.message || 'Unknown server error'}` }, { status: 500 });
   }
 }
