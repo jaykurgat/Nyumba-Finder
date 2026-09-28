@@ -1,70 +1,79 @@
-
 "use client";
 
+import Link from 'next/link';
+import { FormEvent, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { ArrowRight, MapPin, Search, SlidersHorizontal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { type FormEvent, useState } from 'react';
-import { Search } from 'lucide-react';
+
+const popularLocations = ['Kilimani', 'Kileleshwa', 'Roysambu', 'Kasarani', 'Westlands', 'Eldoret'];
 
 export default function Home() {
   const router = useRouter();
-  const [searchQuery, setSearchQuery] = useState('');
+  const [location, setLocation] = useState('');
+  const [propertyType, setPropertyType] = useState('Any type');
+  const [bedrooms, setBedrooms] = useState('Any bedrooms');
 
   const handleSearch = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (searchQuery.trim()) {
-      const params = new URLSearchParams();
-      params.set('q', searchQuery.trim());
-      router.push(`/properties?${params.toString()}`);
-    } else {
-      router.push('/properties'); // Go to all properties if search is empty
-    }
+    const params = new URLSearchParams();
+    if (location.trim()) params.set('location', location.trim());
+    if (propertyType !== 'Any type') params.set('propertyType', propertyType);
+    if (bedrooms !== 'Any bedrooms') params.set('minBedrooms', bedrooms);
+    router.push(`/properties?${params.toString()}`);
   };
 
   return (
-    <div className="flex flex-col items-center justify-center text-center space-y-8 py-12 md:py-24">
-      <h1 className="text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl text-primary">
-        Find Your Perfect Rental in Kenya
-      </h1>
-      {/* The descriptive paragraph below has been removed */}
-      {/* 
-      <p className="max-w-2xl text-lg text-muted-foreground">
-        Search by location, keywords, or property features. Your next home is just a click away.
-      </p> 
-      */}
+    <div className="w-full">
+      <section className="relative overflow-hidden border bg-muted/30 px-6 py-16 md:px-12 md:py-24">
+        <div className="absolute -right-24 -top-24 h-72 w-72 bg-primary/10 blur-3xl" />
+        <div className="relative mx-auto max-w-5xl">
+          <div className="max-w-2xl">
+            <p className="mb-4 text-sm font-medium uppercase tracking-[0.18em] text-primary">Find a place that fits your life</p>
+            <h1 className="text-4xl font-semibold tracking-tight md:text-6xl">Find your next home in Kenya.</h1>
+            <p className="mt-5 max-w-xl text-base leading-7 text-muted-foreground md:text-lg">
+              Search rental homes by location, property type, budget and what matters around them.
+            </p>
+          </div>
+          <form onSubmit={handleSearch} className="mt-10 bg-background p-3 shadow-xl md:flex md:items-center md:gap-2">
+            <div className="flex flex-1 items-center border-b px-3 md:border-b-0 md:border-r">
+              <MapPin className="mr-3 h-5 w-5 text-primary" />
+              <Input value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Where do you want to live?" className="border-0 px-0 shadow-none focus-visible:ring-0" />
+            </div>
+            <select value={propertyType} onChange={(e) => setPropertyType(e.target.value)} className="h-11 w-full border-0 bg-background px-3 text-sm outline-none md:w-40" aria-label="Property type">
+              <option>Any type</option><option>Apartment</option><option>Bedsitter</option><option>House</option><option>Maisonette</option><option>Townhouse</option><option>Villa</option>
+            </select>
+            <select value={bedrooms} onChange={(e) => setBedrooms(e.target.value)} className="h-11 w-full border-0 bg-background px-3 text-sm outline-none md:w-40" aria-label="Bedrooms">
+              <option>Any bedrooms</option><option value="0">Studio</option><option value="1">1+ bedroom</option><option value="2">2+ bedrooms</option><option value="3">3+ bedrooms</option><option value="4">4+ bedrooms</option>
+            </select>
+            <Button type="submit" size="lg" className="mt-2 w-full md:mt-0 md:w-auto"><Search className="mr-2 h-4 w-4" />Search</Button>
+          </form>
+          <div className="mt-5 flex flex-wrap items-center gap-2 text-sm">
+            <span className="mr-1 text-muted-foreground">Popular:</span>
+            {popularLocations.map((item) => <Link key={item} href={`/properties?location=${encodeURIComponent(item)}`} className="border bg-background px-3 py-1.5 transition-colors hover:border-primary hover:text-primary">{item}</Link>)}
+          </div>
+        </div>
+      </section>
 
-      <div className="w-full max-w-xl p-6">
-        <form 
-          onSubmit={handleSearch} 
-          className="flex items-center space-x-2 border border-input rounded-lg p-2 shadow-lg bg-card focus-within:ring-2 focus-within:ring-ring"
-          suppressHydrationWarning
-        >
-          <Search className="h-5 w-5 text-muted-foreground ml-2" />
-          <Input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Enter location, e.g., Kilimani, or keywords like '3 bedroom waterfront'"
-            className="flex-grow text-base border-0 focus:ring-0 focus-visible:ring-offset-0 focus-visible:ring-0 p-2"
-            suppressHydrationWarning
-          />
-          <Button type="submit" size="lg" className="px-6">
-            Search
-          </Button>
-        </form>
-      </div>
+      <section className="mx-auto max-w-5xl py-14">
+        <div className="flex items-end justify-between gap-4">
+          <div><p className="text-sm font-medium text-primary">A simpler way to search</p><h2 className="mt-1 text-2xl font-semibold tracking-tight">Search around what matters</h2></div>
+          <Button variant="ghost" asChild className="hidden sm:flex"><Link href="/properties">Browse houses <ArrowRight className="ml-2 h-4 w-4" /></Link></Button>
+        </div>
+        <div className="mt-7 grid gap-4 md:grid-cols-3">
+          <Link href="/properties" className="border bg-card p-6 transition-colors hover:border-primary"><MapPin className="h-5 w-5 text-primary" /><h3 className="mt-5 font-semibold">Choose your area</h3><p className="mt-2 text-sm leading-6 text-muted-foreground">Find homes by county, town, area and neighbourhood instead of guessing from listing titles.</p></Link>
+          <Link href="/properties" className="border bg-card p-6 transition-colors hover:border-primary"><SlidersHorizontal className="h-5 w-5 text-primary" /><h3 className="mt-5 font-semibold">Filter what fits</h3><p className="mt-2 text-sm leading-6 text-muted-foreground">Narrow results by rent, bedrooms, property type and the features you actually need.</p></Link>
+          <Link href="/properties" className="border bg-card p-6 transition-colors hover:border-primary"><Search className="h-5 w-5 text-primary" /><h3 className="mt-5 font-semibold">Explore nearby</h3><p className="mt-2 text-sm leading-6 text-muted-foreground">Radius-based search will make it easier to discover suitable homes around the places you care about.</p></Link>
+        </div>
+      </section>
 
-      <div className="pt-8">
-        <h2 className="text-2xl font-semibold mb-4">Are you a Landlord?</h2>
-        <Button size="lg" asChild className="bg-accent hover:bg-accent/90 text-accent-foreground">
-          <Link href="/list-property">List Your Property</Link>
-        </Button>
-        <p className="mt-4 text-sm text-muted-foreground">
-          Or <Link href="/properties" className="underline hover:text-primary">view all available properties</Link>.
-        </p>
-      </div>
+      <section className="border-t py-12">
+        <div className="mx-auto flex max-w-5xl flex-col items-start justify-between gap-5 md:flex-row md:items-center">
+          <div><h2 className="text-xl font-semibold">Have a house to rent?</h2><p className="mt-1 text-sm text-muted-foreground">Reach tenants searching for homes in your area.</p></div>
+          <Button asChild><Link href="/list-property">List Your House</Link></Button>
+        </div>
+      </section>
     </div>
   );
 }
