@@ -3,6 +3,7 @@ import { Inter } from 'next/font/google';
 import './globals.css';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
+import { CookieConsentBanner } from '@/components/privacy/CookieConsentBanner';
 import { Toaster } from "@/components/ui/toaster";
 import { cn } from "@/lib/utils";
 
@@ -19,11 +20,10 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       <body className={cn("min-h-full font-sans antialiased", inter.variable)}>
         <div className="flex min-h-screen flex-col">
           <Header />
-          <main className="flex-1">
-            <div className="container mx-auto px-4 md:px-6">{children}</div>
-          </main>
+          <main className="flex-1"><div className="container mx-auto px-4 md:px-6">{children}</div></main>
           <Footer />
         </div>
+        <CookieConsentBanner />
         <Toaster />
       </body>
     </html>
