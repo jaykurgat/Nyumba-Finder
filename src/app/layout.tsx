@@ -6,33 +6,21 @@ import { Footer } from '@/components/layout/Footer';
 import { Toaster } from "@/components/ui/toaster";
 import { cn } from "@/lib/utils";
 
-const inter = Inter({
-  variable: '--font-inter',
-  subsets: ['latin'],
-});
+const inter = Inter({ variable: '--font-inter', subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'Nyumba Finder',
-  description: 'Find your next rental home in Kenya',
+  title: 'NyumbaFinder | Find a Rental Home in Kenya',
+  description: 'Find rental homes in Kenya by location, property type, budget and nearby places.',
 };
 
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en" className="h-full" suppressHydrationWarning>
-      <body className={cn(
-        "relative h-full font-sans antialiased",
-        inter.variable
-      )}>
-        <div className="flex flex-col min-h-screen">
+      <body className={cn("min-h-full font-sans antialiased", inter.variable)}>
+        <div className="flex min-h-screen flex-col">
           <Header />
-          <main className="flex-grow relative flex flex-col items-center justify-center py-12">
-            <div className="container px-4 md:px-6">
-               {children}
-            </div>
+          <main className="flex-1">
+            <div className="container mx-auto px-4 md:px-6">{children}</div>
           </main>
           <Footer />
         </div>
