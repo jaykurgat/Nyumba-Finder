@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { ArrowRight, MapPin, Search, SlidersHorizontal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { rememberSearchPreference } from '@/components/privacy/search-preferences';
 
 const popularLocations = ['Kilimani', 'Kileleshwa', 'Roysambu', 'Kasarani', 'Westlands', 'Eldoret'];
 
@@ -17,6 +18,8 @@ export default function Home() {
 
   const handleSearch = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    rememberSearchPreference({ location, propertyType, bedrooms });
+
     const params = new URLSearchParams();
     if (location.trim()) params.set('location', location.trim());
     if (propertyType !== 'Any type') params.set('propertyType', propertyType);
@@ -32,9 +35,7 @@ export default function Home() {
           <div className="max-w-2xl">
             <p className="mb-4 text-sm font-medium uppercase tracking-[0.18em] text-primary">Find a place that fits your life</p>
             <h1 className="text-4xl font-semibold tracking-tight md:text-6xl">Find your next home in Kenya.</h1>
-            <p className="mt-5 max-w-xl text-base leading-7 text-muted-foreground md:text-lg">
-              Search rental homes by location, property type, budget and what matters around them.
-            </p>
+            <p className="mt-5 max-w-xl text-base leading-7 text-muted-foreground md:text-lg">Search rental homes by location, property type, budget and what matters around them.</p>
           </div>
           <form onSubmit={handleSearch} className="mt-10 bg-background p-3 shadow-xl md:flex md:items-center md:gap-2">
             <div className="flex flex-1 items-center border-b px-3 md:border-b-0 md:border-r">
@@ -55,7 +56,6 @@ export default function Home() {
           </div>
         </div>
       </section>
-
       <section className="mx-auto max-w-5xl py-14">
         <div className="flex items-end justify-between gap-4">
           <div><p className="text-sm font-medium text-primary">A simpler way to search</p><h2 className="mt-1 text-2xl font-semibold tracking-tight">Search around what matters</h2></div>
@@ -67,7 +67,6 @@ export default function Home() {
           <Link href="/properties" className="border bg-card p-6 transition-colors hover:border-primary"><Search className="h-5 w-5 text-primary" /><h3 className="mt-5 font-semibold">Explore nearby</h3><p className="mt-2 text-sm leading-6 text-muted-foreground">Radius-based search will make it easier to discover suitable homes around the places you care about.</p></Link>
         </div>
       </section>
-
       <section className="border-t py-12">
         <div className="mx-auto flex max-w-5xl flex-col items-start justify-between gap-5 md:flex-row md:items-center">
           <div><h2 className="text-xl font-semibold">Have a house to rent?</h2><p className="mt-1 text-sm text-muted-foreground">Reach tenants searching for homes in your area.</p></div>
