@@ -119,9 +119,11 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     if ('amenities' in rawData) data.amenities = getStringArray(rawData.amenities);
     if ('images' in rawData && !uploadedImages.length) data.images = getStringArray(rawData.images);
 
+    let retainedImageUrls: string[] | null = null;
     if ('existingImages' in rawData) {
       try {
-        data.images = getStringArray(JSON.parse(String(rawData.existingImages)));
+        retainedImageUrls = getStringArray(JSON.parse(String(rawData.existingImages)));
+        data.images = retainedImageUrls;
       } catch {
         return NextResponse.json({ message: 'Invalid existing image data.' }, { status: 400 });
       }
@@ -143,41 +145,68 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       return NextResponse.json({ message: 'You can upload a maximum of 5 images.' }, { status: 400 });
     }
 
-    const existingImageCount = await prisma.propertyImage.count({ where: { propertyId: id } });
-    if (existingImageCount + uploadedImages.length > 5) {
+    const currentImages = await prisma.propertyImage.findMany({
+      where: { propertyId: id },
+      select: { id: true },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    const imageUrl = (imageId: string) => '/api/properties/' + id + '?image=' + imageId;
+    const retainedImageIds = retainedImageUrls
+      ? new Set(
+          retainedImageUrls
+            .map((url) => {
+              const match = url.match(/[?&]image=([^&]+)/);
+              return match?.[1] || null;
+            })
+            .filter((imageId): imageId is string => Boolean(imageId))
+        )
+      : new Set(currentImages.map((image) => image.id));
+
+    const finalImageCount = retainedImageIds.size + uploadedImages.length;
+    if (finalImageCount > 5) {
       return NextResponse.json({ message: 'A property can have a maximum of 5 images.' }, { status: 400 });
     }
 
-    await prisma.property.update({ where: { id }, data });
+    await prisma.$transaction(async (tx) => {
+      await tx.property.update({ where: { id }, data });
 
-    if (uploadedImages.length) {
-      await prisma.$transaction(
-        uploadedImages.map((image) =>
-          prisma.propertyImage.create({
-            data: {
-              propertyId: id,
-              data: image.data,
-              mimeType: image.mimeType,
-            },
-          })
-        )
-      );
+      if (retainedImageUrls) {
+        await tx.propertyImage.deleteMany({
+          where: {
+            propertyId: id,
+            id: { notIn: Array.from(retainedImageIds) },
+          },
+        });
+      }
 
-      const storedImages = await prisma.propertyImage.findMany({
+      if (uploadedImages.length) {
+        await Promise.all(
+          uploadedImages.map((image) =>
+            tx.propertyImage.create({
+              data: {
+                propertyId: id,
+                data: image.data,
+                mimeType: image.mimeType,
+              },
+            })
+          )
+        );
+      }
+
+      const storedImages = await tx.propertyImage.findMany({
         where: { propertyId: id },
         select: { id: true },
         orderBy: { createdAt: 'asc' },
       });
 
-      await prisma.property.update({
+      await tx.property.update({
         where: { id },
         data: {
-          images: storedImages.map(
-            (image) => '/api/properties/' + id + '?image=' + image.id
-          ),
+          images: storedImages.map((image) => imageUrl(image.id)),
         },
       });
-    }
+    });
 
     const finalProperty = await prisma.property.findUnique({ where: { id } });
 
