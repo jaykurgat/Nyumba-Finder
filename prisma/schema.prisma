@@ -68,6 +68,17 @@ model LandlordProfile {
   @@index([createdAt])
 }
 
+model PropertyImage {
+  id         String   @id @default(uuid()) @db.Uuid
+  propertyId String   @db.Uuid
+  data       Bytes
+  mimeType   String
+  createdAt  DateTime @default(now())
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@index([propertyId])
+}
+
 model Property {
   id           String   @id @default(uuid()) @db.Uuid
   title        String
@@ -86,6 +97,7 @@ model Property {
   town         Town?    @relation(fields: [townId], references: [id], onDelete: SetNull)
   areaLocation Area?    @relation(fields: [areaId], references: [id], onDelete: SetNull)
   phoneNumber  String?
+  propertyImages PropertyImage[]
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
