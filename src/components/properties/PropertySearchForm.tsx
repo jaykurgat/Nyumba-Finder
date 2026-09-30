@@ -1,305 +1,215 @@
-
 "use client";
 
+import type { ReactNode } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
-import { useRouter, useSearchParams } from 'next/navigation';
-import { useEffect } from 'react';
-
+import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
+import { Bath, BedDouble, ChevronDown, MapPin, Search, SlidersHorizontal, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
-import { Search, FilterX, Filter } from "lucide-react"; // Added Filter icon
 
-const kenyanLocations = [
-  "Nairobi", "Mombasa", "Kisumu", "Nakuru", "Eldoret", "Thika", "Kiambu", "Machakos", "Meru", "Nyeri", "Kakamega", "Naivasha", "Kitale"
-] as const;
+const locations = ["Nairobi","Mombasa","Kisumu","Nakuru","Eldoret","Thika","Kiambu","Machakos","Meru","Nyeri","Kakamega","Naivasha","Kitale"];
+const amenities = ["Parking","Swimming Pool","Gym","Security","Balcony","Garden","Internet Ready","Servant Quarters","Lift","Water Included","Beach Access","Air Conditioning"];
 
-const amenitiesList = ["Parking", "Swimming Pool", "Gym", "Security", "Balcony", "Garden", "Internet Ready", "Servant Quarters", "Lift", "Water Included", "Beach Access", "Air Conditioning"] as const;
-
-const formSchema = z.object({
+const schema = z.object({
   location: z.string().optional(),
-  minPrice: z.coerce.number().positive("Min price must be positive").optional().or(z.literal("")),
-  maxPrice: z.coerce.number().positive("Max price must be positive").optional().or(z.literal("")),
+  minPrice: z.coerce.number().positive("Enter a valid minimum").optional().or(z.literal("")),
+  maxPrice: z.coerce.number().positive("Enter a valid maximum").optional().or(z.literal("")),
   minBedrooms: z.string().optional(),
   minBathrooms: z.string().optional(),
   amenities: z.array(z.string()).optional(),
-}).refine(data => {
-  if (data.minPrice && data.maxPrice && Number(data.minPrice) > Number(data.maxPrice)) {
-    return false;
-  }
-  return true;
-}, {
-  message: "Max price cannot be less than min price",
-  path: ["maxPrice"],
-});
+}).refine(function (data) {
+  return !(data.minPrice && data.maxPrice && Number(data.minPrice) > Number(data.maxPrice));
+}, { message: "Maximum price must be greater than minimum price", path: ["maxPrice"] });
 
-interface PropertySearchFormProps {
-  onFormSubmit?: () => void; // Callback to close sheet on mobile
-  isInSheet?: boolean; // To adjust styling or behavior if inside a sheet
-}
+type Values = z.infer<typeof schema>;
 
-export function PropertySearchForm({ onFormSubmit, isInSheet }: PropertySearchFormProps) {
+export function PropertySearchForm({ onFormSubmit, isInSheet = false }: { onFormSubmit?: () => void; isInSheet?: boolean }) {
   const router = useRouter();
-  const searchParams = useSearchParams();
+  const params = useSearchParams();
+  const [open, setOpen] = useState<string | null>(null);
 
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
+  const form = useForm<Values>({
+    resolver: zodResolver(schema),
     defaultValues: {
-      location: searchParams.get('location') || "",
-      minPrice: searchParams.get('minPrice') ? Number(searchParams.get('minPrice')) : "",
-      maxPrice: searchParams.get('maxPrice') ? Number(searchParams.get('maxPrice')) : "",
-      minBedrooms: searchParams.get('minBedrooms') || "all",
-      minBathrooms: searchParams.get('minBathrooms') || "all",
-      amenities: searchParams.getAll('amenities') || [],
+      location: params.get("location") || "",
+      minPrice: params.get("minPrice") ? Number(params.get("minPrice")) : "",
+      maxPrice: params.get("maxPrice") ? Number(params.get("maxPrice")) : "",
+      minBedrooms: params.get("minBedrooms") || "all",
+      minBathrooms: params.get("minBathrooms") || "all",
+      amenities: params.getAll("amenities"),
     },
   });
 
-  // Effect to reset form when searchParams change (e.g., URL is updated directly or filters cleared)
-  useEffect(() => {
+  useEffect(function () {
     form.reset({
-      location: searchParams.get('location') || "",
-      minPrice: searchParams.get('minPrice') ? Number(searchParams.get('minPrice')) : "",
-      maxPrice: searchParams.get('maxPrice') ? Number(searchParams.get('maxPrice')) : "",
-      minBedrooms: searchParams.get('minBedrooms') || "all",
-      minBathrooms: searchParams.get('minBathrooms') || "all",
-      amenities: searchParams.getAll('amenities') || [],
+      location: params.get("location") || "",
+      minPrice: params.get("minPrice") ? Number(params.get("minPrice")) : "",
+      maxPrice: params.get("maxPrice") ? Number(params.get("maxPrice")) : "",
+      minBedrooms: params.get("minBedrooms") || "all",
+      minBathrooms: params.get("minBathrooms") || "all",
+      amenities: params.getAll("amenities"),
     });
-  }, [searchParams, form]);
+  }, [params, form]);
 
-  function onSubmit(values: z.infer<typeof formSchema>) {
-    const params = new URLSearchParams();
-    if (values.location) params.set('location', values.location);
-    if (values.minPrice) params.set('minPrice', String(values.minPrice));
-    if (values.maxPrice) params.set('maxPrice', String(values.maxPrice));
-    if (values.minBedrooms && values.minBedrooms !== "all") params.set('minBedrooms', values.minBedrooms);
-    if (values.minBathrooms && values.minBathrooms !== "all") params.set('minBathrooms', values.minBathrooms);
-    if (values.amenities && values.amenities.length > 0) {
-      values.amenities.forEach(amenity => params.append('amenities', amenity));
-    }
-    router.push(`/properties?${params.toString()}`);
-    if (onFormSubmit) {
-      onFormSubmit(); // Call the callback if provided (e.g., to close mobile sheet)
-    }
+  const v = form.watch();
+  const amenityCount = v.amenities?.length || 0;
+  const priceActive = Boolean(v.minPrice || v.maxPrice);
+  const bedsActive = Boolean(v.minBedrooms && v.minBedrooms !== "all");
+  const bathsActive = Boolean(v.minBathrooms && v.minBathrooms !== "all");
+
+  const priceLabel = useMemo(function () {
+    if (v.minPrice && v.maxPrice) return "KSh " + Number(v.minPrice).toLocaleString() + " – " + Number(v.maxPrice).toLocaleString();
+    if (v.minPrice) return "KSh " + Number(v.minPrice).toLocaleString() + "+";
+    if (v.maxPrice) return "Up to KSh " + Number(v.maxPrice).toLocaleString();
+    return "Price";
+  }, [v.minPrice, v.maxPrice]);
+
+  const bedsLabel = v.minBedrooms === "0" ? "Studio" : v.minBedrooms && v.minBedrooms !== "all" ? v.minBedrooms + "+ beds" : "Beds";
+  const bathsLabel = v.minBathrooms && v.minBathrooms !== "all" ? v.minBathrooms + "+ baths" : "Baths";
+
+  function submit(data: Values) {
+    const next = new URLSearchParams();
+    if (data.location?.trim()) next.set("location", data.location.trim());
+    if (data.minPrice) next.set("minPrice", String(data.minPrice));
+    if (data.maxPrice) next.set("maxPrice", String(data.maxPrice));
+    if (data.minBedrooms && data.minBedrooms !== "all") next.set("minBedrooms", data.minBedrooms);
+    if (data.minBathrooms && data.minBathrooms !== "all") next.set("minBathrooms", data.minBathrooms);
+    (data.amenities || []).forEach(function (item) { next.append("amenities", item); });
+    router.push(next.toString() ? "/properties?" + next.toString() : "/properties");
+    setOpen(null);
+    onFormSubmit?.();
   }
 
-  function clearFilters() {
-    form.reset({
-      location: "",
-      minPrice: "",
-      maxPrice: "",
-      minBedrooms: "all",
-      minBathrooms: "all",
-      amenities: [],
-    });
-    router.push('/properties'); // Navigate to properties page with no filters
-     if (onFormSubmit) {
-      onFormSubmit(); // Call the callback if provided
-    }
+  function clear() {
+    form.reset({ location: "", minPrice: "", maxPrice: "", minBedrooms: "all", minBathrooms: "all", amenities: [] });
+    router.push("/properties");
+    setOpen(null);
+    onFormSubmit?.();
+  }
+
+  if (isInSheet) {
+    return (
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(submit)} className="space-y-6">
+          <LocationField form={form} />
+          <Panel title="Price range" description="Monthly rent">
+            <PriceFields form={form} />
+          </Panel>
+          <Panel title="Bedrooms" description="Minimum bedrooms">
+            <ChoiceGrid value={v.minBedrooms || "all"} options={["all","0","1","2","3","4"]} labels={["Any","Studio","1+","2+","3+","4+"]} onChange={function (x) { form.setValue("minBedrooms", x); }} />
+          </Panel>
+          <Panel title="Bathrooms" description="Minimum bathrooms">
+            <ChoiceGrid value={v.minBathrooms || "all"} options={["all","1","2","3","4","5"]} labels={["Any","1+","2+","3+","4+","5+"]} onChange={function (x) { form.setValue("minBathrooms", x); }} />
+          </Panel>
+          <AmenityPanel form={form} />
+          <div className="sticky bottom-0 -mx-4 flex gap-2 border-t bg-background px-4 py-4">
+            <Button type="button" variant="ghost" onClick={clear} className="flex-1">Clear all</Button>
+            <Button type="submit" className="flex-[2]">Show results</Button>
+          </div>
+        </form>
+      </Form>
+    );
   }
 
   return (
     <Form {...form}>
-      <form
-        onSubmit={form.handleSubmit(onSubmit)}
-        className="space-y-6"
-        suppressHydrationWarning // For potential browser extension interference
-      >
-        {/* Location Field */}
-        <FormField
-          control={form.control}
-          name="location"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Location</FormLabel>
-              <FormControl>
-                <Input
-                  placeholder="e.g., Nairobi, Kilimani"
-                  {...field}
-                  value={field.value ?? ""}
-                  list="kenyan-locations-filter"
-                  suppressHydrationWarning
-                />
-              </FormControl>
-              <datalist id="kenyan-locations-filter">
-                {kenyanLocations.map(loc => <option key={loc} value={loc} />)}
-              </datalist>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        {/* Price Range Fields */}
-        <div className="grid grid-cols-1 gap-4">
-          <FormField
-            control={form.control}
-            name="minPrice"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Min Price (KES)</FormLabel>
-                <FormControl>
-                  <Input type="number" placeholder="e.g., 30000" {...field} value={field.value ?? ""} suppressHydrationWarning />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="maxPrice"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Max Price (KES)</FormLabel>
-                <FormControl>
-                  <Input type="number" placeholder="e.g., 100000" {...field} value={field.value ?? ""} suppressHydrationWarning />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
-
-        {/* Bedrooms and Bathrooms Selects */}
-        <div className="grid grid-cols-1 gap-4">
-          <FormField
-            control={form.control}
-            name="minBedrooms"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Min Bedrooms</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value || "all"}>
-                  <FormControl>
-                    <SelectTrigger suppressHydrationWarning>
-                      <SelectValue placeholder="Any Bedrooms" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    <SelectItem value="all">Any Bedrooms</SelectItem>
-                    <SelectItem value="0">Studio (0)</SelectItem>
-                    <SelectItem value="1">1+ Bedroom</SelectItem>
-                    <SelectItem value="2">2+ Bedrooms</SelectItem>
-                    <SelectItem value="3">3+ Bedrooms</SelectItem>
-                    <SelectItem value="4">4+ Bedrooms</SelectItem>
-                    <SelectItem value="5">5+ Bedrooms</SelectItem>
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="minBathrooms"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Min Bathrooms</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value || "all"}>
-                  <FormControl>
-                    <SelectTrigger suppressHydrationWarning>
-                      <SelectValue placeholder="Any Bathrooms" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    <SelectItem value="all">Any Bathrooms</SelectItem>
-                    <SelectItem value="1">1+ Bathroom</SelectItem>
-                    <SelectItem value="2">2+ Bathrooms</SelectItem>
-                    <SelectItem value="3">3+ Bathrooms</SelectItem>
-                    <SelectItem value="4">4+ Bathrooms</SelectItem>
-                    <SelectItem value="5">5+ Bathrooms</SelectItem>
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
-
-        {/* Amenities Accordion */}
-        <Accordion type="single" collapsible className="w-full" defaultValue="amenities">
-          <AccordionItem value="amenities">
-            <AccordionTrigger className="text-sm font-medium hover:no-underline py-3">
-              <span className="flex items-center text-foreground">
-                {/* You can add an icon here if desired, e.g., <ListChecks className="mr-2 h-4 w-4" /> */}
-                Amenities
-              </span>
-            </AccordionTrigger>
-            <AccordionContent>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-3 p-1 max-h-60 overflow-y-auto">
-                {amenitiesList.map((item) => (
-                  <FormField
-                    key={item}
-                    control={form.control}
-                    name="amenities"
-                    render={({ field }) => {
-                      const isChecked = field.value?.includes(item);
-                      const checkboxId = `amenity-${item.replace(/\s+/g, '-').toLowerCase()}`;
-                      return (
-                        <FormItem
-                          className="flex flex-row items-center space-x-3 space-y-0 py-1"
-                        >
-                          <FormControl>
-                            <Checkbox
-                              checked={isChecked}
-                              onCheckedChange={(checked) => {
-                                const newValue = checked
-                                  ? [...(field.value || []), item]
-                                  : field.value?.filter(
-                                      (value) => value !== item
-                                    );
-                                field.onChange(newValue);
-                              }}
-                              id={checkboxId}
-                            />
-                          </FormControl>
-                          <FormLabel
-                            htmlFor={checkboxId}
-                            className="font-normal text-sm cursor-pointer flex-grow hover:text-primary"
-                          >
-                            {item}
-                          </FormLabel>
-                        </FormItem>
-                      );
-                    }}
-                  />
-                ))}
-              </div>
-              <FormMessage />
-            </AccordionContent>
-          </AccordionItem>
-        </Accordion>
-
-        {/* Action Buttons */}
-        <div className="flex flex-col gap-2 pt-4">
-          <Button type="submit" className="w-full truncate">
-            <Search className="mr-2 h-4 w-4" /> Apply Filters
-          </Button>
-           <Button type="button" variant="outline" onClick={clearFilters} className="w-full truncate">
-            <FilterX className="mr-2 h-4 w-4" /> Clear All Filters
-          </Button>
+      <form onSubmit={form.handleSubmit(submit)} className="relative rounded-2xl border bg-background p-2 shadow-sm">
+        <div className="flex flex-col lg:flex-row lg:items-center">
+          <LocationField form={form} compact />
+          <div className="hidden h-8 w-px bg-border lg:block" />
+          <FilterMenu name="price" label={priceLabel} active={priceActive} open={open === "price"} setOpen={setOpen} icon={null}>
+            <PriceFields form={form} />
+          </FilterMenu>
+          <FilterMenu name="beds" label={bedsLabel} active={bedsActive} open={open === "beds"} setOpen={setOpen} icon={<BedDouble className="h-4 w-4" />}>
+            <ChoiceGrid value={v.minBedrooms || "all"} options={["all","0","1","2","3","4"]} labels={["Any","Studio","1+","2+","3+","4+"]} onChange={function (x) { form.setValue("minBedrooms", x); }} />
+          </FilterMenu>
+          <FilterMenu name="baths" label={bathsLabel} active={bathsActive} open={open === "baths"} setOpen={setOpen} icon={<Bath className="h-4 w-4" />}>
+            <ChoiceGrid value={v.minBathrooms || "all"} options={["all","1","2","3","4","5"]} labels={["Any","1+","2+","3+","4+","5+"]} onChange={function (x) { form.setValue("minBathrooms", x); }} />
+          </FilterMenu>
+          <FilterMenu name="more" label={amenityCount ? "More filters (" + amenityCount + ")" : "More filters"} active={amenityCount > 0} open={open === "more"} setOpen={setOpen} icon={<SlidersHorizontal className="h-4 w-4" />}>
+            <AmenityPanel form={form} />
+          </FilterMenu>
+          <Button type="submit" className="h-11 gap-2 px-5 lg:ml-1"><Search className="h-4 w-4" /><span>Search</span></Button>
         </div>
       </form>
     </Form>
   );
+}
+
+function LocationField({ form, compact = false }: { form: any; compact?: boolean }) {
+  return (
+    <div className={compact ? "flex min-h-12 flex-1 items-center gap-3 px-3" : "space-y-2"}>
+      {!compact && <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Location</p>}
+      <FormField control={form.control} name="location" render={function ({ field }: any) {
+        return (
+          <FormItem className="min-w-0 flex-1 space-y-0">
+            <FormControl>
+              <div className={compact ? "flex items-center gap-3" : "flex items-center gap-3 border bg-background px-3"}>
+                {compact && <MapPin className="h-5 w-5 shrink-0 text-primary" />}
+                {!compact && <MapPin className="h-4 w-4 text-primary" />}
+                <Input {...field} value={field.value || ""} list="nyumba-locations" placeholder={compact ? "Search city, neighbourhood or estate" : "City, neighbourhood or estate"} className={compact ? "h-10 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0" : "h-12 border-0 px-0 shadow-none focus-visible:ring-0"} />
+              </div>
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        );
+      }} />
+      <datalist id="nyumba-locations">{locations.map(function (x) { return <option key={x} value={x} />; })}</datalist>
+    </div>
+  );
+}
+
+function FilterMenu({ name, label, active, open, setOpen, icon, children }: { name: string; label: string; active: boolean; open: boolean; setOpen: (x: string | null) => void; icon: ReactNode; children: ReactNode }) {
+  return (
+    <div className="relative">
+      <Button type="button" variant="ghost" onClick={function () { setOpen(open ? null : name); }} className={"h-11 w-full justify-between gap-2 border px-3 lg:w-auto lg:justify-center " + (active || open ? "border-primary/30 bg-primary/5 text-primary" : "border-transparent")}>
+        {icon}{label}<ChevronDown className={"h-4 w-4 " + (open ? "rotate-180" : "")} />
+      </Button>
+      {open && (
+        <div className="absolute left-0 top-12 z-50 w-[330px] rounded-xl border bg-background p-5 shadow-xl">
+          {children}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Panel({ title, description, children }: { title: string; description: string; children: ReactNode }) {
+  return <section className="space-y-3"><div><h3 className="font-semibold">{title}</h3><p className="text-sm text-muted-foreground">{description}</p></div>{children}</section>;
+}
+
+function PriceFields({ form }: { form: any }) {
+  return <div className="grid grid-cols-2 gap-3">
+    <FormField control={form.control} name="minPrice" render={function ({ field }: any) { return <FormItem><label className="mb-1 block text-xs font-medium text-muted-foreground">Minimum</label><FormControl><Input type="number" inputMode="numeric" placeholder="Any" {...field} value={field.value || ""} /></FormControl><FormMessage /></FormItem>; }} />
+    <FormField control={form.control} name="maxPrice" render={function ({ field }: any) { return <FormItem><label className="mb-1 block text-xs font-medium text-muted-foreground">Maximum</label><FormControl><Input type="number" inputMode="numeric" placeholder="Any" {...field} value={field.value || ""} /></FormControl><FormMessage /></FormItem>; }} />
+  </div>;
+}
+
+function ChoiceGrid({ value, options, labels, onChange }: { value: string; options: string[]; labels: string[]; onChange: (x: string) => void }) {
+  return <div className="grid grid-cols-3 overflow-hidden">{options.map(function (x, i) {
+    return <button type="button" key={x} onClick={function () { onChange(x); }} className={"min-h-11 border px-2 text-sm " + (value === x ? "border-primary bg-primary text-primary-foreground" : "border-border bg-background hover:bg-muted")}>{labels[i]}</button>;
+  })}</div>;
+}
+
+function AmenityPanel({ form }: { form: any }) {
+  const selected = form.watch("amenities") || [];
+  return <Panel title="Amenities" description="Choose the features you care about">
+    <div className="grid max-h-64 grid-cols-2 gap-1 overflow-y-auto">
+      {amenities.map(function (item) {
+        const checked = selected.includes(item);
+        return <label key={item} className={"flex cursor-pointer items-center gap-2 px-2 py-2.5 text-sm hover:bg-muted " + (checked ? "text-primary" : "")}>
+          <Checkbox checked={checked} onCheckedChange={function (next) {
+            form.setValue("amenities", next ? selected.concat(item) : selected.filter(function (x: string) { return x !== item; }));
+          }} />
+          <span>{item}</span>
+        </label>;
+      })}
+    </div>
+    {selected.length > 0 && <button type="button" onClick={function () { form.setValue("amenities", []); }} className="mt-2 flex items-center gap-1 text-sm font-medium text-primary"><X className="h-3.5 w-3.5" /> Clear amenities</button>}
+  </Panel>;
 }
