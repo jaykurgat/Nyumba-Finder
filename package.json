@@ -14,7 +14,8 @@
     "db:validate": "prisma validate",
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",
-    "db:studio": "prisma studio"
+    "db:studio": "prisma studio",
+    "db:seed": "node prisma/seed.cjs"
   },
   "dependencies": {
     "@genkit-ai/googleai": "^1.0.4",
