@@ -223,7 +223,9 @@ export default function ListPropertyPage() {
         }
       }
 
-      if (existingImages.length) formData.append('existingImages', JSON.stringify(existingImages));
+      if (isEditMode) {
+        formData.append('existingImages', JSON.stringify(existingImages));
+      }
 
       const response = await fetch(apiUrl, {
         method: isEditMode ? 'PUT' : 'POST',
@@ -490,8 +492,21 @@ export default function ListPropertyPage() {
                         </div>
                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                           {watchedImages.map((uri, index) => (
-                            <div key={index} className="relative aspect-video rounded-md overflow-hidden border shadow-sm">
+                            <div key={uri + index} className="relative aspect-video rounded-md overflow-hidden border shadow-sm">
                               <NextImage src={uri} alt={`Preview ${index + 1}`} fill className="object-cover" sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, 25vw" />
+                              <Button
+                                type="button"
+                                variant="destructive"
+                                size="icon"
+                                className="absolute right-2 top-2 h-8 w-8"
+                                onClick={() => {
+                                  const nextImages = (form.getValues('images') || []).filter((_, imageIndex) => imageIndex !== index);
+                                  form.setValue('images', nextImages, { shouldValidate: true, shouldDirty: true });
+                                }}
+                                aria-label={`Remove image ${index + 1}`}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
                             </div>
                           ))}
                         </div>
