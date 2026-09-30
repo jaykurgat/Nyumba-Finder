@@ -40,7 +40,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     const property = await prisma.property.findUnique({ where: { id } });
     if (!property) return NextResponse.json({ message: 'Property not found' }, { status: 404 });
     const images = await prisma.propertyImage.findMany({ where: { propertyId: id }, select: { id: true }, orderBy: { createdAt: 'asc' } });
-    return NextResponse.json(toProperty({ ...property, images: images.map((image) => '/api/properties/' + id + '?image=' + image.id) }));
+    return NextResponse.json(toProperty({ ...property, images: [...(property.images || []), ...images.map((image) => '/api/properties/' + id + '?image=' + image.id)] }));
   } catch (error) {
     console.error('API_ROUTE_ERROR: [GET /api/properties/:id]', error);
     return NextResponse.json({ message: 'Error fetching property details.' }, { status: 500 });
