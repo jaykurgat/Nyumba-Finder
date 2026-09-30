@@ -4,10 +4,16 @@ export interface Property {
   description: string;
   location: string;
   price: number;
-  images: string[]; // Array of image URLs or data URIs (currently not saved to DB)
+  images: string[];
   bedrooms: number;
   bathrooms: number;
-  area?: number; // Optional
-  amenities?: string[]; // Optional
-  phoneNumber?: string; // Optional phone number
+  area?: number;
+  amenities?: string[];
+  phoneNumber?: string;
+  propertyType?: string;
+  status?: string;
+  isSponsored?: boolean;
+  promotionId?: string;
+  promotionLabel?: string;
+  promotionBoost?: number;
 }
