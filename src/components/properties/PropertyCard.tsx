@@ -5,12 +5,33 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { Property } from '@/types/property';
 import { MapPin, BedDouble, Bath, Ruler } from 'lucide-react';
+import { useEffect } from 'react';
 
 interface PropertyCardProps {
   property: Property;
 }
 
 export function PropertyCard({ property }: PropertyCardProps) {
+  useEffect(() => {
+    if (!property.isSponsored || !property.promotionId) return;
+    void fetch('/api/promotions/events', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ promotionId: property.promotionId, type: 'IMPRESSION' }),
+      keepalive: true,
+    });
+  }, [property.isSponsored, property.promotionId]);
+
+  const trackClick = () => {
+    if (!property.isSponsored || !property.promotionId) return;
+    void fetch('/api/promotions/events', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ promotionId: property.promotionId, type: 'CLICK' }),
+      keepalive: true,
+    });
+  };
+
   const displayImage = property.images && property.images.length > 0 && (
     property.images[0].startsWith('data:') ||
     property.images[0].startsWith('http') ||
@@ -24,7 +45,7 @@ export function PropertyCard({ property }: PropertyCardProps) {
   return (
     <Card className="w-full overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300 flex flex-col">
       <CardHeader className="p-0 relative">
-        <Link href={`/properties/${property.id}`} className="block">
+        <Link href={`/properties/${property.id}`} className="block" onClick={trackClick}>
           <NextImage
             src={displayImage}
             alt={property.title}
@@ -38,6 +59,11 @@ export function PropertyCard({ property }: PropertyCardProps) {
         <Badge variant="secondary" className="absolute top-2 right-2 bg-background/80 text-foreground font-semibold">
           Ksh {property.price.toLocaleString()}/mo
         </Badge>
+        {property.isSponsored && (
+          <span className="absolute left-2 top-2 border bg-background/90 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide">
+            Sponsored
+          </span>
+        )}
       </CardHeader>
       <CardContent className="p-4 flex-grow">
         <Link href={`/properties/${property.id}`} className="block">
