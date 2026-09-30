@@ -40,6 +40,7 @@ const formSchema = z.object({
   title: z.string().min(5, "Title must be at least 5 characters.").max(100, "Title cannot exceed 100 characters."),
   description: z.string().min(20, "Description must be at least 20 characters.").max(1000, "Description cannot exceed 1000 characters."),
   location: z.string().min(2, "Please specify a location."),
+  propertyType: z.string().min(2, "Please select a property type."),
   price: z.coerce.number().positive("Price must be a positive number."),
   bedrooms: z.coerce.number().int().min(0, "Number of bedrooms cannot be negative."),
   bathrooms: z.coerce.number().int().min(1, "Must have at least 1 bathroom."),
@@ -74,6 +75,7 @@ export default function ListPropertyPage() {
       title: "",
       description: "",
       location: "",
+      propertyType: "Apartment",
       price: "" as unknown as number, // Keep as empty string for controlled input
       bedrooms: "" as unknown as number,
       bathrooms: "" as unknown as number,
@@ -130,6 +132,7 @@ export default function ListPropertyPage() {
              title: "",
              description: "",
              location: "",
+             propertyType: "Apartment",
              price: "" as unknown as number,
              bedrooms: "" as unknown as number,
              bathrooms: "" as unknown as number,
@@ -202,6 +205,7 @@ export default function ListPropertyPage() {
       formData.append('title', values.title);
       formData.append('description', values.description);
       formData.append('location', values.location);
+      formData.append('propertyType', values.propertyType);
       formData.append('price', String(Number(values.price)));
       formData.append('bedrooms', String(Number(values.bedrooms)));
       formData.append('bathrooms', String(Number(values.bathrooms)));
@@ -322,6 +326,22 @@ export default function ListPropertyPage() {
                             {kenyanLocations.map(loc => <option key={loc} value={loc} />)}
                          </datalist>
                          <FormDescription>Specify the neighborhood and city.</FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="propertyType"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Property Type</FormLabel>
+                        <FormControl>
+                          <select {...field} className="h-10 w-full border bg-background px-3 text-sm">
+                            {['Apartment', 'Bedsitter', 'Single Room', 'Maisonette', 'Townhouse', 'Bungalow', 'Villa', 'House', 'Shared accommodation'].map((type) => <option key={type}>{type}</option>)}
+                          </select>
+                        </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
