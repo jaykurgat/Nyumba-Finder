@@ -144,7 +144,7 @@ function PropertyDetailSkeleton() {
 }
 
 
-export default function PropertyDetailPage({ params: paramsProp }: { params: Promise<{ id: string }> | { id: string } }) {
+export default function PropertyDetailPage({ params: paramsProp }: { params: Promise<{ id: string }> }) {
   const params = use(paramsProp); // Unwrap the promise using React.use()
   const [property, setProperty] = useState<Property | null>(null);
   const [isLoading, setIsLoading] = useState(true);
