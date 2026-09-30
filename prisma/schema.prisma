@@ -1,5 +1,6 @@
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
 }
 
 datasource db {
@@ -56,7 +57,7 @@ model TenantProfile {
 
 model LandlordProfile {
   id          String   @id @default(uuid()) @db.Uuid
-  userId      String   @unique @db.Uuid
+  userId       String   @unique @db.Uuid
   displayName String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -66,27 +67,26 @@ model LandlordProfile {
   @@index([createdAt])
 }
 
-
 model Property {
-  id          String   @id @default(uuid()) @db.Uuid
-  title       String
-  description String   @default("")
-  location    String
-  price       Float
-  bedrooms    Int
-  bathrooms   Int      @default(1)
-  sizeSqm     Float?
-  amenities   String[] @default([])
-  images      String[] @default([])
-  countyId    String?  @db.Uuid
-  townId      String?  @db.Uuid
-  areaId      String?  @db.Uuid
-  county      County?  @relation(fields: [countyId], references: [id], onDelete: SetNull)
-  town        Town?    @relation(fields: [townId], references: [id], onDelete: SetNull)
-  areaLocation Area?   @relation(fields: [areaId], references: [id], onDelete: SetNull)
-  phoneNumber String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id           String   @id @default(uuid()) @db.Uuid
+  title        String
+  description  String   @default("")
+  location     String
+  price        Float
+  bedrooms     Int
+  bathrooms    Int      @default(1)
+  sizeSqm      Float?
+  amenities    String[] @default([])
+  images       String[] @default([])
+  countyId     String?  @db.Uuid
+  townId       String?  @db.Uuid
+  areaId       String?  @db.Uuid
+  county       County?  @relation(fields: [countyId], references: [id], onDelete: SetNull)
+  town         Town?    @relation(fields: [townId], references: [id], onDelete: SetNull)
+  areaLocation Area?    @relation(fields: [areaId], references: [id], onDelete: SetNull)
+  phoneNumber  String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   @@index([location])
   @@index([countyId])
@@ -97,29 +97,28 @@ model Property {
   @@index([createdAt])
 }
 
-
 model County {
-  id        String   @id @default(uuid()) @db.Uuid
-  name      String   @unique
-  slug      String   @unique
-  code      Int      @unique
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  towns     Town[]
+  id         String     @id @default(uuid()) @db.Uuid
+  name       String     @unique
+  slug       String     @unique
+  code       Int        @unique
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+  towns      Town[]
   properties Property[]
 
   @@index([name])
 }
 
 model Town {
-  id        String   @id @default(uuid()) @db.Uuid
-  countyId  String   @db.Uuid
-  name      String
-  slug      String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  county    County   @relation(fields: [countyId], references: [id], onDelete: Cascade)
-  areas     Area[]
+  id         String     @id @default(uuid()) @db.Uuid
+  countyId   String     @db.Uuid
+  name       String
+  slug       String
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+  county     County     @relation(fields: [countyId], references: [id], onDelete: Cascade)
+  areas      Area[]
   properties Property[]
 
   @@unique([countyId, slug])
@@ -128,14 +127,14 @@ model Town {
 }
 
 model Area {
-  id        String   @id @default(uuid()) @db.Uuid
-  townId    String   @db.Uuid
-  name      String
-  slug      String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  town      Town     @relation(fields: [townId], references: [id], onDelete: Cascade)
-  aliases   LocationAlias[]
+  id         String          @id @default(uuid()) @db.Uuid
+  townId     String          @db.Uuid
+  name       String
+  slug       String
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+  town       Town            @relation(fields: [townId], references: [id], onDelete: Cascade)
+  aliases    LocationAlias[]
   properties Property[]
 
   @@unique([townId, slug])
@@ -144,12 +143,12 @@ model Area {
 }
 
 model LocationAlias {
-  id        String   @id @default(uuid()) @db.Uuid
-  areaId    String   @db.Uuid
-  alias     String
+  id         String   @id @default(uuid()) @db.Uuid
+  areaId     String   @db.Uuid
+  alias      String
   normalized String
-  createdAt DateTime @default(now())
-  area      Area     @relation(fields: [areaId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+  area       Area     @relation(fields: [areaId], references: [id], onDelete: Cascade)
 
   @@unique([normalized])
   @@index([areaId])
