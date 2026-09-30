@@ -225,24 +225,10 @@ export default function ListPropertyPage() {
 
       if (existingImages.length) formData.append('existingImages', JSON.stringify(existingImages));
 
-      const response = isEditMode
-        ? await fetch(apiUrl, { method: 'PUT', body: formData })
-        : await fetch('/api/properties', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              title: values.title,
-              description: values.description,
-              location: values.location,
-              price: Number(values.price),
-              bedrooms: Number(values.bedrooms),
-              bathrooms: Number(values.bathrooms),
-              area: values.area ? Number(values.area) : undefined,
-              phoneNumber: values.phoneNumber || '',
-              amenities: values.amenities || [],
-              images: values.images || [],
-            }),
-          });
+      const response = await fetch(apiUrl, {
+        method: isEditMode ? 'PUT' : 'POST',
+        body: formData,
+      });
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: "An unknown error occurred with the server." }));
         throw new Error(errorData.message || `Server responded with ${response.status}`);
