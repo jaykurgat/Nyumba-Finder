@@ -20,6 +20,7 @@ const toProperty = (data: any): Property => ({
   id: data.id, title: data.title, description: data.description, location: data.location,
   price: data.price, images: data.images, bedrooms: data.bedrooms, bathrooms: data.bathrooms,
   area: data.area ?? undefined, amenities: data.amenities, phoneNumber: data.phoneNumber ?? undefined,
+  propertyType: data.propertyType ?? 'Apartment', status: data.status,
 });
 
 const getId = async (params: Promise<{ id: string }>) => (await params).id;
