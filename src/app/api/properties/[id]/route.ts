@@ -79,10 +79,22 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
       for (const [key, value] of formData.entries()) {
         if (key === 'images' && typeof value !== 'string' && typeof value.arrayBuffer === 'function') {
+          const mimeType = value.type || '';
+          if (!mimeType.startsWith('image/')) {
+            return NextResponse.json({ message: 'Only image files can be uploaded.' }, { status: 400 });
+          }
+
           const bytes = await value.arrayBuffer();
+          if (bytes.byteLength === 0) {
+            return NextResponse.json({ message: 'An uploaded image is empty.' }, { status: 400 });
+          }
+          if (bytes.byteLength > 5 * 1024 * 1024) {
+            return NextResponse.json({ message: 'Each image must be 5 MB or smaller.' }, { status: 400 });
+          }
+
           uploadedImages.push({
             data: new Uint8Array(bytes) as Uint8Array<ArrayBuffer>,
-            mimeType: value.type || 'image/jpeg',
+            mimeType,
           });
         } else if (typeof value === 'string') {
           rawData[key] = value;
