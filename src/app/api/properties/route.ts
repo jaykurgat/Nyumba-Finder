@@ -78,7 +78,48 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const rawData = await request.json();
+    const contentType = request.headers.get('content-type') || '';
+    const rawData: Record<string, unknown> = {};
+    const uploadedImages: { data: Uint8Array<ArrayBuffer>; mimeType: string }[] = [];
+
+    if (contentType.includes('multipart/form-data')) {
+      const formData = await request.formData();
+
+      for (const [key, value] of formData.entries()) {
+        if (key === 'images' && typeof value !== 'string' && typeof value.arrayBuffer === 'function') {
+          const mimeType = value.type || '';
+          if (!mimeType.startsWith('image/')) {
+            return NextResponse.json({ message: 'Only image files can be uploaded.' }, { status: 400 });
+          }
+
+          const bytes = await value.arrayBuffer();
+          if (bytes.byteLength === 0) {
+            return NextResponse.json({ message: 'An uploaded image is empty.' }, { status: 400 });
+          }
+          if (bytes.byteLength > 5 * 1024 * 1024) {
+            return NextResponse.json({ message: 'Each image must be 5 MB or smaller.' }, { status: 400 });
+          }
+
+          uploadedImages.push({
+            data: new Uint8Array(bytes) as Uint8Array<ArrayBuffer>,
+            mimeType,
+          });
+        } else if (typeof value === 'string') {
+          rawData[key] = value;
+        }
+      }
+
+      if (rawData.amenities) {
+        try {
+          rawData.amenities = JSON.parse(String(rawData.amenities));
+        } catch {
+          return NextResponse.json({ message: 'Invalid amenities data.' }, { status: 400 });
+        }
+      }
+    } else {
+      Object.assign(rawData, await request.json());
+    }
+
     const title = getString(rawData.title, 'Untitled Property');
     const description = getString(rawData.description);
     const location = getString(rawData.location, 'Unknown Location');
@@ -87,22 +128,59 @@ export async function POST(request: NextRequest) {
     const bathrooms = Math.max(1, Math.trunc(getNumber(rawData.bathrooms, 1)));
     const sizeSqm = getOptionalNumber(rawData.area);
     const amenities = getStringArray(rawData.amenities);
-    const images = getStringArray(rawData.images);
     const phoneNumber = getOptionalString(rawData.phoneNumber);
 
     if (title === 'Untitled Property' || price <= 0 || location === 'Unknown Location') {
       return NextResponse.json({ message: 'Missing or invalid required fields: title, price, and location must be valid.' }, { status: 400 });
     }
 
-    const created = await prisma.property.create({
-      data: { title, description, location, price, bedrooms, bathrooms, sizeSqm, amenities, images, phoneNumber },
+    if (uploadedImages.length > 5) {
+      return NextResponse.json({ message: 'You can upload a maximum of 5 images.' }, { status: 400 });
+    }
+
+    const result = await prisma.$transaction(async (tx) => {
+      const created = await tx.property.create({
+        data: { title, description, location, price, bedrooms, bathrooms, sizeSqm, amenities, images: [], phoneNumber },
+      });
+
+      if (uploadedImages.length) {
+        const storedImages: { id: string }[] = [];
+        for (const image of uploadedImages) {
+          const stored = await tx.propertyImage.create({
+            data: {
+              propertyId: created.id,
+              data: image.data,
+              mimeType: image.mimeType,
+            },
+            select: { id: true },
+          });
+          storedImages.push(stored);
+        }
+
+        await tx.property.update({
+          where: { id: created.id },
+          data: {
+            images: storedImages.map(
+              (image) => '/api/properties/' + created.id + '?image=' + image.id
+            ),
+          },
+        });
+      }
+
+      const finalProperty = await tx.property.findUnique({ where: { id: created.id } });
+      return finalProperty;
     });
 
-    const property = toProperty(created);
-    return NextResponse.json({ message: 'Property listed successfully', propertyId: created.id, property }, { status: 201 });
-  } catch (error) {
+    if (!result) {
+      return NextResponse.json({ message: 'Property could not be created.' }, { status: 500 });
+    }
+
+    const property = toProperty(result);
+    return NextResponse.json({ message: 'Property listed successfully', propertyId: result.id, property }, { status: 201 });
+  } catch (error: any) {
     console.error('API_ROUTE_ERROR: [POST /api/properties]', error);
     if (error instanceof SyntaxError) return NextResponse.json({ message: 'Invalid JSON payload' }, { status: 400 });
-    return NextResponse.json({ message: 'Error listing property.' }, { status: 500 });
+    console.error('Property creation detail:', error);
+    return NextResponse.json({ message: error?.message || 'Error listing property.' }, { status: 500 });
   }
 }
