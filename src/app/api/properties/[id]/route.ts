@@ -58,13 +58,13 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
     if (contentType.includes('multipart/form-data')) {
       const formData = await request.formData();
-      formData.forEach((value, key) => {
+      for (const [key, value] of formData.entries()) {
         if (key === 'images' && value instanceof File) {
           uploadedImages.push({ data: Buffer.from(new Uint8Array(await value.arrayBuffer())), mimeType: value.type || 'image/jpeg' });
         } else if (typeof value === 'string') {
           rawData[key] = value;
         }
-      });
+      }
       if (rawData.amenities) rawData.amenities = JSON.parse(String(rawData.amenities));
     } else {
       Object.assign(rawData, await request.json());
