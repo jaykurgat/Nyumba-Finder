@@ -15,7 +15,14 @@ export async function GET() {
       orderBy: { createdAt: 'desc' },
       take: 200,
     });
-    return NextResponse.json(promotions);
+    const withMetrics = await Promise.all(promotions.map(async (promotion) => {
+      const [impressions, clicks] = await Promise.all([
+        prisma.promotionEvent.count({ where: { promotionId: promotion.id, type: 'IMPRESSION' } }),
+        prisma.promotionEvent.count({ where: { promotionId: promotion.id, type: 'CLICK' } }),
+      ]);
+      return { ...promotion, metrics: { impressions, clicks, ctr: impressions ? clicks / impressions : 0 } };
+    }));
+    return NextResponse.json(withMetrics);
   } catch (error) {
     if (error instanceof Error && error.message === 'UNAUTHORIZED_ADMIN') return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     return NextResponse.json({ message: 'Unable to load promotions.' }, { status: 500 });
