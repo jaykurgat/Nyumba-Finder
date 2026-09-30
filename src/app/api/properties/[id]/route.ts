@@ -50,7 +50,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     if ('price' in rawData) data.price = getNumber(rawData.price);
     if ('bedrooms' in rawData) data.bedrooms = Math.max(0, Math.trunc(getNumber(rawData.bedrooms)));
     if ('bathrooms' in rawData) data.bathrooms = Math.max(1, Math.trunc(getNumber(rawData.bathrooms, 1)));
-    if ('area' in rawData) data.area = getOptionalNumber(rawData.area) ?? null;
+    if ('area' in rawData) data.sizeSqm = getOptionalNumber(rawData.area) ?? null;
     if ('amenities' in rawData) data.amenities = getStringArray(rawData.amenities);
     if ('images' in rawData) data.images = getStringArray(rawData.images);
     if ('phoneNumber' in rawData) data.phoneNumber = getOptionalString(rawData.phoneNumber) ?? null;
