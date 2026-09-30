@@ -107,7 +107,7 @@ export default function ListPropertyPage() {
             bathrooms: data.bathrooms || ("" as unknown as number),
             area: data.area === undefined || data.area === null ? ("" as unknown as number) : data.area,
             phoneNumber: data.phoneNumber || "",
-            images: [], // Images are not fetched from DB, user would re-upload if changing
+            images: data.images || [],
           });
         } catch (error) {
           console.error("Error fetching property to edit:", error);
@@ -193,53 +193,61 @@ export default function ListPropertyPage() {
   async function onSubmit(values: FormSchemaType) {
     setIsLoading(true);
 
-    const submissionValues = {
-      ...values,
-      price: Number(values.price),
-      bedrooms: Number(values.bedrooms),
-      bathrooms: Number(values.bathrooms),
-      area: values.area ? Number(values.area) : undefined,
-      phoneNumber: values.phoneNumber || "", // Ensure phoneNumber is an empty string if undefined/null
-      images: values.images || [],
-    };
-
     try {
       const apiUrl = isEditMode && propertyIdToEdit
         ? `/api/properties/${propertyIdToEdit}`
         : '/api/properties';
-      const method = isEditMode && propertyIdToEdit ? 'PUT' : 'POST';
 
-      const response = await fetch(apiUrl, {
-        method: method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(submissionValues),
-      });
+      const formData = new FormData();
+      formData.append('title', values.title);
+      formData.append('description', values.description);
+      formData.append('location', values.location);
+      formData.append('price', String(Number(values.price)));
+      formData.append('bedrooms', String(Number(values.bedrooms)));
+      formData.append('bathrooms', String(Number(values.bathrooms)));
+      if (values.area !== undefined && values.area !== null && String(values.area) !== '') formData.append('area', String(Number(values.area)));
+      formData.append('phoneNumber', values.phoneNumber || '');
+      formData.append('amenities', JSON.stringify(values.amenities || []));
 
+      const existingImages: string[] = [];
+      for (const image of values.images || []) {
+        if (image.startsWith('data:')) {
+          const [meta, base64] = image.split(',');
+          const mimeType = meta.match(/data:(.*?);base64/)?.[1] || 'image/jpeg';
+          const binary = atob(base64);
+          const bytes = new Uint8Array(binary.length);
+          for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+          formData.append('images', new File([bytes], `property-image-${Date.now()}-${existingImages.length}.jpg`, { type: mimeType }));
+        } else if (image) {
+          existingImages.push(image);
+        }
+      }
+
+      if (existingImages.length) formData.append('existingImages', JSON.stringify(existingImages));
+
+      const response = await fetch(apiUrl, { method: 'PUT', body: formData });
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: "An unknown error occurred with the server." }));
         throw new Error(errorData.message || `Server responded with ${response.status}`);
       }
 
       const result = await response.json();
-
       toast({
         title: isEditMode ? "Property Updated!" : "Property Listed!",
         description: result.message || `Your property has been successfully ${isEditMode ? 'updated' : 'submitted'}.`,
-        variant: "default",
       });
 
       router.push(isEditMode && propertyIdToEdit ? `/properties/${propertyIdToEdit}` : `/properties/${result.propertyId || ''}`);
-      router.refresh(); // Ensure the property list is refreshed
-
+      router.refresh();
     } catch (error) {
-        console.error(`Failed to ${isEditMode ? 'update' : 'list'} property via API:`, error);
-         toast({
-            title: isEditMode ? "Update Failed" : "Listing Failed",
-            description: error instanceof Error ? error.message : `Could not ${isEditMode ? 'update' : 'list'} your property. Please try again.`,
-            variant: "destructive",
-         });
+      console.error(`Failed to ${isEditMode ? 'update' : 'list'} property via API:`, error);
+      toast({
+        title: isEditMode ? "Update Failed" : "Listing Failed",
+        description: error instanceof Error ? error.message : `Could not ${isEditMode ? 'update' : 'list'} your property. Please try again.`,
+        variant: "destructive",
+      });
     } finally {
-        setIsLoading(false);
+      setIsLoading(false);
     }
   }
 
