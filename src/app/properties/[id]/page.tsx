@@ -150,6 +150,9 @@ export default function PropertyDetailPage({ params: paramsProp }: { params: Pro
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showPhoneNumber, setShowPhoneNumber] = useState(false);
+  const [reportType, setReportType] = useState('Incorrect information');
+  const [reportDescription, setReportDescription] = useState('');
+  const [reportSent, setReportSent] = useState(false);
 
   useEffect(() => {
     if (params && params.id) {
@@ -279,6 +282,19 @@ export default function PropertyDetailPage({ params: paramsProp }: { params: Pro
               )}
             </CardContent>
           </Card>
+           <Card>
+             <CardHeader><CardTitle className="text-xl">Report a problem</CardTitle></CardHeader>
+             <CardContent className="space-y-3">
+               <select value={reportType} onChange={(e) => setReportType(e.target.value)} className="h-10 w-full border bg-background px-2 text-sm">
+                 <option>Incorrect information</option><option>No longer available</option><option>Duplicate listing</option><option>Wrong location</option><option>Possible scam</option><option>Inappropriate content</option>
+               </select>
+               <textarea value={reportDescription} onChange={(e) => setReportDescription(e.target.value)} placeholder="Optional details" className="min-h-20 w-full border bg-background p-2 text-sm" />
+               <Button variant="outline" className="w-full" disabled={reportSent} onClick={async () => {
+                 const response = await fetch('/api/property-reports', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ propertyId: property.id, type: reportType, description: reportDescription }) });
+                 if (response.ok) { setReportSent(true); setReportDescription(''); }
+               }}>{reportSent ? 'Report submitted' : 'Submit report'}</Button>
+             </CardContent>
+           </Card>
            <Card>
              <CardHeader>
                <CardTitle className="text-xl">Location</CardTitle>
