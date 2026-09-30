@@ -28,9 +28,9 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
   try {
     const id = await getId(params);
     if (!id) return NextResponse.json({ message: 'Property ID is required' }, { status: 400 });
-    const property = await prisma.property.findUnique({ where: { id } });
+    const property = await prisma.property.findUnique({ where: { id }, include: { propertyImages: { select: { id: true } } } });
     if (!property) return NextResponse.json({ message: 'Property not found' }, { status: 404 });
-    return NextResponse.json(toProperty(property));
+    return NextResponse.json(toProperty({ ...property, images: property.propertyImages.map((image) => `/api/properties/${id}/images/${image.id}`) }));
   } catch (error) {
     console.error('API_ROUTE_ERROR: [GET /api/properties/:id]', error);
     return NextResponse.json({ message: 'Error fetching property details.' }, { status: 500 });
