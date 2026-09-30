@@ -48,11 +48,11 @@ async function fetchPropertyById(id: string): Promise<Property | null> {
 }
 
 function ImageCarousel({ images, title }: { images: string[]; title: string }) {
-    // Since images are not stored in DB yet, this will always show placeholder.
-    // When image storage is implemented, this will show actual images.
-    const effectiveImages = images && images.length > 0 && images.some(src => src.startsWith('data:') || src.startsWith('http'))
+    const effectiveImages = images && images.length > 0 && images.some(src =>
+      src.startsWith('data:') || src.startsWith('http') || src.startsWith('/')
+    )
       ? images
-      : []; // If DB returns empty or placeholder URLs, treat as no images
+      : [];
 
     if (effectiveImages.length === 0) {
       const placeholderUrl = `https://placehold.co/800x600.png`;
