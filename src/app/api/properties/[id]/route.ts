@@ -54,10 +54,9 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
     return NextResponse.json(toProperty({
       ...property,
-      images: [
-        ...(property.images || []),
-        ...images.map((image) => '/api/properties/' + id + '?image=' + image.id),
-      ],
+      // PropertyImage is the source of truth for uploaded images.
+      // Do not append property.images here or every edit would return duplicates.
+      images: images.map((image) => '/api/properties/' + id + '?image=' + image.id),
     }));
   } catch (error) {
     console.error('API_ROUTE_ERROR: [GET /api/properties/:id]', error);
