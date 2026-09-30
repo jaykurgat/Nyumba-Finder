@@ -75,7 +75,7 @@ model Property {
   price       Float
   bedrooms    Int
   bathrooms   Int      @default(1)
-  area        Float?
+  sizeSqm     Float?
   amenities   String[] @default([])
   images      String[] @default([])
   countyId    String?  @db.Uuid
@@ -83,7 +83,7 @@ model Property {
   areaId      String?  @db.Uuid
   county      County?  @relation(fields: [countyId], references: [id], onDelete: SetNull)
   town        Town?    @relation(fields: [townId], references: [id], onDelete: SetNull)
-  area        Area?    @relation(fields: [areaId], references: [id], onDelete: SetNull)
+  areaLocation Area?   @relation(fields: [areaId], references: [id], onDelete: SetNull)
   phoneNumber String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
