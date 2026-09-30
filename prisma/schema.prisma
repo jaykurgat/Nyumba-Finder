@@ -38,6 +38,13 @@ enum PromotionEventType {
   CLICK
 }
 
+enum ReportStatus {
+  OPEN
+  REVIEWING
+  RESOLVED
+  DISMISSED
+}
+
 model User {
   id              String          @id @default(uuid()) @db.Uuid
   email           String?         @unique
@@ -123,6 +130,7 @@ model Property {
   status       PropertyStatus @default(ACTIVE)
   propertyImages PropertyImage[]
   promotions   PropertyPromotion[]
+  reports      PropertyReport[]
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -171,6 +179,27 @@ model PromotionEvent {
 
   @@index([promotionId, type])
   @@index([createdAt])
+}
+
+model PropertyReport {
+  id          String       @id @default(uuid()) @db.Uuid
+  propertyId  String       @db.Uuid
+  property    Property     @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  type        String
+  description String?
+  status      ReportStatus @default(OPEN)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@index([propertyId])
+  @@index([status, createdAt])
+}
+
+model SiteSetting {
+  id        String   @id @default(uuid()) @db.Uuid
+  key       String   @unique
+  value     String
+  updatedAt DateTime @updatedAt
 }
 
 model AuditLog {
