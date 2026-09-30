@@ -111,6 +111,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     if ('title' in rawData) data.title = getString(rawData.title);
     if ('description' in rawData) data.description = getString(rawData.description);
     if ('location' in rawData) data.location = getString(rawData.location);
+    if ('propertyType' in rawData) data.propertyType = getString(rawData.propertyType, 'Apartment');
     if ('price' in rawData) data.price = getNumber(rawData.price);
     if ('bedrooms' in rawData) data.bedrooms = Math.max(0, Math.trunc(getNumber(rawData.bedrooms)));
     if ('bathrooms' in rawData) data.bathrooms = Math.max(1, Math.trunc(getNumber(rawData.bathrooms, 1)));
