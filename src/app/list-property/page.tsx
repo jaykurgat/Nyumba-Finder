@@ -142,31 +142,50 @@ export default function ListPropertyPage() {
   }, [searchParamsHook, form, router, toast]);
 
 
+  const compressImage = (file: File): Promise<string> =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const image = new Image();
+        image.onload = () => {
+          const maxDimension = 1400;
+          const scale = Math.min(1, maxDimension / Math.max(image.width, image.height));
+          const canvas = document.createElement('canvas');
+          canvas.width = Math.max(1, Math.round(image.width * scale));
+          canvas.height = Math.max(1, Math.round(image.height * scale));
+          const context = canvas.getContext('2d');
+          if (!context) {
+            reject(new Error('Could not process image.'));
+            return;
+          }
+          context.drawImage(image, 0, 0, canvas.width, canvas.height);
+          resolve(canvas.toDataURL('image/jpeg', 0.72));
+        };
+        image.onerror = () => reject(new Error('Could not load image.'));
+        image.src = reader.result as string;
+      };
+      reader.onerror = () => reject(new Error('Could not read image.'));
+      reader.readAsDataURL(file);
+    });
+
   const handleImageChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (files && files.length > 0) {
       setIsUploading(true);
-      const imagePromises = Array.from(files).map(file => {
-        return new Promise<string>((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onloadend = () => resolve(reader.result as string);
-          reader.onerror = reject;
-          reader.readAsDataURL(file);
-        });
-      });
       try {
-        const dataUris = await Promise.all(imagePromises);
         const currentImages = form.getValues('images') || [];
+        const dataUris = await Promise.all(Array.from(files).map(compressImage));
         form.setValue('images', [...currentImages, ...dataUris].slice(0, 5), { shouldValidate: true, shouldDirty: true });
       } catch (error) {
-        console.error("Error reading files:", error);
+        console.error("Error processing files:", error);
         toast({
-            title: "Image Read Error",
-            description: "Could not read the selected image(s). Please try again.",
-            variant: "destructive",
-         });
+          title: "Image Processing Error",
+          description: "Could not process the selected image(s). Please try again.",
+          variant: "destructive",
+        });
       } finally {
         setIsUploading(false);
+        event.target.value = '';
       }
     }
   };
@@ -423,7 +442,7 @@ export default function ListPropertyPage() {
                         name="images"
                         render={() => (
                           <FormItem>
-                            <FormLabel>Property Images (Previews Only)</FormLabel>
+                            <FormLabel>Property Images</FormLabel>
                             <FormControl>
                               <Input
                                 type="file"
@@ -436,7 +455,7 @@ export default function ListPropertyPage() {
                               />
                             </FormControl>
                              <FormDescription>
-                              Upload up to 5 images. Images are for preview and NOT saved to the database.
+                              Upload up to 5 images. Images are compressed before being saved with the property.
                               {watchedImages && watchedImages.length >= 5 && " Maximum images reached."}
                             </FormDescription>
                             <FormMessage />
@@ -453,7 +472,7 @@ export default function ListPropertyPage() {
                     {watchedImages && watchedImages.length > 0 && (
                       <div className="space-y-2">
                         <div className="flex justify-between items-center">
-                          <p className="text-sm font-medium">Image Previews ({watchedImages.length} selected):</p>
+                          <p className="text-sm font-medium">Property Images ({watchedImages.length} selected):</p>
                           <Button variant="outline" size="sm" type="button" onClick={() => form.setValue('images', [], { shouldValidate: true, shouldDirty: true })}>
                             <Trash2 className="mr-2 h-4 w-4" /> Clear All Images
                           </Button>
