@@ -16,6 +16,28 @@ enum UserStatus {
   DEACTIVATED
 }
 
+enum PropertyStatus {
+  DRAFT
+  PENDING_REVIEW
+  ACTIVE
+  REJECTED
+  SUSPENDED
+  EXPIRED
+}
+
+enum PromotionStatus {
+  DRAFT
+  ACTIVE
+  PAUSED
+  COMPLETED
+  CANCELLED
+}
+
+enum PromotionEventType {
+  IMPRESSION
+  CLICK
+}
+
 model User {
   id              String          @id @default(uuid()) @db.Uuid
   email           String?         @unique
@@ -97,7 +119,10 @@ model Property {
   town         Town?    @relation(fields: [townId], references: [id], onDelete: SetNull)
   areaLocation Area?    @relation(fields: [areaId], references: [id], onDelete: SetNull)
   phoneNumber  String?
+  propertyType String @default("Apartment")
+  status       PropertyStatus @default(ACTIVE)
   propertyImages PropertyImage[]
+  promotions   PropertyPromotion[]
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -107,6 +132,56 @@ model Property {
   @@index([areaId])
   @@index([price])
   @@index([bedrooms])
+  @@index([createdAt])
+  @@index([status])
+  @@index([propertyType])
+}
+
+model PropertyPromotion {
+  id             String          @id @default(uuid()) @db.Uuid
+  propertyId     String          @db.Uuid
+  property       Property        @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  package        String          @default("Featured")
+  status         PromotionStatus @default(DRAFT)
+  boost          Int             @default(20)
+  targetLocation String?
+  targetType     String?
+  minBedrooms   Int?
+  maxBedrooms   Int?
+  budgetCents    Int?
+  spentCents     Int             @default(0)
+  startsAt       DateTime
+  endsAt         DateTime
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  events         PromotionEvent[]
+
+  @@index([propertyId])
+  @@index([status, startsAt, endsAt])
+  @@index([targetLocation])
+  @@index([targetType])
+}
+
+model PromotionEvent {
+  id           String              @id @default(uuid()) @db.Uuid
+  promotionId  String              @db.Uuid
+  promotion    PropertyPromotion   @relation(fields: [promotionId], references: [id], onDelete: Cascade)
+  type         PromotionEventType
+  createdAt    DateTime            @default(now())
+
+  @@index([promotionId, type])
+  @@index([createdAt])
+}
+
+model AuditLog {
+  id         String   @id @default(uuid()) @db.Uuid
+  action     String
+  entityType String
+  entityId   String?
+  details    Json?
+  createdAt  DateTime @default(now())
+
+  @@index([entityType, entityId])
   @@index([createdAt])
 }
 
