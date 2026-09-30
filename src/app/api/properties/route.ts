@@ -41,6 +41,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const generalQueryTerm = searchParams.get('q')?.trim().toLowerCase();
     const locationQuery = searchParams.get('location')?.trim().toLowerCase();
+    const propertyTypeQuery = searchParams.get('propertyType')?.trim();
     const minPrice = getOptionalNumber(searchParams.get('minPrice'));
     const maxPrice = getOptionalNumber(searchParams.get('maxPrice'));
     const minBedroomsParam = searchParams.get('minBedrooms');
@@ -51,6 +52,8 @@ export async function GET(request: NextRequest) {
 
     const rows = await prisma.property.findMany({
       where: {
+        status: 'ACTIVE',
+        ...(propertyTypeQuery && propertyTypeQuery !== 'Any type' ? { propertyType: propertyTypeQuery } : {}),
         ...(minPrice !== undefined || maxPrice !== undefined
           ? { price: { ...(minPrice !== undefined ? { gte: minPrice } : {}), ...(maxPrice !== undefined ? { lte: maxPrice } : {}) } }
           : {}),
@@ -66,16 +69,63 @@ export async function GET(request: NextRequest) {
           ],
         } : {}),
       },
-      orderBy: minPrice !== undefined || maxPrice !== undefined ? { price: 'asc' } : { title: 'asc' },
+      include: {
+        propertyImages: { select: { id: true }, orderBy: { createdAt: 'asc' } },
+        promotions: {
+          where: {
+            status: 'ACTIVE',
+            startsAt: { lte: new Date() },
+            endsAt: { gte: new Date() },
+          },
+          orderBy: { boost: 'desc' },
+        },
+      },
     });
 
-    return NextResponse.json(rows.map(toProperty));
+    const results = rows.map((row) => {
+      const promotion = row.promotions.find((candidate) => {
+        const targetLocation = candidate.targetLocation?.trim().toLowerCase();
+        const targetType = candidate.targetType?.trim().toLowerCase();
+        const locationMatches = !targetLocation || row.location.toLowerCase().includes(targetLocation);
+        const typeMatches = !targetType || row.propertyType.toLowerCase() === targetType;
+        const bedroomMatches =
+          (candidate.minBedrooms == null || row.bedrooms >= candidate.minBedrooms) &&
+          (candidate.maxBedrooms == null || row.bedrooms <= candidate.maxBedrooms);
+        return locationMatches && typeMatches && bedroomMatches;
+      });
+
+      const relevance =
+        (generalQueryTerm && row.title.toLowerCase().includes(generalQueryTerm) ? 100 : 0) +
+        (generalQueryTerm && row.location.toLowerCase().includes(generalQueryTerm) ? 60 : 0) +
+        (locationQuery && row.location.toLowerCase().includes(locationQuery) ? 40 : 0);
+
+      return {
+        ...toProperty({
+          ...row,
+          images: row.propertyImages.map((image) => '/api/properties/' + row.id + '?image=' + image.id),
+        }),
+        propertyType: row.propertyType,
+        status: row.status,
+        isSponsored: Boolean(promotion),
+        promotionId: promotion?.id,
+        promotionLabel: promotion ? 'Sponsored' : undefined,
+        promotionBoost: promotion?.boost,
+        _rankingScore: relevance + (promotion?.boost ?? 0),
+      };
+    });
+
+    results.sort((a, b) => {
+      if (b._rankingScore !== a._rankingScore) return b._rankingScore - a._rankingScore;
+      if (minPrice !== undefined || maxPrice !== undefined) return a.price - b.price;
+      return a.title.localeCompare(b.title);
+    });
+
+    return NextResponse.json(results.map(({ _rankingScore: _ignored, ...property }) => property));
   } catch (error) {
     console.error('API_ROUTE_ERROR: [GET /api/properties]', error);
     return NextResponse.json({ message: 'Error fetching properties.' }, { status: 500 });
   }
 }
-
 export async function POST(request: NextRequest) {
   try {
     const contentType = request.headers.get('content-type') || '';
