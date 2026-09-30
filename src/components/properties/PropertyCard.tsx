@@ -11,7 +11,11 @@ interface PropertyCardProps {
 }
 
 export function PropertyCard({ property }: PropertyCardProps) {
-  const displayImage = property.images && property.images.length > 0 && (property.images[0].startsWith('data:') || property.images[0].startsWith('http'))
+  const displayImage = property.images && property.images.length > 0 && (
+    property.images[0].startsWith('data:') ||
+    property.images[0].startsWith('http') ||
+    property.images[0].startsWith('/')
+  )
     ? property.images[0]
     : `https://placehold.co/600x400.png`;
   const placeholderHint = !property.images || property.images.length === 0 ? "placeholder house" : "house exterior";
