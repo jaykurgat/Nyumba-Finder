@@ -87,3 +87,58 @@ model Property {
   @@index([bedrooms])
   @@index([createdAt])
 }
+
+
+model County {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String   @unique
+  slug      String   @unique
+  code      Int      @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  towns     Town[]
+
+  @@index([name])
+}
+
+model Town {
+  id        String   @id @default(uuid()) @db.Uuid
+  countyId  String   @db.Uuid
+  name      String
+  slug      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  county    County   @relation(fields: [countyId], references: [id], onDelete: Cascade)
+  areas     Area[]
+
+  @@unique([countyId, slug])
+  @@index([countyId])
+  @@index([name])
+}
+
+model Area {
+  id        String   @id @default(uuid()) @db.Uuid
+  townId    String   @db.Uuid
+  name      String
+  slug      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  town      Town     @relation(fields: [townId], references: [id], onDelete: Cascade)
+  aliases   LocationAlias[]
+
+  @@unique([townId, slug])
+  @@index([townId])
+  @@index([name])
+}
+
+model LocationAlias {
+  id        String   @id @default(uuid()) @db.Uuid
+  areaId    String   @db.Uuid
+  alias     String
+  normalized String
+  createdAt DateTime @default(now())
+  area      Area     @relation(fields: [areaId], references: [id], onDelete: Cascade)
+
+  @@unique([normalized])
+  @@index([areaId])
+}
