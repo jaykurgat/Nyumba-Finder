@@ -181,7 +181,7 @@ export default function ListPropertyPage() {
       bathrooms: Number(values.bathrooms),
       area: values.area ? Number(values.area) : undefined,
       phoneNumber: values.phoneNumber || "", // Ensure phoneNumber is an empty string if undefined/null
-      images: [], // IMPORTANT: Do not send image data URIs to backend to avoid Firestore size limits
+      images: values.images || [],
     };
 
     try {
