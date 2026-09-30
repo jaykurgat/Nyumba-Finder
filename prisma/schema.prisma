@@ -78,11 +78,20 @@ model Property {
   area        Float?
   amenities   String[] @default([])
   images      String[] @default([])
+  countyId    String?  @db.Uuid
+  townId      String?  @db.Uuid
+  areaId      String?  @db.Uuid
+  county      County?  @relation(fields: [countyId], references: [id], onDelete: SetNull)
+  town        Town?    @relation(fields: [townId], references: [id], onDelete: SetNull)
+  area        Area?    @relation(fields: [areaId], references: [id], onDelete: SetNull)
   phoneNumber String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   @@index([location])
+  @@index([countyId])
+  @@index([townId])
+  @@index([areaId])
   @@index([price])
   @@index([bedrooms])
   @@index([createdAt])
@@ -97,6 +106,7 @@ model County {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   towns     Town[]
+  properties Property[]
 
   @@index([name])
 }
@@ -110,6 +120,7 @@ model Town {
   updatedAt DateTime @updatedAt
   county    County   @relation(fields: [countyId], references: [id], onDelete: Cascade)
   areas     Area[]
+  properties Property[]
 
   @@unique([countyId, slug])
   @@index([countyId])
@@ -125,6 +136,7 @@ model Area {
   updatedAt DateTime @updatedAt
   town      Town     @relation(fields: [townId], references: [id], onDelete: Cascade)
   aliases   LocationAlias[]
+  properties Property[]
 
   @@unique([townId, slug])
   @@index([townId])
