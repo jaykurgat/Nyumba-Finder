@@ -80,6 +80,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     if ('area' in rawData) data.sizeSqm = getOptionalNumber(rawData.area) ?? null;
     if ('amenities' in rawData) data.amenities = getStringArray(rawData.amenities);
     if ('images' in rawData && !uploadedImages.length) data.images = getStringArray(rawData.images);
+    if ('existingImages' in rawData) data.images = getStringArray(JSON.parse(String(rawData.existingImages)));
     if ('phoneNumber' in rawData) data.phoneNumber = getOptionalString(rawData.phoneNumber) ?? null;
 
     if (!Object.keys(data).length && !uploadedImages.length) return NextResponse.json({ message: 'No valid fields provided for update.' }, { status: 400 });
