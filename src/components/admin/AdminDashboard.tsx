@@ -41,6 +41,10 @@ export default function AdminDashboard() {
           <nav className="flex gap-4 text-sm text-muted-foreground">
             <Link href="/admin/properties">Properties</Link>
             <Link href="/admin/promotions">Sponsored listings</Link>
+            <Link href="/admin/reports">Reports</Link>
+            <Link href="/admin/users">Users</Link>
+            <Link href="/admin/locations">Locations</Link>
+            <Link href="/admin/settings">Settings</Link>
           </nav>
           <button onClick={logout} className="ml-auto border px-3 py-2 text-sm">Sign out</button>
         </div>
