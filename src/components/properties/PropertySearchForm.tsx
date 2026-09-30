@@ -69,8 +69,8 @@ export function PropertySearchForm({ onFormSubmit, isInSheet }: PropertySearchFo
     resolver: zodResolver(formSchema),
     defaultValues: {
       location: searchParams.get('location') || "",
-      minPrice: searchParams.get('minPrice') || "",
-      maxPrice: searchParams.get('maxPrice') || "",
+      minPrice: searchParams.get('minPrice') ? Number(searchParams.get('minPrice')) : "",
+      maxPrice: searchParams.get('maxPrice') ? Number(searchParams.get('maxPrice')) : "",
       minBedrooms: searchParams.get('minBedrooms') || "all",
       minBathrooms: searchParams.get('minBathrooms') || "all",
       amenities: searchParams.getAll('amenities') || [],
@@ -81,8 +81,8 @@ export function PropertySearchForm({ onFormSubmit, isInSheet }: PropertySearchFo
   useEffect(() => {
     form.reset({
       location: searchParams.get('location') || "",
-      minPrice: searchParams.get('minPrice') || "",
-      maxPrice: searchParams.get('maxPrice') || "",
+      minPrice: searchParams.get('minPrice') ? Number(searchParams.get('minPrice')) : "",
+      maxPrice: searchParams.get('maxPrice') ? Number(searchParams.get('maxPrice')) : "",
       minBedrooms: searchParams.get('minBedrooms') || "all",
       minBathrooms: searchParams.get('minBathrooms') || "all",
       amenities: searchParams.getAll('amenities') || [],
