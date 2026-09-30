@@ -20,7 +20,7 @@ const getStringArray = (value: unknown): string[] =>
 
 const toProperty = (data: {
   id: string; title: string; description: string; location: string; price: number;
-  images: string[]; bedrooms: number; bathrooms: number; area: number | null;
+  images: string[]; bedrooms: number; bathrooms: number; sizeSqm: number | null;
   amenities: string[]; phoneNumber: string | null;
 }): Property => ({
   id: data.id,
@@ -31,7 +31,7 @@ const toProperty = (data: {
   images: data.images,
   bedrooms: data.bedrooms,
   bathrooms: data.bathrooms,
-  area: data.area ?? undefined,
+  area: data.sizeSqm ?? undefined,
   amenities: data.amenities,
   phoneNumber: data.phoneNumber ?? undefined,
 });
@@ -85,7 +85,7 @@ export async function POST(request: NextRequest) {
     const price = getNumber(rawData.price);
     const bedrooms = Math.max(0, Math.trunc(getNumber(rawData.bedrooms)));
     const bathrooms = Math.max(1, Math.trunc(getNumber(rawData.bathrooms, 1)));
-    const area = getOptionalNumber(rawData.area);
+    const sizeSqm = getOptionalNumber(rawData.area);
     const amenities = getStringArray(rawData.amenities);
     const images = getStringArray(rawData.images);
     const phoneNumber = getOptionalString(rawData.phoneNumber);
@@ -95,7 +95,7 @@ export async function POST(request: NextRequest) {
     }
 
     const created = await prisma.property.create({
-      data: { title, description, location, price, bedrooms, bathrooms, area, amenities, images, phoneNumber },
+      data: { title, description, location, price, bedrooms, bathrooms, sizeSqm, amenities, images, phoneNumber },
     });
 
     const property = toProperty(created);
