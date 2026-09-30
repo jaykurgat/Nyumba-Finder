@@ -179,6 +179,7 @@ export async function POST(request: NextRequest) {
     const sizeSqm = getOptionalNumber(rawData.area);
     const amenities = getStringArray(rawData.amenities);
     const phoneNumber = getOptionalString(rawData.phoneNumber);
+    const propertyType = getString(rawData.propertyType, 'Apartment');
 
     if (title === 'Untitled Property' || price <= 0 || location === 'Unknown Location') {
       return NextResponse.json({ message: 'Missing or invalid required fields: title, price, and location must be valid.' }, { status: 400 });
@@ -190,7 +191,7 @@ export async function POST(request: NextRequest) {
 
     const result = await prisma.$transaction(async (tx) => {
       const created = await tx.property.create({
-        data: { title, description, location, price, bedrooms, bathrooms, sizeSqm, amenities, images: [], phoneNumber },
+        data: { title, description, location, price, bedrooms, bathrooms, sizeSqm, amenities, images: [], phoneNumber, propertyType, status: 'PENDING_REVIEW' },
       });
 
       if (uploadedImages.length) {
@@ -226,7 +227,7 @@ export async function POST(request: NextRequest) {
     }
 
     const property = toProperty(result);
-    return NextResponse.json({ message: 'Property listed successfully', propertyId: result.id, property }, { status: 201 });
+    return NextResponse.json({ message: 'Property submitted for review', propertyId: result.id, property }, { status: 201 });
   } catch (error: any) {
     console.error('API_ROUTE_ERROR: [POST /api/properties]', error);
     if (error instanceof SyntaxError) return NextResponse.json({ message: 'Invalid JSON payload' }, { status: 400 });
