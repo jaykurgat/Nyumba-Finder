@@ -40,7 +40,10 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     const property = await prisma.property.findUnique({ where: { id } });
     if (!property) return NextResponse.json({ message: 'Property not found' }, { status: 404 });
     const images = await prisma.propertyImage.findMany({ where: { propertyId: id }, select: { id: true }, orderBy: { createdAt: 'asc' } });
-    return NextResponse.json(toProperty({ ...property, images: [...(property.images || []), ...images.map((image) => '/api/properties/' + id + '?image=' + image.id)] }));
+    return NextResponse.json(toProperty({
+      ...property,
+      images: [...(property.images || []), ...images.map((image) => '/api/properties/' + id + '?image=' + image.id)],
+    }));
   } catch (error) {
     console.error('API_ROUTE_ERROR: [GET /api/properties/:id]', error);
     return NextResponse.json({ message: 'Error fetching property details.' }, { status: 500 });
@@ -60,7 +63,10 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       const formData = await request.formData();
       for (const [key, value] of formData.entries()) {
         if (key === 'images' && value instanceof File) {
-          uploadedImages.push({ data: Buffer.from(new Uint8Array(await value.arrayBuffer())), mimeType: value.type || 'image/jpeg' });
+          uploadedImages.push({
+            data: Buffer.from(new Uint8Array(await value.arrayBuffer())),
+            mimeType: value.type || 'image/jpeg',
+          });
         } else if (typeof value === 'string') {
           rawData[key] = value;
         }
@@ -83,24 +89,42 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     if ('existingImages' in rawData) data.images = getStringArray(JSON.parse(String(rawData.existingImages)));
     if ('phoneNumber' in rawData) data.phoneNumber = getOptionalString(rawData.phoneNumber) ?? null;
 
-    if (!Object.keys(data).length && !uploadedImages.length) return NextResponse.json({ message: 'No valid fields provided for update.' }, { status: 400 });
-    if ('price' in data && Number(data.price) <= 0) return NextResponse.json({ message: 'Price must be greater than zero.' }, { status: 400 });
+    if (!Object.keys(data).length && !uploadedImages.length) {
+      return NextResponse.json({ message: 'No valid fields provided for update.' }, { status: 400 });
+    }
+    if ('price' in data && Number(data.price) <= 0) {
+      return NextResponse.json({ message: 'Price must be greater than zero.' }, { status: 400 });
+    }
     if ('title' in data && !data.title) return NextResponse.json({ message: 'Title is required.' }, { status: 400 });
     if ('location' in data && !data.location) return NextResponse.json({ message: 'Location is required.' }, { status: 400 });
 
     const updated = await prisma.property.update({ where: { id }, data });
 
     if (uploadedImages.length) {
-      const createdImages = await prisma.$transaction(uploadedImages.map((image) =>
-        prisma.propertyImage.create({ data: { propertyId: id, data: image.data, mimeType: image.mimeType } })
+      await prisma.$transaction(uploadedImages.map((image) =>
+        prisma.propertyImage.create({
+          data: {
+            propertyId: id,
+            data: image.data as unknown as Uint8Array<ArrayBuffer>,
+            mimeType: image.mimeType,
+          },
+        })
       ));
-      const existing = await prisma.propertyImage.findMany({ where: { propertyId: id }, select: { id: true }, orderBy: { createdAt: 'asc' } });
+      const existing = await prisma.propertyImage.findMany({
+        where: { propertyId: id },
+        select: { id: true },
+        orderBy: { createdAt: 'asc' },
+      });
       await prisma.property.update({
         where: { id },
         data: { images: existing.map((image) => '/api/properties/' + id + '?image=' + image.id) },
       });
       const finalProperty = await prisma.property.findUnique({ where: { id } });
-      return NextResponse.json({ message: 'Property updated successfully', propertyId: id, property: finalProperty && toProperty(finalProperty) });
+      return NextResponse.json({
+        message: 'Property updated successfully',
+        propertyId: id,
+        property: finalProperty && toProperty(finalProperty),
+      });
     }
 
     return NextResponse.json({ message: 'Property updated successfully', propertyId: id, property: toProperty(updated) });
