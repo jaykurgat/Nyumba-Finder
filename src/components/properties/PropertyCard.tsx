@@ -66,7 +66,7 @@ export function PropertyCard({ property }: PropertyCardProps) {
         )}
       </CardHeader>
       <CardContent className="p-4 flex-grow">
-        <Link href={`/properties/${property.id}`} className="block">
+        <Link href={`/properties/${property.id}`} className="block" onClick={trackClick}>
           <CardTitle className="text-lg font-semibold mb-2 hover:text-primary transition-colors truncate">{property.title}</CardTitle>
         </Link>
         <div className="flex items-center text-sm text-muted-foreground mb-3">
@@ -89,7 +89,7 @@ export function PropertyCard({ property }: PropertyCardProps) {
       </CardContent>
       <CardFooter className="p-4 pt-0 border-t">
          <Button variant="outline" className="w-full" asChild>
-             <Link href={`/properties/${property.id}`}>View Details</Link>
+             <Link href={`/properties/${property.id}`} onClick={trackClick}>View Details</Link>
           </Button>
       </CardFooter>
     </Card>
