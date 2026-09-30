@@ -6,6 +6,7 @@ import { FormEvent, useEffect, useState } from 'react';
 type Promotion = {
   id: string; package: string; status: string; boost: number; targetLocation: string | null; targetType: string | null;
   minBedrooms: number | null; maxBedrooms: number | null; startsAt: string; endsAt: string;
+  metrics?: { impressions: number; clicks: number; ctr: number };
   property: { id: string; title: string; location: string; propertyType: string };
 };
 
@@ -65,9 +66,9 @@ export default function AdminPromotions() {
         {error && <p className="mt-4 text-sm text-destructive">{error}</p>}
         <div className="mt-7 overflow-x-auto border bg-background">
           <table className="w-full min-w-[950px] text-sm">
-            <thead className="border-b bg-muted/40 text-left"><tr><th className="p-3">Property</th><th className="p-3">Package</th><th className="p-3">Boost</th><th className="p-3">Target</th><th className="p-3">Period</th><th className="p-3">Status</th></tr></thead>
+            <thead className="border-b bg-muted/40 text-left"><tr><th className="p-3">Property</th><th className="p-3">Package</th><th className="p-3">Boost</th><th className="p-3">Target</th><th className="p-3">Period</th><th className="p-3">Performance</th><th className="p-3">Status</th></tr></thead>
             <tbody className="divide-y">
-              {promotions.map((p) => <tr key={p.id}><td className="p-3">{p.property.title}<div className="text-xs text-muted-foreground">{p.property.location}</div></td><td className="p-3">{p.package}</td><td className="p-3">+{p.boost}</td><td className="p-3">{[p.targetLocation, p.targetType].filter(Boolean).join(' · ') || 'All matching searches'}</td><td className="p-3">{new Date(p.startsAt).toLocaleDateString()} — {new Date(p.endsAt).toLocaleDateString()}</td><td className="p-3"><select value={p.status} onChange={(e) => setStatus(p.id, e.target.value)} className="h-9 border bg-background px-2 text-xs">{['DRAFT','ACTIVE','PAUSED','COMPLETED','CANCELLED'].map((s) => <option key={s}>{s}</option>)}</select></td></tr>)}
+              {promotions.map((p) => <tr key={p.id}><td className="p-3">{p.property.title}<div className="text-xs text-muted-foreground">{p.property.location}</div></td><td className="p-3">{p.package}</td><td className="p-3">+{p.boost}</td><td className="p-3">{[p.targetLocation, p.targetType].filter(Boolean).join(' · ') || 'All matching searches'}</td><td className="p-3">{new Date(p.startsAt).toLocaleDateString()} — {new Date(p.endsAt).toLocaleDateString()}</td><td className="p-3">{p.metrics?.impressions ?? 0} views · {p.metrics?.clicks ?? 0} clicks · {((p.metrics?.ctr ?? 0) * 100).toFixed(1)}% CTR</td><td className="p-3"><select value={p.status} onChange={(e) => setStatus(p.id, e.target.value)} className="h-9 border bg-background px-2 text-xs">{['DRAFT','ACTIVE','PAUSED','COMPLETED','CANCELLED'].map((s) => <option key={s}>{s}</option>)}</select></td></tr>)}
             </tbody>
           </table>
           {promotions.length === 0 && <p className="p-8 text-center text-sm text-muted-foreground">No promotions yet.</p>}
