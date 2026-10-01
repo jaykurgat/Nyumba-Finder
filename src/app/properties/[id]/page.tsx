@@ -2,6 +2,7 @@
 "use client";
 
 import NextImage from 'next/image';
+import { PropertyImage } from '@/components/properties/PropertyImage';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import type { Property } from '@/types/property';
@@ -48,58 +49,57 @@ async function fetchPropertyById(id: string): Promise<Property | null> {
 }
 
 function ImageCarousel({ images, title }: { images: string[]; title: string }) {
-    const effectiveImages = images && images.length > 0 && images.some(src =>
-      src.startsWith('data:') || src.startsWith('http') || src.startsWith('/')
-    )
-      ? images
-      : [];
+  const effectiveImages = images?.filter((src) =>
+    src.startsWith('data:') || src.startsWith('http') || src.startsWith('/')
+  ) ?? [];
 
-    if (effectiveImages.length === 0) {
-      const placeholderUrl = `https://placehold.co/800x600.png`;
-      return (
-           <div className="relative w-full aspect-[4/3] sm:aspect-[16/9] bg-muted rounded-lg overflow-hidden flex items-center justify-center">
-             <NextImage
-                src={placeholderUrl}
-                alt={`${title} - No Image Available`}
-                fill
-                className="object-contain"
-                priority
-                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                data-ai-hint="placeholder building"
-             />
-           </div>
-        );
-    }
+  if (effectiveImages.length === 0) {
+    return (
+      <div className="rounded-lg overflow-hidden shadow-md border">
+        <PropertyImage
+          src="https://placehold.co/1200x800.png"
+          alt={`${title} - No Image Available`}
+          sizes="(max-width: 1024px) 100vw, 66vw"
+          priority
+          minHeightClassName="min-h-[280px]"
+          maxHeightClassName="max-h-[70vh]"
+        />
+      </div>
+    );
+  }
 
-   return (
-    <Carousel className="w-full rounded-lg overflow-hidden shadow-md border">
-      <CarouselContent>
-        {effectiveImages.map((src, index) => (
-          <CarouselItem key={index}>
-             <div className="relative w-full aspect-[4/3] sm:aspect-[16/9] bg-muted flex items-center justify-center">
-                 <NextImage
-                  src={src} // Assuming src is a valid data URI or http URL
-                  alt={`${title} - Image ${index + 1}`}
-                  fill
-                  className="object-contain"
-                  priority={index === 0}
-                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                  data-ai-hint="house interior"
-                />
-             </div>
-          </CarouselItem>
-        ))}
-      </CarouselContent>
-       {effectiveImages.length > 1 && (
-         <>
+  return (
+    <div className="space-y-3">
+      <Carousel className="w-full rounded-lg overflow-hidden shadow-md border">
+        <CarouselContent>
+          {effectiveImages.map((src, index) => (
+            <CarouselItem key={src + index}>
+              <PropertyImage
+                src={src}
+                alt={`${title} - Image ${index + 1}`}
+                sizes="(max-width: 1024px) 100vw, 66vw"
+                priority={index === 0}
+                minHeightClassName="min-h-[280px] md:min-h-[420px]"
+                maxHeightClassName="max-h-[72vh]"
+              />
+            </CarouselItem>
+          ))}
+        </CarouselContent>
+        {effectiveImages.length > 1 && (
+          <>
             <CarouselPrevious className="absolute left-4 top-1/2 -translate-y-1/2 z-10 hidden md:flex" />
             <CarouselNext className="absolute right-4 top-1/2 -translate-y-1/2 z-10 hidden md:flex" />
-         </>
-       )}
-    </Carousel>
+          </>
+        )}
+      </Carousel>
+      {effectiveImages.length > 1 && (
+        <p className="text-center text-xs text-muted-foreground">
+          Swipe or use the arrows to view all {effectiveImages.length} photos.
+        </p>
+      )}
+    </div>
   );
 }
-
 function PropertyDetailSkeleton() {
   return (
     <div className="container mx-auto px-4 py-8">
