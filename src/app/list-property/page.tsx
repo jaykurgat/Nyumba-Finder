@@ -6,7 +6,7 @@ import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState, useEffect, use } from 'react';
-import NextImage from 'next/image';
+import { PropertyImage } from "@/components/properties/PropertyImage";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -512,8 +512,14 @@ export default function ListPropertyPage() {
                         </div>
                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                           {watchedImages.map((uri, index) => (
-                            <div key={uri + index} className="relative aspect-video rounded-md overflow-hidden border shadow-sm">
-                              <NextImage src={uri} alt={`Preview ${index + 1}`} fill className="object-cover" sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, 25vw" />
+                            <div key={uri + index} className="relative overflow-hidden rounded-md border shadow-sm">
+                              <PropertyImage
+                                src={uri}
+                                alt={`Preview ${index + 1}`}
+                                sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, 25vw"
+                                minHeightClassName="min-h-[150px]"
+                                maxHeightClassName="max-h-[240px]"
+                              />
                               <Button
                                 type="button"
                                 variant="destructive"
