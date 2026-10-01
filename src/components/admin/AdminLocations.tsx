@@ -5,6 +5,8 @@ import { useEffect, useState } from 'react';
 export default function AdminLocations() {
   const [counties, setCounties] = useState<any[]>([]);
   const [submissions, setSubmissions] = useState<any[]>([]);
+  const [parents, setParents] = useState<any[]>([]);
+  const [parentBySubmission, setParentBySubmission] = useState<Record<string,string>>({});
   const [form, setForm] = useState({ kind:'county', name:'', code:'', countyId:'', townId:'' });
   const load=async()=>{
     const [locations, pending] = await Promise.all([
@@ -12,7 +14,8 @@ export default function AdminLocations() {
       fetch('/api/admin/location-submissions').then(r=>r.ok ? r.json() : []),
     ]);
     setCounties(Array.isArray(locations) ? locations : []);
-    setSubmissions(Array.isArray(pending) ? pending : []);
+    setSubmissions(Array.isArray(pending?.submissions) ? pending.submissions : []);
+    setParents(Array.isArray(pending?.parents) ? pending.parents : []);
   };
   useEffect(()=>{load();},[]);
   async function add(){
@@ -21,7 +24,7 @@ export default function AdminLocations() {
     if(r.ok){setForm({...form,name:'',code:''});load();}
   }
   async function review(id:string, action:'approve'|'reject'){
-    const r=await fetch('/api/admin/location-submissions',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({id,action})});
+    const r=await fetch('/api/admin/location-submissions',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({id,action,parentLocationId:parentBySubmission[id]})});
     if(r.ok) load();
   }
   const towns=counties.find(c=>c.id===form.countyId)?.towns||[];
@@ -37,7 +40,7 @@ export default function AdminLocations() {
           {submissions.map((item:any)=><div key={item.id} className="border p-4">
             <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
               <div><p className="font-medium">{item.proposedName}</p><p className="text-xs text-muted-foreground">{[item.suggestedParent?.name,item.suggestedParent?.countyName,item.context].filter(Boolean).join(' · ') || 'No parent/context supplied'}</p></div>
-              <div className="flex gap-2"><button onClick={()=>review(item.id,'reject')} className="h-9 border px-4 text-sm hover:bg-muted">Reject</button><button onClick={()=>review(item.id,'approve')} className="h-9 bg-primary px-4 text-sm text-primary-foreground hover:opacity-90">Approve as new location</button></div>
+              <div className="flex flex-wrap gap-2"><select value={parentBySubmission[item.id] || item.parentLocationId || ''} onChange={e=>setParentBySubmission({...parentBySubmission,[item.id]:e.target.value})} className="h-9 min-w-56 border bg-background px-2 text-sm"><option value="">Choose parent</option>{parents.map((parent:any)=><option key={parent.id} value={parent.id}>{parent.name}{parent.countyName ? ' · '+parent.countyName : ''}</option>)}</select><button onClick={()=>review(item.id,'reject')} className="h-9 border px-4 text-sm hover:bg-muted">Reject</button><button onClick={()=>review(item.id,'approve')} className="h-9 bg-primary px-4 text-sm text-primary-foreground hover:opacity-90">Approve as new location</button></div>
             </div>
           </div>)}
         </div>
