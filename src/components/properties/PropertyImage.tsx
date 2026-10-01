@@ -44,7 +44,8 @@ export function PropertyImage({
         className={cn("object-contain", imageClassName)}
         sizes={sizes}
         priority={priority}
-        onLoadingComplete={(image) => {
+        onLoad={(event) => {
+          const image = event.currentTarget;
           if (image.naturalWidth > 0 && image.naturalHeight > 0) {
             setAspectRatio(String(image.naturalWidth) + " / " + String(image.naturalHeight));
           }
