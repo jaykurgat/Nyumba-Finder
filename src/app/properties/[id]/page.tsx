@@ -1,7 +1,6 @@
 
 "use client";
 
-import NextImage from 'next/image';
 import { PropertyImage } from '@/components/properties/PropertyImage';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
