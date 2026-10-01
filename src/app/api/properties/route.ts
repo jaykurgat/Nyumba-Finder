@@ -191,7 +191,7 @@ export async function POST(request: NextRequest) {
 
     const result = await prisma.$transaction(async (tx) => {
       const created = await tx.property.create({
-        data: { title, description, location, price, bedrooms, bathrooms, sizeSqm, amenities, images: [], phoneNumber, propertyType, status: 'PENDING_REVIEW' },
+        data: { title, description, location, price, bedrooms, bathrooms, sizeSqm, amenities, images: [], phoneNumber, propertyType, status: 'ACTIVE' },
       });
 
       if (uploadedImages.length) {
@@ -227,7 +227,7 @@ export async function POST(request: NextRequest) {
     }
 
     const property = toProperty(result);
-    return NextResponse.json({ message: 'Property submitted for review', propertyId: result.id, property }, { status: 201 });
+    return NextResponse.json({ message: 'Property listed successfully', propertyId: result.id, property }, { status: 201 });
   } catch (error: any) {
     console.error('API_ROUTE_ERROR: [POST /api/properties]', error);
     if (error instanceof SyntaxError) return NextResponse.json({ message: 'Invalid JSON payload' }, { status: 400 });
