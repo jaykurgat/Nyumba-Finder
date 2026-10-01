@@ -11,12 +11,13 @@ import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
+import { LocationPicker } from "@/components/locations/LocationPicker";
 
-const locations = ["Nairobi","Mombasa","Kisumu","Nakuru","Eldoret","Thika","Kiambu","Machakos","Meru","Nyeri","Kakamega","Naivasha","Kitale"];
 const amenities = ["Parking","Swimming Pool","Gym","Security","Balcony","Garden","Internet Ready","Servant Quarters","Lift","Water Included","Beach Access","Air Conditioning"];
 
 const schema = z.object({
   location: z.string().optional(),
+  locationId: z.string().optional(),
   minPrice: z.coerce.number().positive("Enter a valid minimum").optional().or(z.literal("")),
   maxPrice: z.coerce.number().positive("Enter a valid maximum").optional().or(z.literal("")),
   minBedrooms: z.string().optional(),
@@ -37,6 +38,8 @@ export function PropertySearchForm({ onFormSubmit, isInSheet = false }: { onForm
     resolver: zodResolver(schema),
     defaultValues: {
       location: params.get("location") || "",
+      locationId: params.get("locationId") || "",
+      locationId: params.get("locationId") || "",
       minPrice: params.get("minPrice") ? Number(params.get("minPrice")) : "",
       maxPrice: params.get("maxPrice") ? Number(params.get("maxPrice")) : "",
       minBedrooms: params.get("minBedrooms") || "all",
@@ -75,6 +78,7 @@ export function PropertySearchForm({ onFormSubmit, isInSheet = false }: { onForm
   function submit(data: Values) {
     const next = new URLSearchParams();
     if (data.location?.trim()) next.set("location", data.location.trim());
+    if (data.locationId) next.set("locationId", data.locationId);
     if (data.minPrice) next.set("minPrice", String(data.minPrice));
     if (data.maxPrice) next.set("maxPrice", String(data.maxPrice));
     if (data.minBedrooms && data.minBedrooms !== "all") next.set("minBedrooms", data.minBedrooms);
@@ -86,7 +90,7 @@ export function PropertySearchForm({ onFormSubmit, isInSheet = false }: { onForm
   }
 
   function clear() {
-    form.reset({ location: "", minPrice: "", maxPrice: "", minBedrooms: "all", minBathrooms: "all", amenities: [] });
+    form.reset({ location: "", locationId: "", minPrice: "", maxPrice: "", minBedrooms: "all", minBathrooms: "all", amenities: [] });
     router.push("/properties");
     setOpen(null);
     onFormSubmit?.();
@@ -149,17 +153,17 @@ function LocationField({ form, compact = false }: { form: any; compact?: boolean
         return (
           <FormItem className="min-w-0 flex-1 space-y-0">
             <FormControl>
-              <div className={compact ? "flex items-center gap-3" : "flex items-center gap-3 border bg-background px-3"}>
-                {compact && <MapPin className="h-5 w-5 shrink-0 text-primary" />}
-                {!compact && <MapPin className="h-4 w-4 text-primary" />}
-                <Input {...field} value={field.value || ""} list="nyumba-locations" placeholder={compact ? "Search city, neighbourhood or estate" : "City, neighbourhood or estate"} className={compact ? "h-10 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0" : "h-12 border-0 px-0 shadow-none focus-visible:ring-0"} />
-              </div>
+              <LocationPicker
+                value={field.value || ""}
+                locationId={form.watch("locationId")}
+                onChange={field.onChange}
+                onLocationIdChange={function (id) { form.setValue("locationId", id || "", { shouldDirty: true }); }}
+              />
             </FormControl>
             <FormMessage />
           </FormItem>
         );
       }} />
-      <datalist id="nyumba-locations">{locations.map(function (x) { return <option key={x} value={x} />; })}</datalist>
     </div>
   );
 }

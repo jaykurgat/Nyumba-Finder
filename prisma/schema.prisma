@@ -122,9 +122,11 @@ model Property {
   countyId     String?  @db.Uuid
   townId       String?  @db.Uuid
   areaId       String?  @db.Uuid
+  geoLocationId String?
   county       County?  @relation(fields: [countyId], references: [id], onDelete: SetNull)
   town         Town?    @relation(fields: [townId], references: [id], onDelete: SetNull)
   areaLocation Area?    @relation(fields: [areaId], references: [id], onDelete: SetNull)
+  geoLocation  GeoLocation? @relation(fields: [geoLocationId], references: [id], onDelete: SetNull)
   phoneNumber  String?
   propertyType String @default("Apartment")
   status       PropertyStatus @default(ACTIVE)
@@ -138,6 +140,7 @@ model Property {
   @@index([countyId])
   @@index([townId])
   @@index([areaId])
+  @@index([geoLocationId])
   @@index([price])
   @@index([bedrooms])
   @@index([createdAt])
@@ -271,4 +274,95 @@ model LocationAlias {
 
   @@unique([normalized])
   @@index([areaId])
+}
+
+
+enum GeoLocationType {
+  COUNTRY
+  COUNTY
+  ADMINISTRATIVE_UNIT
+  ADMINISTRATIVE_LOCATION
+  TOWN
+  CITY
+  AREA
+  ESTATE
+  NEIGHBORHOOD
+  LANDMARK
+}
+
+enum LocationSubmissionStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  MERGED
+}
+
+model GeoLocation {
+  id              String        @id
+  parentId        String?
+  level           Int
+  levelName       String
+  type            GeoLocationType @default(ADMINISTRATIVE_LOCATION)
+  name            String
+  slug            String
+  countyCode      Int?
+  countyName      String?
+  adminLevel3     String?
+  adminLevel4     String?
+  latitude        Float?
+  longitude       Float?
+  source          String?
+  sourceKey       String?
+  searchable      Boolean       @default(true)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  parent          GeoLocation?  @relation("GeoLocationTree", fields: [parentId], references: [id], onDelete: SetNull)
+  children        GeoLocation[] @relation("GeoLocationTree")
+  aliases         GeoLocationAlias[]
+  properties      Property[]
+  submissions     LocationSubmission[] @relation("SubmissionSuggestedParent")
+
+  @@index([parentId])
+  @@index([level])
+  @@index([countyCode])
+  @@index([name])
+  @@index([slug])
+  @@index([latitude, longitude])
+  @@unique([parentId, slug])
+}
+
+model GeoLocationAlias {
+  id             String      @id @default(uuid()) @db.Uuid
+  geoLocationId  String
+  alias          String
+  normalized     String
+  source         String      @default("admin")
+  createdAt      DateTime    @default(now())
+  geoLocation    GeoLocation @relation(fields: [geoLocationId], references: [id], onDelete: Cascade)
+
+  @@unique([geoLocationId, normalized])
+  @@index([normalized])
+}
+
+model LocationSubmission {
+  id                  String                   @id @default(uuid()) @db.Uuid
+  proposedName        String
+  normalized          String
+  parentLocationId    String?
+  latitude            Float?
+  longitude           Float?
+  context             String?
+  submittedByUserId   String?                  @db.Uuid
+  status              LocationSubmissionStatus @default(PENDING)
+  resolutionNote      String?
+  resolvedLocationId  String?
+  createdAt           DateTime                 @default(now())
+  updatedAt           DateTime                 @updatedAt
+
+  suggestedParent GeoLocation? @relation("SubmissionSuggestedParent", fields: [parentLocationId], references: [id], onDelete: SetNull)
+
+  @@index([status, createdAt])
+  @@index([normalized])
+  @@index([parentLocationId])
 }

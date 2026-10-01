@@ -41,6 +41,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const generalQueryTerm = searchParams.get('q')?.trim().toLowerCase();
     const locationQuery = searchParams.get('location')?.trim().toLowerCase();
+    const locationIdQuery = searchParams.get('locationId')?.trim();
     const propertyTypeQuery = searchParams.get('propertyType')?.trim();
     const minPrice = getOptionalNumber(searchParams.get('minPrice'));
     const maxPrice = getOptionalNumber(searchParams.get('maxPrice'));
@@ -59,7 +60,13 @@ export async function GET(request: NextRequest) {
           : {}),
         ...(minBedrooms !== undefined ? { bedrooms: { gte: Math.ceil(minBedrooms) } } : {}),
         ...(minBathrooms !== undefined ? { bathrooms: { gte: Math.ceil(minBathrooms) } } : {}),
-        ...(locationQuery ? { location: { contains: locationQuery, mode: 'insensitive' } } : {}),
+        ...(locationIdQuery ? { geoLocationId: locationIdQuery } : locationQuery ? {
+          OR: [
+            { location: { contains: locationQuery, mode: 'insensitive' } },
+            { geoLocation: { name: { contains: locationQuery, mode: 'insensitive' } } },
+            { geoLocation: { aliases: { some: { normalized: { contains: locationQuery, mode: 'insensitive' } } } } },
+          ],
+        } : {}),
         ...(selectedAmenities.length ? { amenities: { hasEvery: selectedAmenities } } : {}),
         ...(generalQueryTerm ? {
           OR: [
@@ -70,6 +77,7 @@ export async function GET(request: NextRequest) {
         } : {}),
       },
       include: {
+        geoLocation: { select: { id: true, name: true, countyName: true, parent: { select: { name: true } } } },
         propertyImages: { select: { id: true }, orderBy: { createdAt: 'asc' } },
         promotions: {
           where: {
@@ -105,6 +113,8 @@ export async function GET(request: NextRequest) {
           images: row.propertyImages.map((image) => '/api/properties/' + row.id + '?image=' + image.id),
         }),
         propertyType: row.propertyType,
+        geoLocationId: row.geoLocationId,
+        geoLocation: row.geoLocation ? { id: row.geoLocation.id, name: row.geoLocation.name, county: row.geoLocation.countyName, parent: row.geoLocation.parent?.name || null } : null,
         status: row.status,
         isSponsored: Boolean(promotion),
         promotionId: promotion?.id,
@@ -180,6 +190,7 @@ export async function POST(request: NextRequest) {
     const amenities = getStringArray(rawData.amenities);
     const phoneNumber = getOptionalString(rawData.phoneNumber);
     const propertyType = getString(rawData.propertyType, 'Apartment');
+    const locationId = getOptionalString(rawData.locationId);
 
     if (title === 'Untitled Property' || price <= 0 || location === 'Unknown Location') {
       return NextResponse.json({ message: 'Missing or invalid required fields: title, price, and location must be valid.' }, { status: 400 });
@@ -190,8 +201,13 @@ export async function POST(request: NextRequest) {
     }
 
     const result = await prisma.$transaction(async (tx) => {
+      if (locationId) {
+        const mapped = await tx.geoLocation.findUnique({ where: { id: locationId }, select: { id: true } });
+        if (!mapped) throw new Error('Selected location could not be found.');
+      }
+
       const created = await tx.property.create({
-        data: { title, description, location, price, bedrooms, bathrooms, sizeSqm, amenities, images: [], phoneNumber, propertyType, status: 'ACTIVE' },
+        data: { title, description, location, geoLocationId: locationId, price, bedrooms, bathrooms, sizeSqm, amenities, images: [], phoneNumber, propertyType, status: 'ACTIVE' },
       });
 
       if (uploadedImages.length) {
