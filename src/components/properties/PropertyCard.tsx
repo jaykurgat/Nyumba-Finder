@@ -1,4 +1,4 @@
-import NextImage from 'next/image'; // Renamed to avoid conflict if 'Image' is used locally
+import { PropertyImage } from "@/components/properties/PropertyImage";
 import Link from 'next/link';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -39,24 +39,19 @@ export function PropertyCard({ property }: PropertyCardProps) {
   )
     ? property.images[0]
     : `https://placehold.co/600x400.png`;
-  const placeholderHint = !property.images || property.images.length === 0 ? "placeholder house" : "house exterior";
 
 
   return (
     <Card className="w-full overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300 flex flex-col">
       <CardHeader className="p-0 relative">
         <Link href={`/properties/${property.id}`} className="block" onClick={trackClick}>
-          <div className="relative w-full h-56 sm:h-60 bg-muted flex items-center justify-center">
-            <NextImage
-              src={displayImage}
-              alt={property.title}
-              fill
-              className="object-contain"
-              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-              data-ai-hint={placeholderHint}
-              priority={false}
-            />
-          </div>
+          <PropertyImage
+            src={displayImage}
+            alt={property.title}
+            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+            minHeightClassName="min-h-[190px]"
+            maxHeightClassName="max-h-[300px]"
+          />
         </Link>
         <Badge variant="secondary" className="absolute top-2 right-2 bg-background/80 text-foreground font-semibold">
           Ksh {property.price.toLocaleString()}/mo
