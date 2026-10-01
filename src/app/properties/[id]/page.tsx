@@ -57,7 +57,7 @@ function ImageCarousel({ images, title }: { images: string[]; title: string }) {
     if (effectiveImages.length === 0) {
       const placeholderUrl = `https://placehold.co/800x600.png`;
       return (
-           <AspectRatio ratio={16 / 9} className="bg-muted flex items-center justify-center rounded-lg overflow-hidden">
+           <div className="relative w-full aspect-[4/3] sm:aspect-[16/9] bg-muted rounded-lg overflow-hidden flex items-center justify-center">
              <NextImage
                 src={placeholderUrl}
                 alt={`${title} - No Image Available`}
@@ -67,7 +67,7 @@ function ImageCarousel({ images, title }: { images: string[]; title: string }) {
                 sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                 data-ai-hint="placeholder building"
              />
-           </AspectRatio>
+           </div>
         );
     }
 
@@ -76,17 +76,17 @@ function ImageCarousel({ images, title }: { images: string[]; title: string }) {
       <CarouselContent>
         {effectiveImages.map((src, index) => (
           <CarouselItem key={index}>
-             <AspectRatio ratio={16 / 9} className="bg-muted">
+             <div className="relative w-full aspect-[4/3] sm:aspect-[16/9] bg-muted flex items-center justify-center">
                  <NextImage
                   src={src} // Assuming src is a valid data URI or http URL
                   alt={`${title} - Image ${index + 1}`}
                   fill
-                  className="object-cover"
+                  className="object-contain"
                   priority={index === 0}
                   sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                   data-ai-hint="house interior"
                 />
-             </AspectRatio>
+             </div>
           </CarouselItem>
         ))}
       </CarouselContent>
