@@ -7,6 +7,9 @@ export default function AdminLocations() {
   const [submissions, setSubmissions] = useState<any[]>([]);
   const [parents, setParents] = useState<any[]>([]);
   const [parentBySubmission, setParentBySubmission] = useState<Record<string,string>>({});
+  const [masterFile, setMasterFile] = useState<File | null>(null);
+  const [importing, setImporting] = useState(false);
+  const [importMessage, setImportMessage] = useState("");
   const [form, setForm] = useState({ kind:'county', name:'', code:'', countyId:'', townId:'' });
   const load=async()=>{
     const [locations, pending] = await Promise.all([
@@ -18,6 +21,22 @@ export default function AdminLocations() {
     setParents(Array.isArray(pending?.parents) ? pending.parents : []);
   };
   useEffect(()=>{load();},[]);
+  async function importMaster(){
+    if (!masterFile) return;
+    setImporting(true); setImportMessage("");
+    try {
+      const body = new FormData();
+      body.append("file", masterFile);
+      const r = await fetch("/api/admin/locations/import", { method: "POST", body });
+      const data = await r.json();
+      if (!r.ok) throw new Error(data.message || "Import failed.");
+      setImportMessage("Imported " + data.imported + " location records.");
+      setMasterFile(null);
+      load();
+    } catch (error) {
+      setImportMessage(error instanceof Error ? error.message : "Import failed.");
+    } finally { setImporting(false); }
+  }
   async function add(){
     const body={...form};
     const r=await fetch('/api/admin/locations',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
@@ -45,6 +64,16 @@ export default function AdminLocations() {
           </div>)}
         </div>
       </section>}
+
+      <section className="mt-6 border bg-background p-5">
+        <h2 className="font-semibold">Import consolidated location master</h2>
+        <p className="mt-1 text-sm text-muted-foreground">Upload the CSV generated from KEN_adm4.csv. This updates the canonical geographic master without creating user aliases.</p>
+        <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center">
+          <input type="file" accept=".csv,text/csv" onChange={e=>setMasterFile(e.target.files?.[0] || null)} className="text-sm" />
+          <button onClick={importMaster} disabled={!masterFile || importing} className="h-10 bg-primary px-5 text-sm text-primary-foreground disabled:opacity-50">{importing ? "Importing..." : "Import location master"}</button>
+        </div>
+        {importMessage && <p className="mt-2 text-xs text-muted-foreground">{importMessage}</p>}
+      </section>
 
       <div className="mt-6 grid gap-3 border bg-background p-5 md:grid-cols-4">
         <select value={form.kind} onChange={e=>setForm({...form,kind:e.target.value})} className="h-10 border bg-background px-2 text-sm"><option value="county">County</option><option value="town">Town / City</option><option value="area">Area / Estate</option></select>
