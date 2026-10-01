@@ -187,12 +187,14 @@ model PropertyReport {
   property    Property     @relation(fields: [propertyId], references: [id], onDelete: Cascade)
   type        String
   description String?
-  status      ReportStatus @default(OPEN)
-  createdAt   DateTime     @default(now())
+  status        ReportStatus @default(OPEN)
+  reporterHash  String
+  createdAt     DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
 
   @@index([propertyId])
   @@index([status, createdAt])
+  @@unique([propertyId, reporterHash])
 }
 
 model SiteSetting {
