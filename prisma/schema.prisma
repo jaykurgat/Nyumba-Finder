@@ -122,6 +122,7 @@ model Property {
   countyId     String?  @db.Uuid
   townId       String?  @db.Uuid
   areaId       String?  @db.Uuid
+  geoLocationId String?
   county       County?  @relation(fields: [countyId], references: [id], onDelete: SetNull)
   town         Town?    @relation(fields: [townId], references: [id], onDelete: SetNull)
   areaLocation Area?    @relation(fields: [areaId], references: [id], onDelete: SetNull)
