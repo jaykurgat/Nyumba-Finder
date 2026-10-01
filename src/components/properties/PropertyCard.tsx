@@ -46,15 +46,17 @@ export function PropertyCard({ property }: PropertyCardProps) {
     <Card className="w-full overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300 flex flex-col">
       <CardHeader className="p-0 relative">
         <Link href={`/properties/${property.id}`} className="block" onClick={trackClick}>
-          <NextImage
-            src={displayImage}
-            alt={property.title}
-            width={600}
-            height={400}
-            className="w-full h-48 object-cover"
-            data-ai-hint={placeholderHint}
-            priority={false}
-          />
+          <div className="relative w-full h-56 sm:h-60 bg-muted flex items-center justify-center">
+            <NextImage
+              src={displayImage}
+              alt={property.title}
+              fill
+              className="object-contain"
+              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+              data-ai-hint={placeholderHint}
+              priority={false}
+            />
+          </div>
         </Link>
         <Badge variant="secondary" className="absolute top-2 right-2 bg-background/80 text-foreground font-semibold">
           Ksh {property.price.toLocaleString()}/mo
