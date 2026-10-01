@@ -8,12 +8,19 @@ const slugify = (value: string) =>
 export async function GET() {
   try {
     await requireAdmin();
-    const submissions = await prisma.locationSubmission.findMany({
-      where: { status: 'PENDING' },
-      include: { suggestedParent: { select: { id: true, name: true, countyName: true } } },
-      orderBy: { createdAt: 'asc' },
-    });
-    return NextResponse.json(submissions);
+    const [submissions, parents] = await Promise.all([
+      prisma.locationSubmission.findMany({
+        where: { status: 'PENDING' },
+        include: { suggestedParent: { select: { id: true, name: true, countyName: true } } },
+        orderBy: { createdAt: 'asc' },
+      }),
+      prisma.geoLocation.findMany({
+        where: { searchable: true, level: { in: [1, 3] } },
+        select: { id: true, name: true, level: true, countyName: true },
+        orderBy: [{ level: 'asc' }, { name: 'asc' }],
+      }),
+    ]);
+    return NextResponse.json({ submissions, parents });
   } catch (error) {
     if (error instanceof Error && error.message === 'UNAUTHORIZED_ADMIN') {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
