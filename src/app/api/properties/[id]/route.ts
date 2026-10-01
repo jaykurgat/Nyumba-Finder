@@ -21,6 +21,7 @@ const toProperty = (data: any): Property => ({
   price: data.price, images: data.images, bedrooms: data.bedrooms, bathrooms: data.bathrooms,
   area: data.area ?? undefined, amenities: data.amenities, phoneNumber: data.phoneNumber ?? undefined,
   propertyType: data.propertyType ?? 'Apartment', status: data.status,
+  geoLocationId: data.geoLocationId ?? undefined,
 });
 
 const getId = async (params: Promise<{ id: string }>) => (await params).id;
@@ -44,7 +45,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       });
     }
 
-    const property = await prisma.property.findUnique({ where: { id } });
+    const property = await prisma.property.findUnique({ where: { id }, include: { geoLocation: { select: { id: true, name: true, countyName: true, parent: { select: { name: true } } } } } });
     if (!property) return NextResponse.json({ message: 'Property not found' }, { status: 404 });
 
     const images = await prisma.propertyImage.findMany({
@@ -112,6 +113,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     if ('title' in rawData) data.title = getString(rawData.title);
     if ('description' in rawData) data.description = getString(rawData.description);
     if ('location' in rawData) data.location = getString(rawData.location);
+    if ('locationId' in rawData) data.geoLocationId = getOptionalString(rawData.locationId) ?? null;
     if ('propertyType' in rawData) data.propertyType = getString(rawData.propertyType, 'Apartment');
     if ('price' in rawData) data.price = getNumber(rawData.price);
     if ('bedrooms' in rawData) data.bedrooms = Math.max(0, Math.trunc(getNumber(rawData.bedrooms)));
@@ -141,6 +143,10 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     }
     if ('title' in data && !data.title) return NextResponse.json({ message: 'Title is required.' }, { status: 400 });
     if ('location' in data && !data.location) return NextResponse.json({ message: 'Location is required.' }, { status: 400 });
+    if (typeof data.geoLocationId === 'string') {
+      const mapped = await prisma.geoLocation.findUnique({ where: { id: data.geoLocationId }, select: { id: true } });
+      if (!mapped) return NextResponse.json({ message: 'Selected location could not be found.' }, { status: 400 });
+    }
 
     if (uploadedImages.length > 5) {
       return NextResponse.json({ message: 'You can upload a maximum of 5 images.' }, { status: 400 });
