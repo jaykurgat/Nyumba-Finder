@@ -46,7 +46,7 @@ export function PropertyImage({
         priority={priority}
         onLoadingComplete={(image) => {
           if (image.naturalWidth > 0 && image.naturalHeight > 0) {
-            setAspectRatio(\`\${image.naturalWidth} / \${image.naturalHeight}\`);
+            setAspectRatio(String(image.naturalWidth) + " / " + String(image.naturalHeight));
           }
         }}
       />
