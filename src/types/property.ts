@@ -3,6 +3,9 @@ export interface Property {
   title: string;
   description: string;
   location: string;
+  locationNodeId?: string;
+  countyId?: string;
+  countyName?: string;
   price: number;
   images: string[];
   bedrooms: number;
