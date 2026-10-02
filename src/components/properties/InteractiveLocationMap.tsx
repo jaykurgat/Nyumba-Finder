@@ -47,7 +47,7 @@ function tileUrl(x: number, y: number, z: number) {
   const count = Math.pow(2, z);
   const wrappedX = ((x % count) + count) % count;
   if (y < 0 || y >= count) return null;
-  return `https://tile.openstreetmap.org/${z}/${wrappedX}/${y}.png`;
+  return "https://tile.openstreetmap.org/" + z + "/" + wrappedX + "/" + y + ".png";
 }
 
 export function InteractiveLocationMap({
@@ -64,6 +64,7 @@ export function InteractiveLocationMap({
   const [draggingMap, setDraggingMap] = useState(false);
   const dragRef = useRef<{ pointerX: number; pointerY: number; centerPoint: { x: number; y: number } } | null>(null);
   const markerDragRef = useRef(false);
+  const movedRef = useRef(false);
 
   useEffect(() => {
     if (value) {
@@ -75,6 +76,10 @@ export function InteractiveLocationMap({
   const centerPoint = useMemo(() => project(center, zoom), [center, zoom]);
   const markerPosition = value ?? center;
   const markerPoint = project(markerPosition, zoom);
+  const markerOffset = {
+    x: markerPoint.x - centerPoint.x,
+    y: markerPoint.y - centerPoint.y,
+  };
 
   const tiles = useMemo(() => {
     const centerTileX = Math.floor(centerPoint.x / 256);
@@ -84,7 +89,7 @@ export function InteractiveLocationMap({
     for (let y = centerTileY - 2; y <= centerTileY + 2; y += 1) {
       for (let x = centerTileX - 2; x <= centerTileX + 2; x += 1) {
         const url = tileUrl(x, y, zoom);
-        if (url) items.push({ key: `${x}:${y}`, x, y, url });
+        if (url) items.push({ key: x + ":" + y, x, y, url });
       }
     }
 
@@ -106,24 +111,25 @@ export function InteractiveLocationMap({
   function handlePointerDown(event: React.PointerEvent<HTMLDivElement>) {
     if (!interactive) return;
     event.currentTarget.setPointerCapture(event.pointerId);
+    movedRef.current = false;
 
+    const rect = event.currentTarget.getBoundingClientRect();
     const point = pointFromEvent(event);
-    const distance = Math.hypot(point.x - markerPoint.x + centerPoint.x - centerPoint.x, point.y - markerPoint.y + centerPoint.y - centerPoint.y);
+    const markerScreenX = rect.width / 2 + markerOffset.x;
+    const markerScreenY = rect.height / 2 + markerOffset.y;
 
-    if (value && distance < 28) {
+    if (Math.hypot(point.x - markerScreenX, point.y - markerScreenY) < 30) {
       markerDragRef.current = true;
       setDraggingMarker(true);
       return;
     }
 
-    const rect = event.currentTarget.getBoundingClientRect();
     dragRef.current = {
       pointerX: event.clientX,
       pointerY: event.clientY,
       centerPoint,
     };
     setDraggingMap(true);
-    if (rect.width === 0) finishPointer();
   }
 
   function handlePointerMove(event: React.PointerEvent<HTMLDivElement>) {
@@ -132,6 +138,7 @@ export function InteractiveLocationMap({
     const rect = event.currentTarget.getBoundingClientRect();
 
     if (markerDragRef.current && onChange) {
+      movedRef.current = true;
       const point = pointFromEvent(event);
       const worldPoint = {
         x: centerPoint.x + point.x - rect.width / 2,
@@ -144,6 +151,7 @@ export function InteractiveLocationMap({
     if (dragRef.current) {
       const dx = event.clientX - dragRef.current.pointerX;
       const dy = event.clientY - dragRef.current.pointerY;
+      if (Math.abs(dx) + Math.abs(dy) > 4) movedRef.current = true;
       setCenter(unproject({
         x: dragRef.current.centerPoint.x - dx,
         y: dragRef.current.centerPoint.y - dy,
@@ -151,10 +159,10 @@ export function InteractiveLocationMap({
     }
   }
 
-  function handleMapClick(event: React.PointerEvent<HTMLDivElement>) {
-    if (!interactive || !onChange || markerDragRef.current || draggingMap) return;
+  function handleMapClick(event: React.MouseEvent<HTMLDivElement>) {
+    if (!interactive || !onChange || movedRef.current) return;
     const rect = event.currentTarget.getBoundingClientRect();
-    const point = pointFromEvent(event);
+    const point = { x: event.clientX - rect.left, y: event.clientY - rect.top };
     onChange(unproject({
       x: centerPoint.x + point.x - rect.width / 2,
       y: centerPoint.y + point.y - rect.height / 2,
@@ -167,21 +175,14 @@ export function InteractiveLocationMap({
     setZoom(nextZoom);
   }
 
-  const markerLeft = markerPoint.x - centerPoint.x;
-  const markerTop = markerPoint.y - centerPoint.y;
-
   return (
-    <div className={`relative overflow-hidden rounded-xl border bg-muted ${heightClassName} ${className}`}>
+    <div className={"relative overflow-hidden rounded-xl border bg-muted " + heightClassName + " " + className}>
       <div
-        className={`absolute inset-0 select-none ${interactive ? (draggingMarker ? "cursor-grabbing" : draggingMap ? "cursor-grabbing" : "cursor-grab") : ""}`}
+        className={"absolute inset-0 select-none " + (interactive ? (draggingMarker || draggingMap ? "cursor-grabbing" : "cursor-grab") : "")}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={finishPointer}
         onPointerCancel={finishPointer}
-        onPointerLeave={(event) => {
-          if (dragRef.current || markerDragRef.current) return;
-          event.currentTarget.style.cursor = "grab";
-        }}
         onClick={handleMapClick}
         role={interactive ? "application" : undefined}
         aria-label={interactive ? "Interactive property location map" : "Property location map"}
@@ -194,16 +195,15 @@ export function InteractiveLocationMap({
             draggable={false}
             className="pointer-events-none absolute h-64 w-64 max-w-none"
             style={{
-              left: tile.x * 256 - centerPoint.x + 50 * 0,
-              top: tile.y * 256 - centerPoint.y + 50 * 0,
-              transform: "translate(50%, 50%)",
+              left: "calc(50% + " + (tile.x * 256 - centerPoint.x) + "px)",
+              top: "calc(50% + " + (tile.y * 256 - centerPoint.y) + "px)",
             }}
           />
         ))}
 
         <div
           className="pointer-events-none absolute left-1/2 top-1/2"
-          style={{ transform: `translate(calc(-50% + ${markerLeft}px), calc(-100% + ${markerTop}px))` }}
+          style={{ transform: "translate(calc(-50% + " + markerOffset.x + "px), calc(-100% + " + markerOffset.y + "px))" }}
         >
           <div className="relative flex h-10 w-10 items-center justify-center rounded-full bg-primary/15">
             <MapPin className="h-8 w-8 fill-primary text-primary drop-shadow-md" />
@@ -212,7 +212,7 @@ export function InteractiveLocationMap({
 
         {interactive && (
           <div className="pointer-events-none absolute left-3 top-3 rounded-lg bg-background/95 px-3 py-2 text-xs font-medium shadow-sm backdrop-blur">
-            {value ? "Drag the pin to adjust the location" : "Tap the map or drag the pin to place it"}
+            {value ? "Drag the pin to adjust the location" : "Drag the pin or tap the map to place it"}
           </div>
         )}
 
