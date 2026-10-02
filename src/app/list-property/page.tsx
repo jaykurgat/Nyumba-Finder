@@ -515,8 +515,12 @@ export default function ListPropertyPage() {
                                 disabled={!selectedTownId}
                                 onChange={(event) => field.onChange(event.target.value)}
                               />
-                              {areas.length > 0 && <datalist id="property-area-suggestions">{areas.map((area) => <option key={area.id} value={area.name} />)}</datalist>}
                             </FormControl>
+                            {areas.length > 0 && (
+                              <datalist id="property-area-suggestions">
+                                {areas.map((area) => <option key={area.id} value={area.name} />)}
+                              </datalist>
+                            )}
                             <FormDescription>Enter the local area tenants would normally use when describing the property.</FormDescription>
                             <FormMessage />
                           </FormItem>
