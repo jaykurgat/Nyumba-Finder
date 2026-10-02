@@ -209,14 +209,17 @@ export async function POST(request: NextRequest) {
     const result = await prisma.$transaction(async (tx) => {
       const requestedLocationNodeId = getOptionalString(rawData.locationNodeId);
       const matchedNode = requestedLocationNodeId
-        ? await tx.locationNode.findUnique({ where: { id: requestedLocationNodeId } })
+        ? await tx.locationNode.findFirst({ where: { id: requestedLocationNodeId, searchable: true } })
         : await tx.locationNode.findFirst({
             where: { name: { equals: location.trim(), mode: 'insensitive' }, searchable: true },
             orderBy: [{ level: 'asc' }, { name: 'asc' }],
           });
-      const latitude = getOptionalNumber(rawData.latitude) ?? matchedNode?.latitude ?? undefined;
-      const longitude = getOptionalNumber(rawData.longitude) ?? matchedNode?.longitude ?? undefined;
-      const countyId = matchedNode?.countyId;
+      if (!matchedNode) {
+        throw new Error('Please select a valid location from the location suggestions.');
+      }
+      const latitude = getOptionalNumber(rawData.latitude) ?? matchedNode.latitude ?? undefined;
+      const longitude = getOptionalNumber(rawData.longitude) ?? matchedNode.longitude ?? undefined;
+      const countyId = matchedNode.countyId;
       const created = await tx.property.create({
         data: {
           title, description, location, price, bedrooms, bathrooms, sizeSqm, amenities, images: [], phoneNumber, propertyType, status: 'ACTIVE',
