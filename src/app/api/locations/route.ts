@@ -70,7 +70,7 @@ export async function GET(request: NextRequest) {
         _score: (exact ? 1000 : 0) + (starts ? 300 : 0) + levelWeight,
       };
     }).sort((a, b) => b._score - a._score || a.name.localeCompare(b.name))
-      .slice(0, 15)
+      .slice(0, query ? 15 : 1000)
       .map(({ _score, ...location }) => location);
 
     return NextResponse.json({ locations: results });
