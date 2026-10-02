@@ -490,7 +490,9 @@ export default function ListPropertyPage() {
                               const town = towns.find((item) => item.id === townId);
                               setSelectedTownId(townId);
                               form.setValue('locationNodeId', townId, { shouldValidate: true, shouldDirty: true });
-                              form.setValue('location', town?.name || '', { shouldValidate: true, shouldDirty: true });
+                              // Town / City and Area / Estate are separate fields.
+                              // Selecting a town must never copy the town name into the area field.
+                              form.setValue('location', '', { shouldValidate: true, shouldDirty: true });
                               setMapPosition(town?.latitude != null && town?.longitude != null ? { lat: town.latitude, lng: town.longitude } : null);
                               setLocationSource("USER_SELECTED");
                             }}
