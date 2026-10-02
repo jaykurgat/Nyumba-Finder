@@ -62,6 +62,8 @@ export async function GET(request: NextRequest) {
         parentName: node.parent?.name ?? null,
         latitude: node.latitude,
         longitude: node.longitude,
+        searchRadiusKm: node.searchRadiusKm,
+        searchPriority: node.searchPriority,
         label: node.parent?.name && node.parent.name !== node.name
           ? node.name + ', ' + node.parent.name + ', ' + node.county.name
           : node.name + ', ' + node.county.name,
