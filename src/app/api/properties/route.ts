@@ -201,11 +201,24 @@ export async function POST(request: NextRequest) {
     }
 
     const result = await prisma.$transaction(async (tx) => {
+      const requestedLocationNodeId = getOptionalString(rawData.locationNodeId);
+      const normalizedLocation = location.trim().toLowerCase();
+      const matchedNode = requestedLocationNodeId
+        ? await tx.locationNode.findUnique({ where: { id: requestedLocationNodeId } })
+        : await tx.locationNode.findFirst({
+            where: { name: { equals: location.trim(), mode: 'insensitive' }, searchable: true },
+            orderBy: [{ level: 'asc' }, { name: 'asc' }],
+          });
+      const latitude = getOptionalNumber(rawData.latitude) ?? matchedNode?.latitude ?? undefined;
+      const longitude = getOptionalNumber(rawData.longitude) ?? matchedNode?.longitude ?? undefined;
+      const countyId = matchedNode?.countyId;
       const created = await tx.property.create({
         data: {
           title, description, location, price, bedrooms, bathrooms, sizeSqm, amenities, images: [], phoneNumber, propertyType, status: 'ACTIVE',
-          latitude: getOptionalNumber(rawData.latitude),
-          longitude: getOptionalNumber(rawData.longitude),
+          latitude,
+          longitude,
+          countyId,
+          locationNodeId: matchedNode?.id,
         },
       });
 
