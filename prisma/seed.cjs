@@ -340,6 +340,86 @@ async function main() {
     }
   }
 
+  // Curated rental-market area names for major Kenyan cities. These are
+  // user-facing search terms, not administrative boundaries.
+  const majorCityAreaMasters = {
+    "Mombasa": [
+      "Mombasa Island", "Kizingo", "Tudor", "Tononoka", "Old Town", "Majengo",
+      "Ganjoni", "Makupa", "Nyali", "Nyali Estate", "Kongowea", "Mkomani",
+      "Kisauni", "Bamburi", "Bamburi Mtambo", "Bamburi Mwembeni", "Mtwapa",
+      "Shanzu", "Mtwapa Creek", "Likoni", "Shelly Beach", "Mtongwe",
+      "Changamwe", "Port Reitz", "Miritini", "Mikindani", "Jomvu", "Magongo",
+      "Airport", "Dunga Road", "Mombasa CBD"
+    ],
+    "Nakuru": [
+      "Nakuru CBD", "Biashara", "Milimani", "Milimani Estate", "Section 58",
+      "London", "Kiamunyi", "Lanet", "Lanet Umoja", "Naka", "Pipeline",
+      "Free Area", "Shabab", "Bondeni", "Flamingo", "Rhonda", "Kaptembwa",
+      "Menengai", "Menengai West", "Kiamunyi Estate", "Kapkures",
+      "Kivumbini", "Nakuru West", "Nakuru East"
+    ],
+    "Kisumu": [
+      "Kisumu CBD", "Milimani", "Milimani Estate", "Mamboleo", "Mamboleo Junction",
+      "Manyatta", "Manyatta B", "Manyatta Arab", "Nyalenda", "Nyalenda A",
+      "Nyalenda B", "Kondele", "Migosi", "Tom Mboya Estate", "Lolwe",
+      "Riat Hills", "Nyamasaria", "Polyview", "Dunga", "Kanyakwar",
+      "Obunga", "Kajulu", "Airport", "Kibos", "Otonglo"
+    ],
+    "Eldoret": [
+      "Eldoret CBD", "Pioneer", "Pioneer Estate", "Kapsoya", "Elgon View",
+      "Elgon View Estate", "Langas", "Annex", "Huruma", "Kimumu", "Kipkenyo",
+      "Kiplombe", "Chepkoilel", "Racecourse", "West Indies", "Kipkaren",
+      "Maili Nne", "Munyaka", "Kesses Road", "Kapsoya Estate", "King'ong'o",
+      "Hawaii", "Action", "Roadblock", "Kenmosa"
+    ]
+  };
+
+  for (const [townName, areaNames] of Object.entries(majorCityAreaMasters)) {
+    const countyForTown = await prisma.county.findFirst({
+      where: {
+        name: townName === "Eldoret" ? "Uasin Gishu" :
+          townName === "Kisumu" ? "Kisumu" :
+          townName === "Nakuru" ? "Nakuru" : "Mombasa"
+      }
+    });
+    if (!countyForTown) continue;
+
+    const townNode = await prisma.locationNode.findFirst({
+      where: {
+        countyId: countyForTown.id,
+        level: "TOWN",
+        slug: townName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""),
+        parentId: null
+      }
+    });
+    if (!townNode) continue;
+
+    const seenAreaSlugs = new Set();
+    for (const areaName of areaNames) {
+      const slug = areaName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+      if (seenAreaSlugs.has(slug)) continue;
+      seenAreaSlugs.add(slug);
+
+      const existingArea = await prisma.locationNode.findFirst({
+        where: { countyId: countyForTown.id, level: "AREA", slug, parentId: townNode.id }
+      });
+      const areaData = {
+        name: areaName,
+        source: "NyumbaFinder major-city rental-area master",
+        searchable: true,
+        searchRadiusKm: 5,
+        searchPriority: 200
+      };
+      if (existingArea) {
+        await prisma.locationNode.update({ where: { id: existingArea.id }, data: areaData });
+      } else {
+        await prisma.locationNode.create({
+          data: { countyId: countyForTown.id, parentId: townNode.id, level: "AREA", slug, ...areaData }
+        });
+      }
+    }
+  }
+
   // Nairobi rental-market area suggestions. These are user-facing place names, not
   // administrative boundaries. Landlords can still enter any local name not listed here.
   const nairobiAreaNames = [
