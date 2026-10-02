@@ -508,32 +508,20 @@ export default function ListPropertyPage() {
                           <FormItem>
                             <FormLabel>Area / Estate / Neighborhood</FormLabel>
                             <FormControl>
-                              {areas.length > 0 && !field.value ? (
-                                <select
-                                  value=""
-                                  disabled={!selectedTownId || areasLoading}
-                                  onChange={(event) => field.onChange(event.target.value)}
-                                  className="flex h-11 w-full rounded-xl border bg-background px-3 text-sm outline-none transition focus:ring-2 focus:ring-primary/20"
-                                >
-                                  <option value="">{areasLoading ? 'Loading areas...' : 'Select an area, estate or neighborhood'}</option>
-                                  {areas.map((area) => (
-                                    <option key={area.id} value={area.name}>{area.name}</option>
-                                  ))}
-                                  <option value="__OTHER__">Other — enter manually</option>
-                                </select>
-                              ) : (
-                                <Input
-                                  placeholder="Enter area, estate or neighborhood"
-                                  value={field.value === '__OTHER__' ? '' : field.value}
-                                  disabled={!selectedTownId}
-                                  onChange={(event) => field.onChange(event.target.value)}
-                                />
-                              )}                            </FormControl>
-                            <FormDescription>
-                              {areas.length > 0
-                                ? 'Select a known local area, estate or neighborhood, or choose Other to enter a different name.'
-                                : 'Enter the local area tenants would normally use when describing the property.'}
-                            </FormDescription>
+                              <Input
+                                list="property-area-suggestions"
+                                placeholder={areasLoading ? "Loading area suggestions..." : "e.g., Kilimani, Kapsoya, Milimani"}
+                                value={field.value}
+                                disabled={!selectedTownId}
+                                onChange={(event) => field.onChange(event.target.value)}
+                              />
+                            </FormControl>
+                            {areas.length > 0 && (
+                              <datalist id="property-area-suggestions">
+                                {areas.map((area) => <option key={area.id} value={area.name} />)}
+                              </datalist>
+                            )}
+                            <FormDescription>Enter the local area tenants would normally use when describing the property.</FormDescription>
                             <FormMessage />
                           </FormItem>
                         )} />
