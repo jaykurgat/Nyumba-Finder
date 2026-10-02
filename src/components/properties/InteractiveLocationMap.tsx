@@ -67,7 +67,7 @@ export function InteractiveLocationMap({
   const movedRef = useRef(false);
 
   useEffect(() => {
-    if (value) {
+    if (value && !markerDragRef.current) {
       setCenter(value);
       setZoom((current) => Math.max(current, initialZoom));
     }
@@ -110,6 +110,7 @@ export function InteractiveLocationMap({
 
   function handlePointerDown(event: React.PointerEvent<HTMLDivElement>) {
     if (!interactive) return;
+    if ((event.target as HTMLElement).closest("button")) return;
     event.currentTarget.setPointerCapture(event.pointerId);
     movedRef.current = false;
 
