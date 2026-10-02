@@ -99,10 +99,16 @@ export async function GET(request: NextRequest) {
         return locationMatches && typeMatches && bedroomMatches;
       });
 
+      const distance = locationContext?.center && row.latitude != null && row.longitude != null
+        ? distanceKm(locationContext.center.lat, locationContext.center.lng, row.latitude, row.longitude)
+        : undefined;
+      const withinRadius = distance != null && distance <= radiusKm;
       const relevance =
         (generalQueryTerm && row.title.toLowerCase().includes(generalQueryTerm) ? 100 : 0) +
         (generalQueryTerm && row.location.toLowerCase().includes(generalQueryTerm) ? 60 : 0) +
-        (locationQuery && row.location.toLowerCase().includes(locationQuery) ? 40 : 0);
+        locationRelevanceScore(row.location, locationContext) +
+        (withinRadius ? 800 + Math.max(0, 200 - distance! * 8) : 0) +
+        (distance != null && !withinRadius ? Math.max(0, 120 - distance) : 0);
 
       return {
         ...toProperty({
