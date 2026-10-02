@@ -18,6 +18,9 @@ const getStringArray = (value: unknown): string[] =>
 
 const toProperty = (data: any): Property => ({
   id: data.id, title: data.title, description: data.description, location: data.location,
+  locationNodeId: data.locationNodeId ?? undefined,
+  countyId: data.countyId ?? undefined,
+  countyName: data.county?.name ?? undefined,
   price: data.price, images: data.images, bedrooms: data.bedrooms, bathrooms: data.bathrooms,
   area: data.area ?? undefined, amenities: data.amenities, phoneNumber: data.phoneNumber ?? undefined,
   propertyType: data.propertyType ?? 'Apartment', status: data.status,
@@ -45,7 +48,10 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       });
     }
 
-    const property = await prisma.property.findUnique({ where: { id } });
+    const property = await prisma.property.findUnique({
+      where: { id },
+      include: { locationNode: true, county: { select: { name: true } } },
+    });
     if (!property) return NextResponse.json({ message: 'Property not found' }, { status: 404 });
 
     const images = await prisma.propertyImage.findMany({
@@ -133,18 +139,22 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
     if ('phoneNumber' in rawData) data.phoneNumber = getOptionalString(rawData.phoneNumber) ?? null;
 
-    if ('location' in rawData) {
+    if ('location' in rawData || 'locationNodeId' in rawData) {
+      const requestedLocationNodeId = getOptionalString(rawData.locationNodeId);
       const location = getString(rawData.location).trim();
-      const matchedNode = await prisma.locationNode.findFirst({
-        where: { name: { equals: location, mode: 'insensitive' }, searchable: true },
-        orderBy: [{ level: 'asc' }, { name: 'asc' }],
-      });
-      if (matchedNode) {
-        data.locationNodeId = matchedNode.id;
-        data.countyId = matchedNode.countyId;
-        if (!('latitude' in rawData) && matchedNode.latitude != null) data.latitude = matchedNode.latitude;
-        if (!('longitude' in rawData) && matchedNode.longitude != null) data.longitude = matchedNode.longitude;
+      const matchedNode = requestedLocationNodeId
+        ? await prisma.locationNode.findFirst({ where: { id: requestedLocationNodeId, searchable: true } })
+        : await prisma.locationNode.findFirst({
+            where: { name: { equals: location, mode: 'insensitive' }, searchable: true },
+            orderBy: [{ level: 'asc' }, { name: 'asc' }],
+          });
+      if (!matchedNode) {
+        return NextResponse.json({ message: 'Please select a valid location from the location suggestions.' }, { status: 400 });
       }
+      data.locationNodeId = matchedNode.id;
+      data.countyId = matchedNode.countyId;
+      if (!('latitude' in rawData) && matchedNode.latitude != null) data.latitude = matchedNode.latitude;
+      if (!('longitude' in rawData) && matchedNode.longitude != null) data.longitude = matchedNode.longitude;
     }
     if ('latitude' in rawData) data.latitude = getOptionalNumber(rawData.latitude) ?? null;
     if ('longitude' in rawData) data.longitude = getOptionalNumber(rawData.longitude) ?? null;
