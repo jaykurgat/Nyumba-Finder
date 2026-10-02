@@ -88,6 +88,30 @@ export default function ListPropertyPage() {
   });
 
   const watchedImages = form.watch('images');
+  const watchedLocation = form.watch('location');
+
+  useEffect(() => {
+    const query = watchedLocation?.trim() || '';
+    if (query.length < 2) {
+      setLocationSuggestions([]);
+      setShowLocationSuggestions(false);
+      return;
+    }
+    const timer = window.setTimeout(async () => {
+      setLocationSearching(true);
+      try {
+        const response = await fetch('/api/locations?q=' + encodeURIComponent(query));
+        const data = await response.json();
+        setLocationSuggestions(data.locations || []);
+        setShowLocationSuggestions(true);
+      } catch {
+        setLocationSuggestions([]);
+      } finally {
+        setLocationSearching(false);
+      }
+    }, 250);
+    return () => window.clearTimeout(timer);
+  }, [watchedLocation]);
 
   useEffect(() => {
     const editId = searchParamsHook.get('edit');
@@ -208,6 +232,7 @@ export default function ListPropertyPage() {
       formData.append('title', values.title);
       formData.append('description', values.description);
       formData.append('location', values.location);
+      formData.append('locationNodeId', values.locationNodeId);
       formData.append('propertyType', values.propertyType);
       formData.append('price', String(Number(values.price)));
       formData.append('bedrooms', String(Number(values.bedrooms)));
@@ -321,17 +346,55 @@ export default function ListPropertyPage() {
                     name="location"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Location</FormLabel>
-                        <FormControl>
-                           <Input placeholder="e.g., Kilimani, Nairobi" {...field} list="list-kenyan-locations" suppressHydrationWarning />
-                        </FormControl>
-                         <datalist id="list-kenyan-locations">
-                            {kenyanLocations.map(loc => <option key={loc} value={loc} />)}
-                         </datalist>
-                         <FormDescription>Specify the neighborhood and city.</FormDescription>
+                        <FormLabel>Property Location</FormLabel>
+                        <div className="relative">
+                          <FormControl>
+                            <Input
+                              placeholder="Search for a town, area or location e.g. Kikuyu"
+                              {...field}
+                              autoComplete="off"
+                              onFocus={() => locationSuggestions.length > 0 && setShowLocationSuggestions(true)}
+                              onChange={(event) => {
+                                field.onChange(event);
+                                form.setValue('locationNodeId', '', { shouldValidate: true });
+                              }}
+                              suppressHydrationWarning
+                            />
+                          </FormControl>
+                          {showLocationSuggestions && (
+                            <div className="absolute z-20 mt-1 w-full overflow-hidden rounded-md border bg-background shadow-lg">
+                              {locationSearching && <div className="px-3 py-2 text-sm text-muted-foreground">Searching locations...</div>}
+                              {!locationSearching && locationSuggestions.length === 0 && (
+                                <div className="px-3 py-2 text-sm text-muted-foreground">No mapped locations found.</div>
+                              )}
+                              {!locationSearching && locationSuggestions.map((location) => (
+                                <button
+                                  key={location.id}
+                                  type="button"
+                                  className="block w-full border-b px-3 py-2 text-left text-sm last:border-b-0 hover:bg-muted"
+                                  onMouseDown={(event) => event.preventDefault()}
+                                  onClick={() => {
+                                    form.setValue('location', location.label, { shouldValidate: true, shouldDirty: true });
+                                    form.setValue('locationNodeId', location.id, { shouldValidate: true, shouldDirty: true });
+                                    setShowLocationSuggestions(false);
+                                  }}
+                                >
+                                  <span className="block font-medium">{location.name}</span>
+                                  <span className="block text-xs text-muted-foreground">{location.parentName ? location.parentName + ' · ' : ''}{location.countyName}</span>
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                        <FormDescription>Select a mapped location so NyumbaFinder can associate the listing with the correct county.</FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="locationNodeId"
+                    render={() => <FormItem><FormMessage /></FormItem>}
                   />
 
                   <FormField
