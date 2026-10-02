@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
         county: { select: { id: true, name: true } },
         parent: { select: { id: true, name: true, level: true } },
       },
-      take: 30,
+      take: query ? 30 : 1000,
     });
 
     const results = rows.map((node) => {
