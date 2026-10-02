@@ -43,7 +43,6 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const generalQueryTerm = searchParams.get('q')?.trim().toLowerCase();
-    const locationQuery = searchParams.get('location')?.trim().toLowerCase();
     const propertyTypeQuery = searchParams.get('propertyType')?.trim();
     const minPrice = getOptionalNumber(searchParams.get('minPrice'));
     const maxPrice = getOptionalNumber(searchParams.get('maxPrice'));
