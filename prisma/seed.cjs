@@ -275,8 +275,6 @@ async function main() {
       },
       update: {
         name: townName,
-        latitude: townName === "Kapsabet" ? 0.20387 : undefined,
-        longitude: townName === "Kapsabet" ? 35.105 : undefined,
         source: "NyumbaFinder county-capital master"
       },
       create: {
@@ -284,8 +282,6 @@ async function main() {
         level: "TOWN",
         name: townName,
         slug: townName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""),
-        latitude: townName === "Kapsabet" ? 0.20387 : null,
-        longitude: townName === "Kapsabet" ? 35.105 : null,
         source: "NyumbaFinder county-capital master"
       }
     });
