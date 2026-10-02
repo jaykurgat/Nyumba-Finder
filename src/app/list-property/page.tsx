@@ -529,7 +529,11 @@ export default function ListPropertyPage() {
                               </datalist>
                             )}
                             <FormDescription>Enter the local area tenants would normally use when describing the property.</FormDescription>
-                            <FormMessage />
+                            {form.formState.errors.location?.message && (
+                              <p className="text-xs text-primary">
+                                {form.formState.errors.location.message}
+                              </p>
+                            )}
                           </FormItem>
                         )} />
                       </div>
