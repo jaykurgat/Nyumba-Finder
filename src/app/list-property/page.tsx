@@ -75,6 +75,8 @@ export default function ListPropertyPage() {
   const [selectedTownId, setSelectedTownId] = useState("");
   const [towns, setTowns] = useState<any[]>([]);
   const [townsLoading, setTownsLoading] = useState(false);
+  const [areas, setAreas] = useState<any[]>([]);
+  const [areasLoading, setAreasLoading] = useState(false);
   const [mapPosition, setMapPosition] = useState<{ lat: number; lng: number } | null>(null);
   const [locationSource, setLocationSource] = useState<"USER_SELECTED" | "BROWSER_GEOLOCATION">("USER_SELECTED");
 
@@ -139,6 +141,7 @@ export default function ListPropertyPage() {
   useEffect(() => {
     if (!watchedCountyId) {
       setTowns([]);
+      setAreas([]);
       setSelectedTownId("");
       form.setValue('location', '', { shouldValidate: true, shouldDirty: true });
       form.setValue('locationNodeId', '', { shouldValidate: true, shouldDirty: true });
@@ -170,6 +173,30 @@ export default function ListPropertyPage() {
 
     return () => { cancelled = true; };
   }, [watchedCountyId, form]);
+
+  useEffect(() => {
+    if (!selectedTownId) {
+      setAreas([]);
+      return;
+    }
+    let cancelled = false;
+    setAreasLoading(true);
+    fetch('/api/locations?' + new URLSearchParams({ parentId: selectedTownId, level: 'AREA' }).toString(), { cache: 'no-store' })
+      .then(async (response) => {
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.message || 'Failed to load area suggestions.');
+        return data;
+      })
+      .then((data) => {
+        if (!cancelled) setAreas(Array.isArray(data.locations) ? data.locations : []);
+      })
+      .catch((error) => {
+        console.error('Failed to load area suggestions:', error);
+        if (!cancelled) setAreas([]);
+      })
+      .finally(() => { if (!cancelled) setAreasLoading(false); });
+    return () => { cancelled = true; };
+  }, [selectedTownId]);
 
   useEffect(() => {
     const editId = searchParamsHook.get('edit');
@@ -482,11 +509,13 @@ export default function ListPropertyPage() {
                             <FormLabel>Area / Estate / Neighborhood</FormLabel>
                             <FormControl>
                               <Input
-                                placeholder="e.g., Kilimani, Kapsoya, Milimani"
+                                list="property-area-suggestions"
+                                placeholder={areasLoading ? "Loading area suggestions..." : "e.g., Kilimani, Kapsoya, Milimani"}
                                 value={field.value}
                                 disabled={!selectedTownId}
                                 onChange={(event) => field.onChange(event.target.value)}
                               />
+                              {areas.length > 0 && <datalist id="property-area-suggestions">{areas.map((area) => <option key={area.id} value={area.name} />)}</datalist>}
                             </FormControl>
                             <FormDescription>Enter the local area tenants would normally use when describing the property.</FormDescription>
                             <FormMessage />
