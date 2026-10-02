@@ -22,7 +22,7 @@ const getStringArray = (value: unknown): string[] =>
 const toProperty = (data: {
   id: string; title: string; description: string; location: string; price: number;
   images: string[]; bedrooms: number; bathrooms: number; sizeSqm: number | null;
-  amenities: string[]; phoneNumber: string | null;
+  amenities: string[]; phoneNumber: string | null; latitude: number | null; longitude: number | null;
 }): Property => ({
   id: data.id,
   title: data.title,
