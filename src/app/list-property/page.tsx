@@ -23,7 +23,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Trash2, Home } from "lucide-react"; // Added Home icon
+import { Loader2, Trash2, Home, MapPin, Navigation, Search, CheckCircle2, X } from "lucide-react";
 import type { Property } from "@/types/property";
 
 const amenitiesList = ["Parking", "Swimming Pool", "Gym", "Security", "Balcony", "Garden", "Internet Ready", "Servant Quarters", "Lift", "Water Included", "Beach Access", "Air Conditioning"] as const;
@@ -35,8 +35,9 @@ const phoneRegex = new RegExp(
 const formSchema = z.object({
   title: z.string().min(5, "Title must be at least 5 characters.").max(100, "Title cannot exceed 100 characters."),
   description: z.string().min(20, "Description must be at least 20 characters.").max(1000, "Description cannot exceed 1000 characters."),
+  countyId: z.string().min(1, "Please select a county."),
   location: z.string().min(2, "Please specify a location."),
-  locationNodeId: z.string().min(1, "Please select a location from the suggestions."),
+  locationNodeId: z.string().min(1, "Please select a location or county from the suggestions."),
   propertyType: z.string().min(2, "Please select a property type."),
   price: z.coerce.number().positive("Price must be a positive number."),
   bedrooms: z.coerce.number().int().min(0, "Number of bedrooms cannot be negative."),
@@ -68,12 +69,20 @@ export default function ListPropertyPage() {
   const [locationSuggestions, setLocationSuggestions] = useState<any[]>([]);
   const [showLocationSuggestions, setShowLocationSuggestions] = useState(false);
   const [locationSearching, setLocationSearching] = useState(false);
+  const [counties, setCounties] = useState<any[]>([]);
+  const [selectedTownId, setSelectedTownId] = useState("");
+  const [townSuggestions, setTownSuggestions] = useState<any[]>([]);
+  const [townSearching, setTownSearching] = useState(false);
+  const [showTownSuggestions, setShowTownSuggestions] = useState(false);
+  const [mapPosition, setMapPosition] = useState<{ lat: number; lng: number } | null>(null);
+  const [locationSource, setLocationSource] = useState<"USER_SELECTED" | "BROWSER_GEOLOCATION">("USER_SELECTED");
 
   const form = useForm<FormSchemaType>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       title: "",
       description: "",
+      countyId: "",
       location: "",
       locationNodeId: "",
       propertyType: "Apartment",
@@ -89,6 +98,14 @@ export default function ListPropertyPage() {
 
   const watchedImages = form.watch('images');
   const watchedLocation = form.watch('location');
+  const watchedCountyId = form.watch('countyId');
+
+  useEffect(() => {
+    fetch('/api/counties')
+      .then((response) => response.json())
+      .then((data) => setCounties(data.counties || []))
+      .catch(() => setCounties([]));
+  }, []);
 
   useEffect(() => {
     const query = watchedLocation?.trim() || '';
@@ -100,7 +117,10 @@ export default function ListPropertyPage() {
     const timer = window.setTimeout(async () => {
       setLocationSearching(true);
       try {
-        const response = await fetch('/api/locations?q=' + encodeURIComponent(query));
+        const params = new URLSearchParams({ q: query });
+        if (watchedCountyId) params.set('countyId', watchedCountyId);
+        if (selectedTownId) params.set('parentId', selectedTownId);
+        const response = await fetch('/api/locations?' + params.toString());
         const data = await response.json();
         setLocationSuggestions(data.locations || []);
         setShowLocationSuggestions(true);
@@ -111,7 +131,7 @@ export default function ListPropertyPage() {
       }
     }, 250);
     return () => window.clearTimeout(timer);
-  }, [watchedLocation]);
+  }, [watchedLocation, watchedCountyId, selectedTownId]);
 
   useEffect(() => {
     const editId = searchParamsHook.get('edit');
@@ -129,6 +149,7 @@ export default function ListPropertyPage() {
           const data: Property = await response.json();
           form.reset({
             ...data,
+            countyId: data.countyId || "",
             price: data.price || ("" as unknown as number),
             bedrooms: data.bedrooms === undefined || data.bedrooms === null ? ("" as unknown as number) : data.bedrooms,
             bathrooms: data.bathrooms || ("" as unknown as number),
@@ -137,6 +158,8 @@ export default function ListPropertyPage() {
             images: data.images || [],
             locationNodeId: data.locationNodeId || "",
           });
+          setMapPosition(data.latitude != null && data.longitude != null ? { lat: data.latitude, lng: data.longitude } : null);
+          setLocationSource("USER_SELECTED");
         } catch (error) {
           console.error("Error fetching property to edit:", error);
           toast({
@@ -157,6 +180,7 @@ export default function ListPropertyPage() {
         form.reset({ // Reset to default empty values if not in edit mode
              title: "",
              description: "",
+             countyId: "",
              location: "",
              locationNodeId: "",
              propertyType: "Apartment",
@@ -231,8 +255,14 @@ export default function ListPropertyPage() {
       const formData = new FormData();
       formData.append('title', values.title);
       formData.append('description', values.description);
+      formData.append('countyId', values.countyId);
       formData.append('location', values.location);
       formData.append('locationNodeId', values.locationNodeId);
+      if (mapPosition) {
+        formData.append('latitude', String(mapPosition.lat));
+        formData.append('longitude', String(mapPosition.lng));
+      }
+      formData.append('locationSource', locationSource);
       formData.append('propertyType', values.propertyType);
       formData.append('price', String(Number(values.price)));
       formData.append('bedrooms', String(Number(values.bedrooms)));
@@ -341,61 +371,110 @@ export default function ListPropertyPage() {
                     )}
                   />
 
-                   <FormField
-                    control={form.control}
-                    name="location"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Property Location</FormLabel>
-                        <div className="relative">
-                          <FormControl>
+                  <div className="rounded-2xl border bg-card p-5 shadow-sm md:p-6">
+                    <div className="mb-5 flex items-start gap-3">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary"><MapPin className="h-5 w-5" /></div>
+                      <div>
+                        <h2 className="text-lg font-semibold tracking-tight">Where is the property?</h2>
+                        <p className="mt-1 text-sm text-muted-foreground">Choose the county first, then narrow the location. You don't need to know the official administrative name.</p>
+                      </div>
+                    </div>
+
+                    <div className="space-y-5">
+                      <FormField control={form.control} name="countyId" render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>County</FormLabel>
+                          <select
+                            value={field.value}
+                            onChange={(event) => {
+                              const value = event.target.value;
+                              field.onChange(value);
+                              setSelectedTownId("");
+                              setTownSuggestions([]);
+                              form.setValue('location', '', { shouldValidate: true, shouldDirty: true });
+                              form.setValue('locationNodeId', '', { shouldValidate: true, shouldDirty: true });
+                              setMapPosition(null);
+                            }}
+                            className="flex h-11 w-full rounded-xl border bg-background px-3 text-sm outline-none transition focus:ring-2 focus:ring-primary/20"
+                          >
+                            <option value="">Select a county</option>
+                            {counties.map((county) => <option key={county.id} value={county.id}>{county.name}</option>)}
+                          </select>
+                          <FormMessage />
+                        </FormItem>
+                      )} />
+
+                      <div className="grid gap-5 md:grid-cols-2">
+                        <div className="space-y-2">
+                          <FormLabel>Town / City <span className="font-normal text-muted-foreground">(Optional)</span></FormLabel>
+                          <div className="relative">
+                            <Search className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                             <Input
-                              placeholder="Search for a town, area or location e.g. Kikuyu"
-                              {...field}
+                              value={townSuggestions.find((town) => town.id === selectedTownId)?.name || ""}
+                              disabled={!watchedCountyId}
+                              placeholder={watchedCountyId ? "Search a town or city" : "Select a county first"}
+                              className="h-11 rounded-xl pl-9 pr-9"
                               autoComplete="off"
-                              onFocus={() => locationSuggestions.length > 0 && setShowLocationSuggestions(true)}
                               onChange={(event) => {
-                                field.onChange(event);
-                                form.setValue('locationNodeId', '', { shouldValidate: true });
+                                setSelectedTownId("");
+                                const query = event.target.value.trim();
+                                if (!watchedCountyId || query.length < 2) { setTownSuggestions([]); setShowTownSuggestions(false); return; }
+                                setTownSearching(true);
+                                fetch('/api/locations?' + new URLSearchParams({ q: query, countyId: watchedCountyId, level: 'TOWN' }).toString())
+                                  .then((response) => response.json()).then((data) => { setTownSuggestions(data.locations || []); setShowTownSuggestions(true); }).catch(() => setTownSuggestions([])).finally(() => setTownSearching(false));
                               }}
-                              suppressHydrationWarning
+                              onFocus={() => townSuggestions.length > 0 && setShowTownSuggestions(true)}
                             />
-                          </FormControl>
-                          {showLocationSuggestions && (
-                            <div className="absolute z-20 mt-1 w-full overflow-hidden rounded-md border bg-background shadow-lg">
-                              {locationSearching && <div className="px-3 py-2 text-sm text-muted-foreground">Searching locations...</div>}
-                              {!locationSearching && locationSuggestions.length === 0 && (
-                                <div className="px-3 py-2 text-sm text-muted-foreground">No mapped locations found.</div>
-                              )}
-                              {!locationSearching && locationSuggestions.map((location) => (
-                                <button
-                                  key={location.id}
-                                  type="button"
-                                  className="block w-full border-b px-3 py-2 text-left text-sm last:border-b-0 hover:bg-muted"
-                                  onMouseDown={(event) => event.preventDefault()}
-                                  onClick={() => {
-                                    form.setValue('location', location.label, { shouldValidate: true, shouldDirty: true });
-                                    form.setValue('locationNodeId', location.id, { shouldValidate: true, shouldDirty: true });
-                                    setShowLocationSuggestions(false);
-                                  }}
-                                >
-                                  <span className="block font-medium">{location.name}</span>
-                                  <span className="block text-xs text-muted-foreground">{location.parentName ? location.parentName + ' · ' : ''}{location.countyName}</span>
-                                </button>
-                              ))}
-                            </div>
-                          )}
+                            {selectedTownId && <button type="button" onClick={() => { setSelectedTownId(""); setTownSuggestions([]); }} className="absolute right-3 top-3 text-muted-foreground hover:text-foreground" aria-label="Clear town"><X className="h-4 w-4" /></button>}
+                            {showTownSuggestions && (
+                              <div className="absolute z-30 mt-2 w-full overflow-hidden rounded-xl border bg-background shadow-xl">
+                                {townSearching && <div className="px-4 py-3 text-sm text-muted-foreground">Searching...</div>}
+                                {!townSearching && townSuggestions.map((town) => <button key={town.id} type="button" onMouseDown={(event) => event.preventDefault()} onClick={() => { setSelectedTownId(town.id); setShowTownSuggestions(false); form.setValue('location', '', { shouldValidate: true }); form.setValue('locationNodeId', '', { shouldValidate: true }); }} className="block w-full border-b px-4 py-3 text-left last:border-0 hover:bg-muted/60"><span className="block font-medium">{town.name}</span><span className="text-xs text-muted-foreground">{town.typeLabel} · {town.countyName}</span></button>)}
+                              </div>
+                            )}
+                          </div>
+                          <p className="text-xs text-muted-foreground">Optional. It only narrows the locality suggestions.</p>
                         </div>
-                        <FormDescription>Select a mapped location so NyumbaFinder can associate the listing with the correct county.</FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="locationNodeId"
-                    render={() => <FormItem><FormMessage /></FormItem>}
-                  />
+
+                        <FormField control={form.control} name="location" render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Area / Locality</FormLabel>
+                            <div className="relative">
+                              <FormControl><Input placeholder={watchedCountyId ? "Kileleshwa, South B, Kapsoya..." : "Select a county first"} {...field} disabled={!watchedCountyId} autoComplete="off" className="h-11 rounded-xl" onFocus={() => locationSuggestions.length > 0 && setShowLocationSuggestions(true)} onChange={(event) => { field.onChange(event); form.setValue('locationNodeId', '', { shouldValidate: true }); }} /></FormControl>
+                              {showLocationSuggestions && (
+                                <div className="absolute z-20 mt-2 w-full overflow-hidden rounded-xl border bg-background shadow-xl">
+                                  {locationSearching && <div className="px-4 py-3 text-sm text-muted-foreground">Searching recognized locations...</div>}
+                                  {!locationSearching && locationSuggestions.length === 0 && <div className="px-4 py-4"><p className="text-sm font-medium">No exact locality found</p><p className="mt-1 text-xs text-muted-foreground">You can use the county as the listing location or choose a nearby recognized location.</p></div>}
+                                  {!locationSearching && locationSuggestions.map((location) => <button key={location.id} type="button" className="block w-full border-b px-4 py-3 text-left last:border-0 hover:bg-muted/60" onMouseDown={(event) => event.preventDefault()} onClick={() => { form.setValue('location', location.name, { shouldValidate: true, shouldDirty: true }); form.setValue('locationNodeId', location.id, { shouldValidate: true, shouldDirty: true }); setMapPosition(location.latitude != null && location.longitude != null ? { lat: location.latitude, lng: location.longitude } : null); setLocationSource("USER_SELECTED"); setShowLocationSuggestions(false); }}><span className="block font-medium">{location.name}</span><span className="mt-0.5 block text-xs text-muted-foreground">{location.typeLabel}{location.parentName ? ' · ' + location.parentName : ''} · {location.countyName}</span></button>)}
+                                </div>
+                              )}
+                            </div>
+                            <FormDescription>Search estates, neighborhoods, villages, towns, centres and administrative locations.</FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )} />
+                      </div>
+
+                      {watchedCountyId && !form.watch('locationNodeId') && (
+                        <div className="rounded-xl border border-dashed bg-muted/30 p-4">
+                          <div className="flex items-start justify-between gap-4">
+                            <div><p className="text-sm font-medium">Can't find the exact area?</p><p className="mt-1 text-xs text-muted-foreground">You can list the property under the whole county. Tenants can still discover it through broader location searches.</p></div>
+                            <Button type="button" variant="outline" size="sm" onClick={() => { const county = counties.find((item) => item.id === watchedCountyId); if (!county?.locationNodeId) return; form.setValue('location', county.name, { shouldValidate: true, shouldDirty: true }); form.setValue('locationNodeId', county.locationNodeId, { shouldValidate: true, shouldDirty: true }); setSelectedTownId(""); setShowLocationSuggestions(false); setLocationSource("USER_SELECTED"); }}>Use county</Button>
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="rounded-xl border bg-muted/20 p-4">
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex gap-3"><div className="mt-0.5 flex h-9 w-9 items-center justify-center rounded-lg bg-background text-primary shadow-sm"><Navigation className="h-4 w-4" /></div><div><p className="text-sm font-medium">Property map location <span className="font-normal text-muted-foreground">(Optional)</span></p><p className="mt-1 text-xs leading-5 text-muted-foreground">A location pin helps tenants find properties near the areas they search for. Your exact pin is used for search and is not shown publicly as a precise address.</p></div></div>
+                          <Button type="button" variant="outline" size="sm" className="shrink-0 rounded-lg" onClick={() => { if (!navigator.geolocation) { toast({ title: "Location unavailable", description: "Your browser does not support location access.", variant: "destructive" }); return; } navigator.geolocation.getCurrentPosition((position) => { setMapPosition({ lat: position.coords.latitude, lng: position.coords.longitude }); setLocationSource("BROWSER_GEOLOCATION"); }, () => toast({ title: "Location not available", description: "Allow location access or continue using the selected area.", variant: "destructive" }), { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }); }}>Use my location</Button>
+                        </div>
+                        {mapPosition && <div className="mt-4 overflow-hidden rounded-xl border bg-background"><iframe title="Property location map" className="h-48 w-full border-0" loading="lazy" src={`https://www.openstreetmap.org/export/embed.html?bbox=${mapPosition.lng - 0.01}%2C${mapPosition.lat - 0.01}%2C${mapPosition.lng + 0.01}%2C${mapPosition.lat + 0.01}&layer=mapnik&marker=${mapPosition.lat}%2C${mapPosition.lng}`} /><div className="flex items-center justify-between gap-3 px-3 py-2 text-xs text-muted-foreground"><span className="inline-flex items-center gap-1.5"><CheckCircle2 className="h-3.5 w-3.5 text-primary" />Location pin captured</span><button type="button" className="hover:text-foreground" onClick={() => setMapPosition(null)}>Remove pin</button></div></div>}
+                      </div>
+                    </div>
+                  </div>
+
+                  <FormField control={form.control} name="locationNodeId" render={() => <FormItem><FormMessage /></FormItem>} />
 
                   <FormField
                     control={form.control}
