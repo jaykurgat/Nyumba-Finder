@@ -123,6 +123,8 @@ model Property {
   townId       String?  @db.Uuid
   areaId       String?  @db.Uuid
   locationNodeId String? @db.Uuid
+  locationSource String? @default("USER_SELECTED")
+  locationAccuracy String?
   latitude     Float?
   longitude    Float?
   county       County?  @relation(fields: [countyId], references: [id], onDelete: SetNull)
@@ -232,6 +234,8 @@ model LocationNode {
   latitude    Float?
   longitude   Float?
   searchable Boolean  @default(true)
+  searchRadiusKm Float?
+  searchPriority Int      @default(0)
   source      String   @default("KEN_adm4.csv")
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
