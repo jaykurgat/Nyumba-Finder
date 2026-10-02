@@ -26,8 +26,6 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2, Trash2, Home } from "lucide-react"; // Added Home icon
 import type { Property } from "@/types/property";
 
-const kenyanLocations = ["Mombasa","Kwale","Kilifi","Hola","Lamu","Voi","Garissa","Wajir","Mandera","Marsabit","Isiolo","Meru","Kathwana","Embu","Kitui","Machakos","Wote","Ol Kalou","Nyeri","Kerugoya","Murang'a","Kiambu","Lodwar","Kapenguria","Maralal","Kitale","Eldoret","Iten","Kapsabet","Kabarnet","Nanyuki","Nakuru","Narok","Kajiado","Kericho","Bomet","Kakamega","Vihiga","Bungoma","Busia","Siaya","Kisumu","Homa Bay","Migori","Kisii","Nyamira","Nairobi"] as const;
-
 const amenitiesList = ["Parking", "Swimming Pool", "Gym", "Security", "Balcony", "Garden", "Internet Ready", "Servant Quarters", "Lift", "Water Included", "Beach Access", "Air Conditioning"] as const;
 
 const phoneRegex = new RegExp(
@@ -38,6 +36,7 @@ const formSchema = z.object({
   title: z.string().min(5, "Title must be at least 5 characters.").max(100, "Title cannot exceed 100 characters."),
   description: z.string().min(20, "Description must be at least 20 characters.").max(1000, "Description cannot exceed 1000 characters."),
   location: z.string().min(2, "Please specify a location."),
+  locationNodeId: z.string().min(1, "Please select a location from the suggestions."),
   propertyType: z.string().min(2, "Please select a property type."),
   price: z.coerce.number().positive("Price must be a positive number."),
   bedrooms: z.coerce.number().int().min(0, "Number of bedrooms cannot be negative."),
@@ -66,6 +65,9 @@ export default function ListPropertyPage() {
   const [isEditMode, setIsEditMode] = useState(false);
   const [propertyIdToEdit, setPropertyIdToEdit] = useState<string | null>(null);
   const [pageTitle, setPageTitle] = useState("List Your Property");
+  const [locationSuggestions, setLocationSuggestions] = useState<any[]>([]);
+  const [showLocationSuggestions, setShowLocationSuggestions] = useState(false);
+  const [locationSearching, setLocationSearching] = useState(false);
 
   const form = useForm<FormSchemaType>({
     resolver: zodResolver(formSchema),
@@ -73,6 +75,7 @@ export default function ListPropertyPage() {
       title: "",
       description: "",
       location: "",
+      locationNodeId: "",
       propertyType: "Apartment",
       price: "" as unknown as number, // Keep as empty string for controlled input
       bedrooms: "" as unknown as number,
@@ -108,6 +111,7 @@ export default function ListPropertyPage() {
             area: data.area === undefined || data.area === null ? ("" as unknown as number) : data.area,
             phoneNumber: data.phoneNumber || "",
             images: data.images || [],
+            locationNodeId: data.locationNodeId || "",
           });
         } catch (error) {
           console.error("Error fetching property to edit:", error);
@@ -130,6 +134,7 @@ export default function ListPropertyPage() {
              title: "",
              description: "",
              location: "",
+             locationNodeId: "",
              propertyType: "Apartment",
              price: "" as unknown as number,
              bedrooms: "" as unknown as number,
