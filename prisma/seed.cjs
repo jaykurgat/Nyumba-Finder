@@ -248,62 +248,91 @@ async function main() {
       create: county,
     });
   }
-  const countyCapitals = [
-    ["Mombasa","Mombasa"],["Kwale","Kwale"],["Kilifi","Kilifi"],["Tana River","Hola"],["Lamu","Lamu"],
-    ["Taita Taveta","Voi"],["Garissa","Garissa"],["Wajir","Wajir"],["Mandera","Mandera"],["Marsabit","Marsabit"],
-    ["Isiolo","Isiolo"],["Meru","Meru"],["Tharaka Nithi","Kathwana"],["Embu","Embu"],["Kitui","Kitui"],
-    ["Machakos","Machakos"],["Makueni","Wote"],["Nyandarua","Ol Kalou"],["Nyeri","Nyeri"],["Kirinyaga","Kerugoya"],
-    ["Murang'a","Murang'a"],["Kiambu","Kiambu"],["Turkana","Lodwar"],["West Pokot","Kapenguria"],["Samburu","Maralal"],
-    ["Trans Nzoia","Kitale"],["Uasin Gishu","Eldoret"],["Elgeyo Marakwet","Iten"],["Nandi","Kapsabet"],["Baringo","Kabarnet"],
-    ["Laikipia","Nanyuki"],["Nakuru","Nakuru"],["Narok","Narok"],["Kajiado","Kajiado"],["Kericho","Kericho"],
-    ["Bomet","Bomet"],["Kakamega","Kakamega"],["Vihiga","Vihiga"],["Bungoma","Bungoma"],["Busia","Busia"],
-    ["Siaya","Siaya"],["Kisumu","Kisumu"],["Homa Bay","Homa Bay"],["Migori","Migori"],["Kisii","Kisii"],
-    ["Nyamira","Nyamira"],["Nairobi City","Nairobi"]
-  ];
+  // User-facing rental geography: major towns/cities by county.
+  // The first town in each list is the county headquarters; additional entries are established major towns.
+  // Areas/estates/neighborhoods are intentionally left as landlord-entered local names.
+  const countyTowns = {
+    "Mombasa": ["Mombasa"],
+    "Kwale": ["Kwale", "Ukunda", "Msambweni", "Lunga Lunga"],
+    "Kilifi": ["Kilifi", "Malindi", "Mariakani", "Watamu", "Mtwapa"],
+    "Tana River": ["Hola", "Garsen", "Bura"],
+    "Lamu": ["Lamu", "Mpeketoni", "Hindi"],
+    "Taita Taveta": ["Voi", "Wundanyi", "Taveta", "Mwatate"],
+    "Garissa": ["Garissa", "Dadaab", "Masalani"],
+    "Wajir": ["Wajir", "Habaswein", "Buna", "Griftu"],
+    "Mandera": ["Mandera", "El Wak", "Rhamu", "Takaba"],
+    "Marsabit": ["Marsabit", "Moyale", "North Horr", "Laisamis"],
+    "Isiolo": ["Isiolo", "Merti", "Garbatulla"],
+    "Meru": ["Meru", "Maua", "Nkubu", "Timau", "Chuka"],
+    "Tharaka Nithi": ["Kathwana", "Chuka", "Marimanti", "Maara"],
+    "Embu": ["Embu", "Runyenjes", "Siakago", "Kiritiri"],
+    "Kitui": ["Kitui", "Mwingi", "Mutomo", "Kyuso"],
+    "Machakos": ["Machakos", "Athi River", "Mlolongo", "Kangundo", "Tala"],
+    "Makueni": ["Wote", "Kibwezi", "Makindu", "Mtito Andei", "Sultan Hamud"],
+    "Nyandarua": ["Ol Kalou", "Engineer", "Njabini", "Kinangop"],
+    "Nyeri": ["Nyeri", "Nanyuki", "Othaya", "Karatina", "Mukurwe-ini"],
+    "Kirinyaga": ["Kerugoya", "Kutus", "Wanguru", "Sagana"],
+    "Murang'a": ["Murang'a", "Kenol", "Maragua", "Kangema", "Kandara"],
+    "Kiambu": ["Kiambu", "Thika", "Ruiru", "Limuru", "Kikuyu", "Githunguri"],
+    "Turkana": ["Lodwar", "Kakuma", "Lokichar", "Lokichoggio"],
+    "West Pokot": ["Kapenguria", "Kitale", "Kacheliba", "Ortum"],
+    "Samburu": ["Maralal", "Baragoi", "Archers Post"],
+    "Trans Nzoia": ["Kitale", "Endebess", "Kiminini", "Kwanza"],
+    "Uasin Gishu": ["Eldoret", "Burnt Forest", "Moiben", "Kesses"],
+    "Elgeyo Marakwet": ["Iten", "Kapsowar", "Chebiemit", "Tambach"],
+    "Nandi": ["Kapsabet", "Nandi Hills", "Mosoriot", "Meteitei"],
+    "Baringo": ["Kabarnet", "Eldama Ravine", "Marigat", "Mogotio", "Kabartonjo"],
+    "Laikipia": ["Nanyuki", "Nyahururu", "Rumuruti", "Doldol"],
+    "Nakuru": ["Nakuru", "Naivasha", "Gilgil", "Molo", "Njoro", "Bahati"],
+    "Narok": ["Narok", "Kilgoris", "Suswa", "Ololulunga"],
+    "Kajiado": ["Kajiado", "Kitengela", "Ngong", "Ongata Rongai", "Loitokitok", "Namanga"],
+    "Kericho": ["Kericho", "Litein", "Londiani", "Kipkelion"],
+    "Bomet": ["Bomet", "Sotik", "Litein", "Longisa"],
+    "Kakamega": ["Kakamega", "Mumias", "Butere", "Malava", "Shinyalu"],
+    "Vihiga": ["Mbale", "Luanda", "Chavakali", "Majengo"],
+    "Bungoma": ["Bungoma", "Webuye", "Kimilili", "Chwele", "Sirisia"],
+    "Busia": ["Busia", "Malaba", "Nambale", "Funyula", "Port Victoria"],
+    "Siaya": ["Siaya", "Bondo", "Ukwala", "Ugunja", "Yala"],
+    "Kisumu": ["Kisumu", "Ahero", "Maseno", "Muhoroni", "Awasi"],
+    "Homa Bay": ["Homa Bay", "Mbita", "Oyugis", "Kendu Bay", "Ndhiwa"],
+    "Migori": ["Migori", "Rongo", "Kehancha", "Awendo", "Isebania"],
+    "Kisii": ["Kisii", "Ogembo", "Keroka", "Suneka"],
+    "Nyamira": ["Nyamira", "Keroka", "Nyansiongo", "Manga"],
+    "Nairobi City": ["Nairobi"]
+  };
 
-  for (const county of counties) {
-    const dbCounty = await prisma.county.findUnique({ where: { name: county.name } });
-    if (!dbCounty) continue;
-    await prisma.locationNode.upsert({
-      where: { countyId_level_slug_parentId: {
-        countyId: dbCounty.id, level: 'COUNTY', slug: county.slug, parentId: null
-      } },
-      update: { name: county.name, source: 'NyumbaFinder county master', searchRadiusKm: 35, searchPriority: 100 },
-      create: {
-        countyId: dbCounty.id, level: 'COUNTY', name: county.name, slug: county.slug,
-        source: 'NyumbaFinder county master', searchRadiusKm: 35, searchPriority: 100
-      }
-    });
-  }
-
-  for (const [countyName, townName] of countyCapitals) {
+  for (const [countyName, townNames] of Object.entries(countyTowns)) {
     const county = await prisma.county.findUnique({ where: { name: countyName } });
     if (!county) continue;
-    await prisma.locationNode.upsert({
-      where: {
-        countyId_level_slug_parentId: {
+
+    for (const townName of townNames) {
+      const slug = townName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+      await prisma.locationNode.upsert({
+        where: {
+          countyId_level_slug_parentId: {
+            countyId: county.id,
+            level: "TOWN",
+            slug,
+            parentId: null
+          }
+        },
+        update: {
+          name: townName,
+          source: "NyumbaFinder major-town master",
+          searchRadiusKm: townName === townNames[0] ? 20 : 12,
+          searchPriority: townName === townNames[0] ? 400 : 300
+        },
+        create: {
           countyId: county.id,
           level: "TOWN",
-          slug: townName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""),
-          parentId: null
+          name: townName,
+          slug,
+          source: "NyumbaFinder major-town master",
+          searchRadiusKm: townName === townNames[0] ? 20 : 12,
+          searchPriority: townName === townNames[0] ? 400 : 300
         }
-      },
-      update: {
-        name: townName,
-        source: "NyumbaFinder county-capital master",
-        searchRadiusKm: 15,
-        searchPriority: 300
-      },
-      create: {
-        countyId: county.id,
-        level: "TOWN",
-        name: townName,
-        slug: townName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""),
-        source: "NyumbaFinder county-capital master",
-        searchRadiusKm: 15,
-        searchPriority: 300
-      }
-    });
+      });
+    }
   }
 
   // Import the supplied Kenyan administrative location master.
