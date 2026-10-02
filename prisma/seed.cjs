@@ -261,6 +261,21 @@ async function main() {
     ["Nyamira","Nyamira"],["Nairobi City","Nairobi"]
   ];
 
+  for (const county of counties) {
+    const dbCounty = await prisma.county.findUnique({ where: { name: county.name } });
+    if (!dbCounty) continue;
+    await prisma.locationNode.upsert({
+      where: { countyId_level_slug_parentId: {
+        countyId: dbCounty.id, level: 'COUNTY', slug: county.slug, parentId: null
+      } },
+      update: { name: county.name, source: 'NyumbaFinder county master', searchRadiusKm: 35, searchPriority: 100 },
+      create: {
+        countyId: dbCounty.id, level: 'COUNTY', name: county.name, slug: county.slug,
+        source: 'NyumbaFinder county master', searchRadiusKm: 35, searchPriority: 100
+      }
+    });
+  }
+
   for (const [countyName, townName] of countyCapitals) {
     const county = await prisma.county.findUnique({ where: { name: countyName } });
     if (!county) continue;
@@ -275,14 +290,18 @@ async function main() {
       },
       update: {
         name: townName,
-        source: "NyumbaFinder county-capital master"
+        source: "NyumbaFinder county-capital master",
+        searchRadiusKm: 15,
+        searchPriority: 300
       },
       create: {
         countyId: county.id,
         level: "TOWN",
         name: townName,
         slug: townName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""),
-        source: "NyumbaFinder county-capital master"
+        source: "NyumbaFinder county-capital master",
+        searchRadiusKm: 15,
+        searchPriority: 300
       }
     });
   }
