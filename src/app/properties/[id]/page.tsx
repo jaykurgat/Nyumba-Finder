@@ -2,6 +2,7 @@
 "use client";
 
 import { PropertyImage } from '@/components/properties/PropertyImage';
+import { InteractiveLocationMap } from '@/components/properties/InteractiveLocationMap';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import type { Property } from '@/types/property';
@@ -299,10 +300,18 @@ export default function PropertyDetailPage({ params: paramsProp }: { params: Pro
                <CardTitle className="text-xl">Location</CardTitle>
              </CardHeader>
              <CardContent>
-               <div className="h-60 bg-muted rounded-md flex items-center justify-center text-muted-foreground" data-ai-hint="map location">
-                 Map Placeholder
-               </div>
-                <p className="mt-2 text-sm text-center text-muted-foreground">{property.location}</p>
+               {property.latitude != null && property.longitude != null ? (
+                 <InteractiveLocationMap
+                   value={{ lat: property.latitude, lng: property.longitude }}
+                   interactive={false}
+                   heightClassName="h-60"
+                 />
+               ) : (
+                 <div className="h-60 rounded-xl bg-muted flex items-center justify-center text-sm text-muted-foreground">
+                   Map location not available for this listing.
+                 </div>
+               )}
+               <p className="mt-2 text-sm text-center text-muted-foreground">{property.location}</p>
              </CardContent>
            </Card>
         </div>
