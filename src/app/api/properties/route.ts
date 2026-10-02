@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
     const minBathroomsParam = searchParams.get('minBathrooms');
     const minBathrooms = minBathroomsParam && minBathroomsParam !== 'all' ? getOptionalNumber(minBathroomsParam) : undefined;
     const selectedAmenities = searchParams.getAll('amenities');
-    const locationContext = resolveLocationContext(searchParams.get('location')?.trim() || '');
+    const locationContext = await resolveLocationContext(searchParams.get('location')?.trim() || '', prisma);
     const radiusKm = Math.max(1, Math.min(100, getOptionalNumber(searchParams.get('radiusKm')) ?? 25));
 
     const rows = await prisma.property.findMany({
