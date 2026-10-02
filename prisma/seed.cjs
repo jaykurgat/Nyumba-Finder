@@ -340,6 +340,40 @@ async function main() {
     }
   }
 
+  // Nairobi rental-market area suggestions. These are user-facing place names, not
+  // administrative boundaries. Landlords can still enter any local name not listed here.
+  const nairobiAreaNames = [
+    "Nairobi Central", "Ngara", "Pangani", "Parklands", "Highridge", "Kitisuru", "Karura", "Kangemi", "Mountain View",
+    "Westlands", "Riverside", "Brookside", "Loresho", "Gigiri", "Runda", "Muthaiga", "Spring Valley", "Kileleshwa",
+    "Kilimani", "Lavington", "Hurlingham", "Upper Hill", "Haughton", "Kawangware", "Gatina", "Kabiro", "Dagoretti Corner",
+    "Riruta", "Ngando", "Uthiru", "Waithaka", "Mutuini", "Karen", "Lang'ata", "Nairobi West", "South C", "South B",
+    "Mugumo-ini", "Nyayo Highrise", "Imara Daima", "Pipeline", "Kware", "Kwa Njenga", "Kwa Reuben", "Embakasi", "Utawala",
+    "Mihang'o", "Upper Savanna", "Lower Savanna", "Umoja", "Umoja I", "Umoja II", "Kayole", "Komarock", "Matopeni", "Mowlem",
+    "Dandora", "Dandora Phase 1", "Dandora Phase 2", "Dandora Phase 3", "Dandora Phase 4", "Kariobangi", "Kariobangi North", "Kariobangi South",
+    "Buruburu", "Jericho", "Kaloleni", "Makongeni", "Maringo", "Harambee", "Viwandani", "Industrial Area", "Muthurwa", "Shauri Moyo",
+    "Eastleigh", "Pumwani", "California", "Kasarani", "Mwiki", "Clay City", "Njiru", "Ruai", "Roysambu", "Zimmerman", "Kahawa West",
+    "Githurai", "Kahawa Sukari", "Babadogo", "Utalii", "Mathare North", "Lucky Summer", "Korogocho", "Huruma", "Mabatini", "Ngei",
+    "Mlango Kubwa", "Laini Saba", "Lindi", "Makina", "Woodley", "Adams Arcade", "Jamhuri", "Yaya", "Valley Arcade", "Hurlingham Estate"
+  ];
+  const nairobiCounty = await prisma.county.findUnique({ where: { name: "Nairobi City" } });
+  const nairobiTown = nairobiCounty
+    ? await prisma.locationNode.findFirst({ where: { countyId: nairobiCounty.id, level: "TOWN", slug: "nairobi", parentId: null } })
+    : null;
+  if (nairobiCounty && nairobiTown) {
+    for (const areaName of nairobiAreaNames) {
+      const slug = areaName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+      const existingArea = await prisma.locationNode.findFirst({
+        where: { countyId: nairobiCounty.id, level: "AREA", slug, parentId: nairobiTown.id }
+      });
+      const areaData = { name: areaName, source: "NyumbaFinder Nairobi rental-area master", searchable: true, searchRadiusKm: 5, searchPriority: 200 };
+      if (existingArea) {
+        await prisma.locationNode.update({ where: { id: existingArea.id }, data: areaData });
+      } else {
+        await prisma.locationNode.create({ data: { countyId: nairobiCounty.id, parentId: nairobiTown.id, level: "AREA", slug, ...areaData } });
+      }
+    }
+  }
+
   // Import the supplied Kenyan administrative location master.
   // NAME_3 is represented as an administrative unit and NAME_4 as its child location.
   // This is deliberately separate from rental-market towns/estates, which will be layered on later.
