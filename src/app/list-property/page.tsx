@@ -455,7 +455,7 @@ export default function ListPropertyPage() {
                     <div className="space-y-5">
                       <FormField control={form.control} name="countyId" render={({ field }) => (
                         <FormItem>
-                          <FormLabel>County <span className="text-primary">*</span></FormLabel>
+                          <FormLabel className="text-foreground">County <span className="text-primary">*</span></FormLabel>
                           <select
                             value={field.value}
                             disabled={countiesLoading || !!countiesError}
@@ -513,7 +513,7 @@ export default function ListPropertyPage() {
 
                         <FormField control={form.control} name="location" render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Area / Estate / Neighborhood <span className="text-primary">*</span></FormLabel>
+                            <FormLabel className="text-foreground">Area / Estate / Neighborhood <span className="text-primary">*</span></FormLabel>
                             <FormControl>
                               <Input
                                 list="property-area-suggestions"
