@@ -484,13 +484,7 @@ export default function ListPropertyPage() {
                         </FormItem>
                       )} />
 
-                      <div className="grid gap-5 md:grid-cols-3">
-                        <div className="space-y-2">
-                          <FormLabel>County</FormLabel>
-                          <p className="text-xs text-muted-foreground">Select the county where the property is located.</p>
-                        </div>
-
-                        <div className="space-y-2">
+                      <div className="grid gap-5 md:grid-cols-3"><div className="space-y-2">
                           <FormLabel>Administrative Unit</FormLabel>
                           <select
                             value={selectedAdminUnitId}
