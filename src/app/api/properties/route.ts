@@ -74,6 +74,7 @@ export async function GET(request: NextRequest) {
         } : {}),
       },
       include: {
+        county: { select: { name: true } },
         propertyImages: { select: { id: true }, orderBy: { createdAt: 'asc' } },
         promotions: {
           where: {
@@ -105,7 +106,7 @@ export async function GET(request: NextRequest) {
       const relevance =
         (generalQueryTerm && row.title.toLowerCase().includes(generalQueryTerm) ? 100 : 0) +
         (generalQueryTerm && row.location.toLowerCase().includes(generalQueryTerm) ? 60 : 0) +
-        locationRelevanceScore(row.location, locationContext) +
+        locationRelevanceScore(row.location + (row.county?.name ? ' ' + row.county.name : ''), locationContext) +
         (withinRadius ? 800 + Math.max(0, 200 - distance! * 8) : 0) +
         (distance != null && !withinRadius ? Math.max(0, 120 - distance) : 0);
 
