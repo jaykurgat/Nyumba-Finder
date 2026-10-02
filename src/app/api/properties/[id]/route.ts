@@ -20,6 +20,8 @@ const toProperty = (data: any): Property => ({
   id: data.id, title: data.title, description: data.description, location: data.location,
   locationNodeId: data.locationNodeId ?? undefined,
   countyId: data.countyId ?? undefined,
+  locationSource: data.locationSource ?? undefined,
+  locationAccuracy: data.locationAccuracy ?? undefined,
   countyName: data.county?.name ?? undefined,
   price: data.price, images: data.images, bedrooms: data.bedrooms, bathrooms: data.bathrooms,
   area: data.area ?? undefined, amenities: data.amenities, phoneNumber: data.phoneNumber ?? undefined,
