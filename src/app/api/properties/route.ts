@@ -207,6 +207,7 @@ export async function POST(request: NextRequest) {
     }
 
     const result = await prisma.$transaction(async (tx) => {
+      const requestedCountyId = getOptionalString(rawData.countyId);
       const requestedLocationNodeId = getOptionalString(rawData.locationNodeId);
       const matchedNode = requestedLocationNodeId
         ? await tx.locationNode.findFirst({ where: { id: requestedLocationNodeId, searchable: true } })
@@ -217,6 +218,9 @@ export async function POST(request: NextRequest) {
       if (!matchedNode) {
         throw new Error('Please select a valid location from the location suggestions.');
       }
+      if (requestedCountyId && matchedNode.countyId !== requestedCountyId) {
+        throw new Error('The selected location does not belong to the selected county.');
+      }
       const latitude = getOptionalNumber(rawData.latitude) ?? matchedNode.latitude ?? undefined;
       const longitude = getOptionalNumber(rawData.longitude) ?? matchedNode.longitude ?? undefined;
       const countyId = matchedNode.countyId;
@@ -226,7 +230,9 @@ export async function POST(request: NextRequest) {
           latitude,
           longitude,
           countyId,
-          locationNodeId: matchedNode?.id,
+          locationNodeId: matchedNode.id,
+          locationSource: getOptionalString(rawData.locationSource) ?? 'USER_SELECTED',
+          locationAccuracy: getOptionalNumber(rawData.latitude) != null && getOptionalNumber(rawData.longitude) != null ? 'PROPERTY_PIN' : (matchedNode.latitude != null && matchedNode.longitude != null ? 'LOCATION_NODE' : 'AREA_ONLY'),
         },
       });
 
