@@ -6,6 +6,8 @@ export interface Property {
   locationNodeId?: string;
   countyId?: string;
   countyName?: string;
+  locationSource?: string;
+  locationAccuracy?: string;
   price: number;
   images: string[];
   bedrooms: number;
