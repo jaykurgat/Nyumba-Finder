@@ -547,7 +547,7 @@ export default function ListPropertyPage() {
                             </div>
                             <div>
                               <p className="text-sm font-medium">Property map location <span className="font-normal text-muted-foreground">(Optional)</span></p>
-                              <p className="mt-1 text-xs leading-5 text-muted-foreground">Place the pin where the property is located. You can use your current location or move the pin manually. Your exact pin is not shown publicly as a precise address.</p>
+                              <p className="mt-1 text-xs leading-5 text-muted-foreground">Place the pin where the property is located. You can use your current location or move the pin manually. The map location helps tenants find the property in the right area.</p>
                             </div>
                           </div>
                           <Button
