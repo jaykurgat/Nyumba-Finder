@@ -37,7 +37,7 @@ const formSchema = z.object({
   description: z.string().min(20, "Description must be at least 20 characters.").max(1000, "Description cannot exceed 1000 characters."),
   countyId: z.string().min(1, "Please select a county."),
   location: z.string().min(2, "Please specify a location."),
-  locationNodeId: z.string().min(1, "Please select a location or county from the suggestions."),
+  locationNodeId: z.string().min(1, "Please select a Town / City."),
   propertyType: z.string().min(2, "Please select a property type."),
   price: z.coerce.number().positive("Price must be a positive number."),
   bedrooms: z.coerce.number().int().min(0, "Number of bedrooms cannot be negative."),
@@ -455,7 +455,7 @@ export default function ListPropertyPage() {
                     <div className="space-y-5">
                       <FormField control={form.control} name="countyId" render={({ field }) => (
                         <FormItem>
-                          <FormLabel>County</FormLabel>
+                          <FormLabel>County <span className="text-primary">*</span></FormLabel>
                           <select
                             value={field.value}
                             disabled={countiesLoading || !!countiesError}
@@ -481,7 +481,7 @@ export default function ListPropertyPage() {
 
                       <div className="grid gap-5 md:grid-cols-2">
                         <div className="space-y-2">
-                          <FormLabel>Town / City</FormLabel>
+                          <FormLabel>Town / City <span className="text-primary">*</span></FormLabel>
                           <select
                             value={selectedTownId}
                             disabled={!watchedCountyId || townsLoading}
@@ -504,11 +504,16 @@ export default function ListPropertyPage() {
                             ))}
                           </select>
                           <p className="text-xs text-muted-foreground">Choose the town or city where the property is located.</p>
+                          {form.formState.errors.locationNodeId && (
+                            <p className="text-xs text-primary">
+                              {form.formState.errors.locationNodeId.message}
+                            </p>
+                          )}
                         </div>
 
                         <FormField control={form.control} name="location" render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Area / Estate / Neighborhood</FormLabel>
+                            <FormLabel>Area / Estate / Neighborhood <span className="text-primary">*</span></FormLabel>
                             <FormControl>
                               <Input
                                 list="property-area-suggestions"
@@ -539,7 +544,6 @@ export default function ListPropertyPage() {
                     </div>
                   </div>
 
-                  <FormField control={form.control} name="locationNodeId" render={() => <FormItem><FormMessage /></FormItem>} />
 
                   <FormField
                     control={form.control}
