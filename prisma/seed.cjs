@@ -248,7 +248,50 @@ async function main() {
       create: county,
     });
   }
-  console.log(`Seeded ${counties.length} Kenyan counties.`);
+  const countyCapitals = [
+    ["Mombasa","Mombasa"],["Kwale","Kwale"],["Kilifi","Kilifi"],["Tana River","Hola"],["Lamu","Lamu"],
+    ["Taita Taveta","Voi"],["Garissa","Garissa"],["Wajir","Wajir"],["Mandera","Mandera"],["Marsabit","Marsabit"],
+    ["Isiolo","Isiolo"],["Meru","Meru"],["Tharaka Nithi","Kathwana"],["Embu","Embu"],["Kitui","Kitui"],
+    ["Machakos","Machakos"],["Makueni","Wote"],["Nyandarua","Ol Kalou"],["Nyeri","Nyeri"],["Kirinyaga","Kerugoya"],
+    ["Murang'a","Murang'a"],["Kiambu","Kiambu"],["Turkana","Lodwar"],["West Pokot","Kapenguria"],["Samburu","Maralal"],
+    ["Trans Nzoia","Kitale"],["Uasin Gishu","Eldoret"],["Elgeyo Marakwet","Iten"],["Nandi","Kapsabet"],["Baringo","Kabarnet"],
+    ["Laikipia","Nanyuki"],["Nakuru","Nakuru"],["Narok","Narok"],["Kajiado","Kajiado"],["Kericho","Kericho"],
+    ["Bomet","Bomet"],["Kakamega","Kakamega"],["Vihiga","Vihiga"],["Bungoma","Bungoma"],["Busia","Busia"],
+    ["Siaya","Siaya"],["Kisumu","Kisumu"],["Homa Bay","Homa Bay"],["Migori","Migori"],["Kisii","Kisii"],
+    ["Nyamira","Nyamira"],["Nairobi City","Nairobi"]
+  ];
+
+  for (const [countyName, townName] of countyCapitals) {
+    const county = await prisma.county.findUnique({ where: { name: countyName } });
+    if (!county) continue;
+    await prisma.locationNode.upsert({
+      where: {
+        countyId_level_slug_parentId: {
+          countyId: county.id,
+          level: "TOWN",
+          slug: townName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""),
+          parentId: null
+        }
+      },
+      update: {
+        name: townName,
+        latitude: townName === "Kapsabet" ? 0.20387 : undefined,
+        longitude: townName === "Kapsabet" ? 35.105 : undefined,
+        source: "NyumbaFinder county-capital master"
+      },
+      create: {
+        countyId: county.id,
+        level: "TOWN",
+        name: townName,
+        slug: townName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""),
+        latitude: townName === "Kapsabet" ? 0.20387 : null,
+        longitude: townName === "Kapsabet" ? 35.105 : null,
+        source: "NyumbaFinder county-capital master"
+      }
+    });
+  }
+
+  console.log(`Seeded ${counties.length} Kenyan counties and county-capital location nodes.`);
 }
 
 main().catch((error) => {
