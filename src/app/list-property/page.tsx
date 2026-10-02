@@ -70,6 +70,8 @@ export default function ListPropertyPage() {
   const [showLocationSuggestions, setShowLocationSuggestions] = useState(false);
   const [locationSearching, setLocationSearching] = useState(false);
   const [counties, setCounties] = useState<any[]>([]);
+  const [countiesLoading, setCountiesLoading] = useState(true);
+  const [countiesError, setCountiesError] = useState<string | null>(null);
   const [selectedTownId, setSelectedTownId] = useState("");
   const [townSuggestions, setTownSuggestions] = useState<any[]>([]);
   const [townSearching, setTownSearching] = useState(false);
@@ -101,10 +103,38 @@ export default function ListPropertyPage() {
   const watchedCountyId = form.watch('countyId');
 
   useEffect(() => {
-    fetch('/api/counties')
-      .then((response) => response.json())
-      .then((data) => setCounties(data.counties || []))
-      .catch(() => setCounties([]));
+    let cancelled = false;
+
+    async function loadCounties() {
+      setCountiesLoading(true);
+      setCountiesError(null);
+
+      try {
+        const response = await fetch('/api/counties', { cache: 'no-store' });
+        const data = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+          throw new Error(data.message || 'County request failed (' + response.status + ')');
+        }
+
+        if (!Array.isArray(data.counties)) {
+          throw new Error('County API returned an invalid response.');
+        }
+
+        if (!cancelled) setCounties(data.counties);
+      } catch (error) {
+        console.error('Failed to load counties:', error);
+        if (!cancelled) {
+          setCounties([]);
+          setCountiesError(error instanceof Error ? error.message : 'Could not load counties.');
+        }
+      } finally {
+        if (!cancelled) setCountiesLoading(false);
+      }
+    }
+
+    loadCounties();
+    return () => { cancelled = true; };
   }, []);
 
   useEffect(() => {
@@ -392,6 +422,7 @@ export default function ListPropertyPage() {
                           <FormLabel>County</FormLabel>
                           <select
                             value={field.value}
+                            disabled={countiesLoading || !!countiesError}
                             onChange={(event) => {
                               const value = event.target.value;
                               field.onChange(value);
@@ -403,9 +434,11 @@ export default function ListPropertyPage() {
                             }}
                             className="flex h-11 w-full rounded-xl border bg-background px-3 text-sm outline-none transition focus:ring-2 focus:ring-primary/20"
                           >
-                            <option value="">Select a county</option>
+                            <option value="">{countiesLoading ? 'Loading counties...' : countiesError ? 'Unable to load counties' : 'Select a county'}</option>
                             {counties.map((county) => <option key={county.id} value={county.id}>{county.name}</option>)}
                           </select>
+                          {countiesError && <p className="text-xs text-destructive">{countiesError}</p>}
+                          {!countiesLoading && !countiesError && counties.length === 0 && <p className="text-xs text-destructive">No counties were returned by the server.</p>}
                           <FormMessage />
                         </FormItem>
                       )} />
