@@ -508,14 +508,11 @@ export default function ListPropertyPage() {
                           <FormItem>
                             <FormLabel>Area / Estate / Neighborhood</FormLabel>
                             <FormControl>
-                              {areas.length > 0 ? (
+                              {areas.length > 0 && !field.value ? (
                                 <select
-                                  value={areas.some((area) => area.name === field.value) ? field.value : field.value ? '__OTHER__' : ''}
+                                  value=""
                                   disabled={!selectedTownId || areasLoading}
-                                  onChange={(event) => {
-                                    const value = event.target.value;
-                                    field.onChange(value === '__OTHER__' ? '' : value);
-                                  }}
+                                  onChange={(event) => field.onChange(event.target.value)}
                                   className="flex h-11 w-full rounded-xl border bg-background px-3 text-sm outline-none transition focus:ring-2 focus:ring-primary/20"
                                 >
                                   <option value="">{areasLoading ? 'Loading areas...' : 'Select an area, estate or neighborhood'}</option>
@@ -526,14 +523,12 @@ export default function ListPropertyPage() {
                                 </select>
                               ) : (
                                 <Input
-                                  placeholder={areasLoading ? "Loading area suggestions..." : "e.g., Kilimani, Kapsoya, Milimani"}
-                                  value={field.value}
+                                  placeholder="Enter area, estate or neighborhood"
+                                  value={field.value === '__OTHER__' ? '' : field.value}
                                   disabled={!selectedTownId}
                                   onChange={(event) => field.onChange(event.target.value)}
                                 />
-                              )}
-                            </FormControl>
-                            {areas.length > 0 && field.value === '' && null}
+                              )}                            </FormControl>
                             <FormDescription>
                               {areas.length > 0
                                 ? 'Select a known local area, estate or neighborhood, or choose Other to enter a different name.'
