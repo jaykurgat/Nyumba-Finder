@@ -328,12 +328,18 @@ export default function ListPropertyPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-3xl">
-      <Card>
-          <CardHeader>
-             <CardTitle className="text-3xl font-bold text-center">{pageTitle}</CardTitle>
+    <div className="min-h-screen bg-muted/20">
+      <div className="container mx-auto max-w-4xl px-4 py-8 md:py-12">
+        <div className="mb-8 max-w-2xl">
+          <p className="mb-2 text-sm font-medium text-primary">NyumbaFinder</p>
+          <h1 className="text-3xl font-semibold tracking-tight md:text-4xl">{pageTitle}</h1>
+          <p className="mt-2 text-sm leading-6 text-muted-foreground md:text-base">Add the details tenants need to discover and compare your property. We’ll use the location you choose to make it easier to find in relevant searches.</p>
+        </div>
+        <Card className="overflow-hidden rounded-3xl border bg-background shadow-sm">
+          <CardHeader className="border-b bg-background px-5 py-5 md:px-7">
+            <CardTitle className="text-base font-semibold">Property information</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-5 py-6 md:px-7 md:py-8">
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6" suppressHydrationWarning>
                   <FormField
@@ -698,7 +704,8 @@ export default function ListPropertyPage() {
                 </form>
               </Form>
           </CardContent>
-      </Card>
+        </Card>
+      </div>
     </div>
   );
 }
