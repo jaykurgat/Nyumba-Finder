@@ -72,10 +72,11 @@ export default function ListPropertyPage() {
   const [counties, setCounties] = useState<any[]>([]);
   const [countiesLoading, setCountiesLoading] = useState(true);
   const [countiesError, setCountiesError] = useState<string | null>(null);
-  const [selectedTownId, setSelectedTownId] = useState("");
-  const [townSuggestions, setTownSuggestions] = useState<any[]>([]);
-  const [townSearching, setTownSearching] = useState(false);
-  const [showTownSuggestions, setShowTownSuggestions] = useState(false);
+  const [selectedAdminUnitId, setSelectedAdminUnitId] = useState("");
+  const [adminUnits, setAdminUnits] = useState<any[]>([]);
+  const [adminUnitsLoading, setAdminUnitsLoading] = useState(false);
+  const [adminLocations, setAdminLocations] = useState<any[]>([]);
+  const [adminLocationsLoading, setAdminLocationsLoading] = useState(false);
   const [mapPosition, setMapPosition] = useState<{ lat: number; lng: number } | null>(null);
   const [locationSource, setLocationSource] = useState<"USER_SELECTED" | "BROWSER_GEOLOCATION">("USER_SELECTED");
 
@@ -138,30 +139,70 @@ export default function ListPropertyPage() {
   }, []);
 
   useEffect(() => {
-    const query = watchedLocation?.trim() || '';
-    if (query.length < 2) {
-      setLocationSuggestions([]);
-      setShowLocationSuggestions(false);
+    if (!watchedCountyId) {
+      setAdminUnits([]);
+      setSelectedAdminUnitId("");
+      setAdminLocations([]);
       return;
     }
-    const timer = window.setTimeout(async () => {
-      setLocationSearching(true);
-      try {
-        const params = new URLSearchParams({ q: query });
-        if (watchedCountyId) params.set('countyId', watchedCountyId);
-        if (selectedTownId) params.set('parentId', selectedTownId);
-        const response = await fetch('/api/locations?' + params.toString());
-        const data = await response.json();
-        setLocationSuggestions(data.locations || []);
-        setShowLocationSuggestions(true);
-      } catch {
-        setLocationSuggestions([]);
-      } finally {
-        setLocationSearching(false);
-      }
-    }, 250);
-    return () => window.clearTimeout(timer);
-  }, [watchedLocation, watchedCountyId, selectedTownId]);
+
+    let cancelled = false;
+    setAdminUnitsLoading(true);
+
+    fetch('/api/locations?' + new URLSearchParams({
+      countyId: watchedCountyId,
+      level: 'ADMIN_UNIT',
+    }).toString(), { cache: 'no-store' })
+      .then(async (response) => {
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.message || 'Failed to load administrative units.');
+        return data;
+      })
+      .then((data) => {
+        if (!cancelled) setAdminUnits(Array.isArray(data.locations) ? data.locations : []);
+      })
+      .catch((error) => {
+        console.error('Failed to load administrative units:', error);
+        if (!cancelled) setAdminUnits([]);
+      })
+      .finally(() => {
+        if (!cancelled) setAdminUnitsLoading(false);
+      });
+
+    return () => { cancelled = true; };
+  }, [watchedCountyId]);
+
+  useEffect(() => {
+    if (!selectedAdminUnitId) {
+      setAdminLocations([]);
+      return;
+    }
+
+    let cancelled = false;
+    setAdminLocationsLoading(true);
+
+    fetch('/api/locations?' + new URLSearchParams({
+      parentId: selectedAdminUnitId,
+      level: 'ADMIN_LOCATION',
+    }).toString(), { cache: 'no-store' })
+      .then(async (response) => {
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.message || 'Failed to load administrative locations.');
+        return data;
+      })
+      .then((data) => {
+        if (!cancelled) setAdminLocations(Array.isArray(data.locations) ? data.locations : []);
+      })
+      .catch((error) => {
+        console.error('Failed to load administrative locations:', error);
+        if (!cancelled) setAdminLocations([]);
+      })
+      .finally(() => {
+        if (!cancelled) setAdminLocationsLoading(false);
+      });
+
+    return () => { cancelled = true; };
+  }, [selectedAdminUnitId]);
 
   useEffect(() => {
     const editId = searchParamsHook.get('edit');
@@ -426,8 +467,8 @@ export default function ListPropertyPage() {
                             onChange={(event) => {
                               const value = event.target.value;
                               field.onChange(value);
-                              setSelectedTownId("");
-                              setTownSuggestions([]);
+                              setSelectedAdminUnitId("");
+                              setAdminUnits([]);
                               form.setValue('location', '', { shouldValidate: true, shouldDirty: true });
                               form.setValue('locationNodeId', '', { shouldValidate: true, shouldDirty: true });
                               setMapPosition(null);
@@ -443,65 +484,59 @@ export default function ListPropertyPage() {
                         </FormItem>
                       )} />
 
-                      <div className="grid gap-5 md:grid-cols-2">
+                      <div className="grid gap-5 md:grid-cols-3">
                         <div className="space-y-2">
-                          <FormLabel>Town / City <span className="font-normal text-muted-foreground">(Optional)</span></FormLabel>
-                          <div className="relative">
-                            <Search className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                            <Input
-                              value={townSuggestions.find((town) => town.id === selectedTownId)?.name || ""}
-                              disabled={!watchedCountyId}
-                              placeholder={watchedCountyId ? "Search a town or city" : "Select a county first"}
-                              className="h-11 rounded-xl pl-9 pr-9"
-                              autoComplete="off"
-                              onChange={(event) => {
-                                setSelectedTownId("");
-                                const query = event.target.value.trim();
-                                if (!watchedCountyId || query.length < 2) { setTownSuggestions([]); setShowTownSuggestions(false); return; }
-                                setTownSearching(true);
-                                fetch('/api/locations?' + new URLSearchParams({ q: query, countyId: watchedCountyId, level: 'TOWN' }).toString())
-                                  .then((response) => response.json()).then((data) => { setTownSuggestions(data.locations || []); setShowTownSuggestions(true); }).catch(() => setTownSuggestions([])).finally(() => setTownSearching(false));
-                              }}
-                              onFocus={() => townSuggestions.length > 0 && setShowTownSuggestions(true)}
-                            />
-                            {selectedTownId && <button type="button" onClick={() => { setSelectedTownId(""); setTownSuggestions([]); }} className="absolute right-3 top-3 text-muted-foreground hover:text-foreground" aria-label="Clear town"><X className="h-4 w-4" /></button>}
-                            {showTownSuggestions && (
-                              <div className="absolute z-30 mt-2 w-full overflow-hidden rounded-xl border bg-background shadow-xl">
-                                {townSearching && <div className="px-4 py-3 text-sm text-muted-foreground">Searching...</div>}
-                                {!townSearching && townSuggestions.map((town) => <button key={town.id} type="button" onMouseDown={(event) => event.preventDefault()} onClick={() => { setSelectedTownId(town.id); setShowTownSuggestions(false); form.setValue('location', '', { shouldValidate: true }); form.setValue('locationNodeId', '', { shouldValidate: true }); }} className="block w-full border-b px-4 py-3 text-left last:border-0 hover:bg-muted/60"><span className="block font-medium">{town.name}</span><span className="text-xs text-muted-foreground">{town.typeLabel} · {town.countyName}</span></button>)}
-                              </div>
-                            )}
-                          </div>
-                          <p className="text-xs text-muted-foreground">Optional. It only narrows the locality suggestions.</p>
+                          <FormLabel>County</FormLabel>
+                          <p className="text-xs text-muted-foreground">Select the county where the property is located.</p>
+                        </div>
+
+                        <div className="space-y-2">
+                          <FormLabel>Administrative Unit</FormLabel>
+                          <select
+                            value={selectedAdminUnitId}
+                            disabled={!watchedCountyId || adminUnitsLoading}
+                            onChange={(event) => {
+                              const value = event.target.value;
+                              setSelectedAdminUnitId(value);
+                              form.setValue('location', '', { shouldValidate: true, shouldDirty: true });
+                              form.setValue('locationNodeId', '', { shouldValidate: true, shouldDirty: true });
+                              setMapPosition(null);
+                            }}
+                            className="flex h-11 w-full rounded-xl border bg-background px-3 text-sm outline-none transition focus:ring-2 focus:ring-primary/20"
+                          >
+                            <option value="">{!watchedCountyId ? 'Select county first' : adminUnitsLoading ? 'Loading...' : 'Select an administrative unit'}</option>
+                            {adminUnits.map((unit) => (
+                              <option key={unit.id} value={unit.id}>{unit.name}</option>
+                            ))}
+                          </select>
                         </div>
 
                         <FormField control={form.control} name="location" render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Area / Locality</FormLabel>
-                            <div className="relative">
-                              <FormControl><Input placeholder={watchedCountyId ? "Kileleshwa, South B, Kapsoya..." : "Select a county first"} {...field} disabled={!watchedCountyId} autoComplete="off" className="h-11 rounded-xl" onFocus={() => locationSuggestions.length > 0 && setShowLocationSuggestions(true)} onChange={(event) => { field.onChange(event); form.setValue('locationNodeId', '', { shouldValidate: true }); }} /></FormControl>
-                              {showLocationSuggestions && (
-                                <div className="absolute z-20 mt-2 w-full overflow-hidden rounded-xl border bg-background shadow-xl">
-                                  {locationSearching && <div className="px-4 py-3 text-sm text-muted-foreground">Searching recognized locations...</div>}
-                                  {!locationSearching && locationSuggestions.length === 0 && <div className="px-4 py-4"><p className="text-sm font-medium">No exact locality found</p><p className="mt-1 text-xs text-muted-foreground">You can use the county as the listing location or choose a nearby recognized location.</p></div>}
-                                  {!locationSearching && locationSuggestions.map((location) => <button key={location.id} type="button" className="block w-full border-b px-4 py-3 text-left last:border-0 hover:bg-muted/60" onMouseDown={(event) => event.preventDefault()} onClick={() => { form.setValue('location', location.name, { shouldValidate: true, shouldDirty: true }); form.setValue('locationNodeId', location.id, { shouldValidate: true, shouldDirty: true }); setMapPosition(location.latitude != null && location.longitude != null ? { lat: location.latitude, lng: location.longitude } : null); setLocationSource("USER_SELECTED"); setShowLocationSuggestions(false); }}><span className="block font-medium">{location.name}</span><span className="mt-0.5 block text-xs text-muted-foreground">{location.typeLabel}{location.parentName ? ' · ' + location.parentName : ''} · {location.countyName}</span></button>)}
-                                </div>
-                              )}
-                            </div>
-                            <FormDescription>Search estates, neighborhoods, villages, towns, centres and administrative locations.</FormDescription>
+                            <FormLabel>Administrative Location</FormLabel>
+                            <select
+                              value={form.watch('locationNodeId') || ''}
+                              disabled={!selectedAdminUnitId || adminLocationsLoading}
+                              onChange={(event) => {
+                                const nodeId = event.target.value;
+                                const location = adminLocations.find((item) => item.id === nodeId);
+                                form.setValue('location', location?.name || '', { shouldValidate: true, shouldDirty: true });
+                                form.setValue('locationNodeId', nodeId, { shouldValidate: true, shouldDirty: true });
+                                setMapPosition(location?.latitude != null && location?.longitude != null ? { lat: location.latitude, lng: location.longitude } : null);
+                                setLocationSource("USER_SELECTED");
+                              }}
+                              className="flex h-11 w-full rounded-xl border bg-background px-3 text-sm outline-none transition focus:ring-2 focus:ring-primary/20"
+                            >
+                              <option value="">{!selectedAdminUnitId ? 'Select administrative unit first' : adminLocationsLoading ? 'Loading...' : 'Select a location'}</option>
+                              {adminLocations.map((location) => (
+                                <option key={location.id} value={location.id}>{location.name}</option>
+                              ))}
+                            </select>
+                            <FormDescription>These locations come directly from the supplied Kenyan administrative location dataset.</FormDescription>
                             <FormMessage />
                           </FormItem>
                         )} />
                       </div>
-
-                      {watchedCountyId && !form.watch('locationNodeId') && (
-                        <div className="rounded-xl border border-dashed bg-muted/30 p-4">
-                          <div className="flex items-start justify-between gap-4">
-                            <div><p className="text-sm font-medium">Can't find the exact area?</p><p className="mt-1 text-xs text-muted-foreground">You can list the property under the whole county. Tenants can still discover it through broader location searches.</p></div>
-                            <Button type="button" variant="outline" size="sm" onClick={() => { const county = counties.find((item) => item.id === watchedCountyId); if (!county?.locationNodeId) return; form.setValue('location', county.name, { shouldValidate: true, shouldDirty: true }); form.setValue('locationNodeId', county.locationNodeId, { shouldValidate: true, shouldDirty: true }); setSelectedTownId(""); setShowLocationSuggestions(false); setLocationSource("USER_SELECTED"); }}>Use county</Button>
-                          </div>
-                        </div>
-                      )}
 
                       <div className="rounded-xl border bg-muted/20 p-4">
                         <div className="flex items-start justify-between gap-4">
