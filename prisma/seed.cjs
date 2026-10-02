@@ -346,7 +346,7 @@ async function main() {
     "Mombasa": [
       "Mombasa Island", "Kizingo", "Tudor", "Tononoka", "Old Town", "Majengo",
       "Ganjoni", "Makupa", "Nyali", "Nyali Estate", "Kongowea", "Mkomani",
-      "Kisauni", "Bamburi", "Bamburi Mtambo", "Bamburi Mwembeni", "Mtwapa",
+      "Kisauni", "Bamburi", "Bamburi Mtambo", "Bamburi Mwembeni",
       "Shanzu", "Mtwapa Creek", "Likoni", "Shelly Beach", "Mtongwe",
       "Changamwe", "Port Reitz", "Miritini", "Mikindani", "Jomvu", "Magongo",
       "Airport", "Dunga Road", "Mombasa CBD"
