@@ -307,31 +307,36 @@ async function main() {
 
     for (const townName of townNames) {
       const slug = townName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-      await prisma.locationNode.upsert({
+      const existingTown = await prisma.locationNode.findFirst({
         where: {
-          countyId_level_slug_parentId: {
-            countyId: county.id,
-            level: "TOWN",
-            slug,
-            parentId: null
-          }
-        },
-        update: {
-          name: townName,
-          source: "NyumbaFinder major-town master",
-          searchRadiusKm: townName === townNames[0] ? 20 : 12,
-          searchPriority: townName === townNames[0] ? 400 : 300
-        },
-        create: {
           countyId: county.id,
           level: "TOWN",
-          name: townName,
           slug,
-          source: "NyumbaFinder major-town master",
-          searchRadiusKm: townName === townNames[0] ? 20 : 12,
-          searchPriority: townName === townNames[0] ? 400 : 300
+          parentId: null
         }
       });
+      const townData = {
+        name: townName,
+        source: "NyumbaFinder major-town master",
+        searchRadiusKm: townName === townNames[0] ? 20 : 12,
+        searchPriority: townName === townNames[0] ? 400 : 300
+      };
+      if (existingTown) {
+        await prisma.locationNode.update({
+          where: { id: existingTown.id },
+          data: townData
+        });
+      } else {
+        await prisma.locationNode.create({
+          data: {
+            countyId: county.id,
+            level: "TOWN",
+            name: townName,
+            slug,
+            ...townData
+          }
+        });
+      }
     }
   }
 
@@ -350,11 +355,15 @@ async function main() {
     const county = await prisma.county.findUnique({ where: { name: countyName } });
     if (!county) continue;
     const slug = normalizeSlug(adminUnitName);
-    const node = await prisma.locationNode.upsert({
-      where: { countyId_level_slug_parentId: { countyId: county.id, level: 'ADMIN_UNIT', slug, parentId: null } },
-      update: { name: adminUnitName, source: 'KEN_adm4.csv' },
-      create: { countyId: county.id, level: 'ADMIN_UNIT', name: adminUnitName, slug, source: 'KEN_adm4.csv' }
+    const existingAdminUnit = await prisma.locationNode.findFirst({
+      where: { countyId: county.id, level: 'ADMIN_UNIT', slug, parentId: null }
     });
+    const adminUnitData = { name: adminUnitName, source: 'KEN_adm4.csv' };
+    const node = existingAdminUnit
+      ? await prisma.locationNode.update({ where: { id: existingAdminUnit.id }, data: adminUnitData })
+      : await prisma.locationNode.create({
+          data: { countyId: county.id, level: 'ADMIN_UNIT', name: adminUnitName, slug, ...adminUnitData }
+        });
     parentIds.set(countyName + '::' + slug, node.id);
   }
   for (const [countyName, adminUnitName, locationName] of locationMaster.rows) {
