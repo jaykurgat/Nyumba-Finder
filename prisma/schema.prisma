@@ -247,6 +247,19 @@ model LocationNode {
   @@index([parentId])
 }
 
+model CountyNeighbor {
+  id          String @id @default(uuid()) @db.Uuid
+  countyId    String @db.Uuid
+  neighborId  String @db.Uuid
+  distanceKm  Float?
+  county      County @relation("CountyNeighborFrom", fields: [countyId], references: [id], onDelete: Cascade)
+  neighbor    County @relation("CountyNeighborTo", fields: [neighborId], references: [id], onDelete: Cascade)
+
+  @@unique([countyId, neighborId])
+  @@index([countyId])
+  @@index([neighborId])
+}
+
 model LocationNodeAlias {
   id          String @id @default(uuid()) @db.Uuid
   locationNodeId String @db.Uuid
@@ -267,6 +280,8 @@ model County {
   towns      Town[]
   properties Property[]
   locationNodes LocationNode[]
+  neighboringFrom CountyNeighbor[] @relation("CountyNeighborFrom")
+  neighboringTo CountyNeighbor[] @relation("CountyNeighborTo")
 
   @@index([name])
 }
