@@ -21,6 +21,7 @@ const toProperty = (data: any): Property => ({
   price: data.price, images: data.images, bedrooms: data.bedrooms, bathrooms: data.bathrooms,
   area: data.area ?? undefined, amenities: data.amenities, phoneNumber: data.phoneNumber ?? undefined,
   propertyType: data.propertyType ?? 'Apartment', status: data.status,
+  latitude: data.latitude ?? undefined, longitude: data.longitude ?? undefined,
 });
 
 const getId = async (params: Promise<{ id: string }>) => (await params).id;
@@ -131,6 +132,22 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     }
 
     if ('phoneNumber' in rawData) data.phoneNumber = getOptionalString(rawData.phoneNumber) ?? null;
+
+    if ('location' in rawData) {
+      const location = getString(rawData.location).trim();
+      const matchedNode = await prisma.locationNode.findFirst({
+        where: { name: { equals: location, mode: 'insensitive' }, searchable: true },
+        orderBy: [{ level: 'asc' }, { name: 'asc' }],
+      });
+      if (matchedNode) {
+        data.locationNodeId = matchedNode.id;
+        data.countyId = matchedNode.countyId;
+        if (!('latitude' in rawData) && matchedNode.latitude != null) data.latitude = matchedNode.latitude;
+        if (!('longitude' in rawData) && matchedNode.longitude != null) data.longitude = matchedNode.longitude;
+      }
+    }
+    if ('latitude' in rawData) data.latitude = getOptionalNumber(rawData.latitude) ?? null;
+    if ('longitude' in rawData) data.longitude = getOptionalNumber(rawData.longitude) ?? null;
 
     if (!Object.keys(data).length && !uploadedImages.length) {
       return NextResponse.json({ message: 'No valid fields provided for update.' }, { status: 400 });
