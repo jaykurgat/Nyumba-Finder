@@ -1,5 +1,6 @@
 export type LocationContext = {
   query: string;
+  center?: { lat: number; lng: number; label: string };
   canonicalCounty?: string;
   canonicalPlace?: string;
   exactPlaceTerms: string[];
@@ -77,6 +78,7 @@ export function resolveLocationContext(rawQuery: string): LocationContext | null
 
   return {
     query,
+    center: normalizedQuery === "kapsabet" ? { lat: 0.20387, lng: 35.105, label: "Kapsabet" } : undefined,
     canonicalCounty,
     canonicalPlace: normalizedQuery === "kapsabet" ? "Kapsabet" : undefined,
     exactPlaceTerms,
@@ -116,4 +118,13 @@ export function countySearchTerms(context: LocationContext | null) {
     ...(context.canonicalCounty ? [context.canonicalCounty] : []),
     ...context.neighboringCountyTerms,
   ];
+}
+
+export function distanceKm(lat1: number, lng1: number, lat2: number, lng2: number) {
+  const earthRadiusKm = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLng = ((lng2 - lng1) * Math.PI) / 180;
+  const a = Math.sin(dLat / 2) ** 2 +
+    Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLng / 2) ** 2;
+  return earthRadiusKm * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
