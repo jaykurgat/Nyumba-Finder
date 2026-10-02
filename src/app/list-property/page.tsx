@@ -508,20 +508,37 @@ export default function ListPropertyPage() {
                           <FormItem>
                             <FormLabel>Area / Estate / Neighborhood</FormLabel>
                             <FormControl>
-                              <Input
-                                list="property-area-suggestions"
-                                placeholder={areasLoading ? "Loading area suggestions..." : "e.g., Kilimani, Kapsoya, Milimani"}
-                                value={field.value}
-                                disabled={!selectedTownId}
-                                onChange={(event) => field.onChange(event.target.value)}
-                              />
+                              {areas.length > 0 ? (
+                                <select
+                                  value={areas.some((area) => area.name === field.value) ? field.value : field.value ? '__OTHER__' : ''}
+                                  disabled={!selectedTownId || areasLoading}
+                                  onChange={(event) => {
+                                    const value = event.target.value;
+                                    field.onChange(value === '__OTHER__' ? '' : value);
+                                  }}
+                                  className="flex h-11 w-full rounded-xl border bg-background px-3 text-sm outline-none transition focus:ring-2 focus:ring-primary/20"
+                                >
+                                  <option value="">{areasLoading ? 'Loading areas...' : 'Select an area, estate or neighborhood'}</option>
+                                  {areas.map((area) => (
+                                    <option key={area.id} value={area.name}>{area.name}</option>
+                                  ))}
+                                  <option value="__OTHER__">Other — enter manually</option>
+                                </select>
+                              ) : (
+                                <Input
+                                  placeholder={areasLoading ? "Loading area suggestions..." : "e.g., Kilimani, Kapsoya, Milimani"}
+                                  value={field.value}
+                                  disabled={!selectedTownId}
+                                  onChange={(event) => field.onChange(event.target.value)}
+                                />
+                              )}
                             </FormControl>
-                            {areas.length > 0 && (
-                              <datalist id="property-area-suggestions">
-                                {areas.map((area) => <option key={area.id} value={area.name} />)}
-                              </datalist>
-                            )}
-                            <FormDescription>Enter the local area tenants would normally use when describing the property.</FormDescription>
+                            {areas.length > 0 && field.value === '' && null}
+                            <FormDescription>
+                              {areas.length > 0
+                                ? 'Select a known local area, estate or neighborhood, or choose Other to enter a different name.'
+                                : 'Enter the local area tenants would normally use when describing the property.'}
+                            </FormDescription>
                             <FormMessage />
                           </FormItem>
                         )} />
