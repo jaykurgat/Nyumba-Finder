@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import type { Property } from '@/types/property';
+import { distanceKm, locationRelevanceScore, resolveLocationContext } from '@/lib/location-relevance';
 
 const getString = (value: unknown, defaultValue = '') =>
   typeof value === 'string' ? value : defaultValue;
@@ -34,6 +35,8 @@ const toProperty = (data: {
   area: data.sizeSqm ?? undefined,
   amenities: data.amenities,
   phoneNumber: data.phoneNumber ?? undefined,
+  latitude: data.latitude ?? undefined,
+  longitude: data.longitude ?? undefined,
 });
 
 export async function GET(request: NextRequest) {
@@ -49,6 +52,8 @@ export async function GET(request: NextRequest) {
     const minBathroomsParam = searchParams.get('minBathrooms');
     const minBathrooms = minBathroomsParam && minBathroomsParam !== 'all' ? getOptionalNumber(minBathroomsParam) : undefined;
     const selectedAmenities = searchParams.getAll('amenities');
+    const locationContext = resolveLocationContext(searchParams.get('location')?.trim() || '');
+    const radiusKm = Math.max(1, Math.min(100, getOptionalNumber(searchParams.get('radiusKm')) ?? 25));
 
     const rows = await prisma.property.findMany({
       where: {
@@ -59,7 +64,7 @@ export async function GET(request: NextRequest) {
           : {}),
         ...(minBedrooms !== undefined ? { bedrooms: { gte: Math.ceil(minBedrooms) } } : {}),
         ...(minBathrooms !== undefined ? { bathrooms: { gte: Math.ceil(minBathrooms) } } : {}),
-        ...(locationQuery ? { location: { contains: locationQuery, mode: 'insensitive' } } : {}),
+
         ...(selectedAmenities.length ? { amenities: { hasEvery: selectedAmenities } } : {}),
         ...(generalQueryTerm ? {
           OR: [
@@ -110,12 +115,18 @@ export async function GET(request: NextRequest) {
         promotionId: promotion?.id,
         promotionLabel: promotion ? 'Sponsored' : undefined,
         promotionBoost: promotion?.boost,
+        distanceKm: distance != null ? Math.round(distance * 10) / 10 : undefined,
         _rankingScore: relevance + (promotion?.boost ?? 0),
       };
     });
 
     results.sort((a, b) => {
       if (b._rankingScore !== a._rankingScore) return b._rankingScore - a._rankingScore;
+      if (a.distanceKm !== undefined || b.distanceKm !== undefined) {
+        if (a.distanceKm === undefined) return 1;
+        if (b.distanceKm === undefined) return -1;
+        if (a.distanceKm !== b.distanceKm && locationContext?.center) return a.distanceKm - b.distanceKm;
+      }
       if (minPrice !== undefined || maxPrice !== undefined) return a.price - b.price;
       return a.title.localeCompare(b.title);
     });
@@ -191,7 +202,11 @@ export async function POST(request: NextRequest) {
 
     const result = await prisma.$transaction(async (tx) => {
       const created = await tx.property.create({
-        data: { title, description, location, price, bedrooms, bathrooms, sizeSqm, amenities, images: [], phoneNumber, propertyType, status: 'ACTIVE' },
+        data: {
+          title, description, location, price, bedrooms, bathrooms, sizeSqm, amenities, images: [], phoneNumber, propertyType, status: 'ACTIVE',
+          latitude: getOptionalNumber(rawData.latitude),
+          longitude: getOptionalNumber(rawData.longitude),
+        },
       });
 
       if (uploadedImages.length) {
