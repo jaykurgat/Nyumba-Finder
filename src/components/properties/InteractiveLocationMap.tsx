@@ -179,7 +179,7 @@ export function InteractiveLocationMap({
   return (
     <div className={"relative overflow-hidden rounded-xl border bg-muted " + heightClassName + " " + className}>
       <div
-        className={"absolute inset-0 select-none " + (interactive ? (draggingMarker || draggingMap ? "cursor-grabbing" : "cursor-grab") : "")}
+        className={"absolute inset-0 touch-none select-none " + (interactive ? (draggingMarker || draggingMap ? "cursor-grabbing" : "cursor-grab") : "")}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={finishPointer}
