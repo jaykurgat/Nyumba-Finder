@@ -1,4 +1,3 @@
-
 "use client";
 
 import { PropertyImage } from '@/components/properties/PropertyImage';
@@ -6,7 +5,18 @@ import { InteractiveLocationMap } from '@/components/properties/InteractiveLocat
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import type { Property } from '@/types/property';
-import { MapPin, BedDouble, Bath, Ruler, CheckCircle, Phone, AlertTriangle, Edit3 } from 'lucide-react';
+import {
+  AlertTriangle,
+  Bath,
+  BedDouble,
+  Check,
+  Edit3,
+  Home,
+  MapPin,
+  Phone,
+  Ruler,
+  ShieldAlert,
+} from 'lucide-react';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import { AspectRatio } from "@/components/ui/aspect-ratio";
 import Link from 'next/link';
@@ -14,36 +24,24 @@ import { useEffect, useState, use } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 
 async function fetchPropertyById(id: string): Promise<Property | null> {
-  console.log(`[PropertyDetail Page] Attempting to fetch property with ID: ${id}`);
   try {
-    const baseUrl = ''; // For client-side fetch, relative URL is fine
-    const response = await fetch(`${baseUrl}/api/properties/${id}`, {
-        cache: 'no-store',
-    });
-    const responseStatus = response.status;
-    console.log(`[PropertyDetail Page] API response status for ID ${id}: ${responseStatus}`);
+    const response = await fetch('/api/properties/' + id, { cache: 'no-store' });
 
     if (!response.ok) {
-      if (responseStatus === 404) {
-        console.warn(`[PropertyDetail Page] API returned 404 for property ID ${id}.`);
-        return null;
-      }
-      let errorData = { message: `Server error: ${responseStatus}. Failed to fetch details.` };
+      if (response.status === 404) return null;
+      let message = 'Failed to fetch property details.';
       try {
-        errorData = await response.json();
-        console.error(`[PropertyDetail Page] API Error JSON response for ID ${id}:`, errorData);
-      } catch (e) {
-        const errorText = await response.text();
-        console.error(`[PropertyDetail Page] API Error Text response for ID ${id} (Status ${responseStatus}): ${errorText}`);
-        errorData.message = errorText || errorData.message;
+        const data = await response.json();
+        message = data.message || message;
+      } catch {
+        // Keep the default message when the response is not JSON.
       }
-      throw new Error(errorData.message);
+      throw new Error(message);
     }
-    const property: Property = await response.json();
-    console.log(`[PropertyDetail Page] Successfully fetched property ID ${id}:`, property);
-    return property;
-  } catch (error: any) {
-    console.error(`[PropertyDetail Page] Catch block error fetching property ID ${id}:`, error.message, error);
+
+    return await response.json();
+  } catch (error) {
+    console.error('[PropertyDetail Page] Error fetching property:', error);
     throw error;
   }
 }
@@ -55,14 +53,14 @@ function ImageCarousel({ images, title }: { images: string[]; title: string }) {
 
   if (effectiveImages.length === 0) {
     return (
-      <div className="rounded-lg overflow-hidden shadow-md border">
+      <div className="overflow-hidden rounded-2xl border bg-muted shadow-sm">
         <PropertyImage
           src="https://placehold.co/1200x800.png"
-          alt={`${title} - No Image Available`}
+          alt={title + ' - No Image Available'}
           sizes="(max-width: 1024px) 100vw, 66vw"
           priority
-          minHeightClassName="min-h-[280px]"
-          maxHeightClassName="max-h-[70vh]"
+          minHeightClassName="min-h-[300px] md:min-h-[500px]"
+          maxHeightClassName="max-h-[72vh]"
         />
       </div>
     );
@@ -70,16 +68,16 @@ function ImageCarousel({ images, title }: { images: string[]; title: string }) {
 
   return (
     <div className="space-y-3">
-      <Carousel className="w-full rounded-lg overflow-hidden shadow-md border">
+      <Carousel className="w-full overflow-hidden rounded-2xl border bg-background shadow-sm">
         <CarouselContent>
           {effectiveImages.map((src, index) => (
             <CarouselItem key={src + index}>
               <PropertyImage
                 src={src}
-                alt={`${title} - Image ${index + 1}`}
+                alt={title + ' - Image ' + (index + 1)}
                 sizes="(max-width: 1024px) 100vw, 66vw"
                 priority={index === 0}
-                minHeightClassName="min-h-[280px] md:min-h-[420px]"
+                minHeightClassName="min-h-[300px] md:min-h-[500px]"
                 maxHeightClassName="max-h-[72vh]"
               />
             </CarouselItem>
@@ -87,8 +85,8 @@ function ImageCarousel({ images, title }: { images: string[]; title: string }) {
         </CarouselContent>
         {effectiveImages.length > 1 && (
           <>
-            <CarouselPrevious className="absolute left-4 top-1/2 -translate-y-1/2 z-10 hidden md:flex" />
-            <CarouselNext className="absolute right-4 top-1/2 -translate-y-1/2 z-10 hidden md:flex" />
+            <CarouselPrevious className="absolute left-4 top-1/2 z-10 hidden -translate-y-1/2 md:flex" />
+            <CarouselNext className="absolute right-4 top-1/2 z-10 hidden -translate-y-1/2 md:flex" />
           </>
         )}
       </Carousel>
@@ -100,52 +98,62 @@ function ImageCarousel({ images, title }: { images: string[]; title: string }) {
     </div>
   );
 }
+
+function DetailStat({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: typeof BedDouble;
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="flex items-center gap-3 rounded-xl border bg-background px-4 py-3">
+      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+        <Icon className="h-4 w-4" />
+      </div>
+      <div className="min-w-0">
+        <p className="text-sm font-semibold">{value}</p>
+        <p className="text-xs text-muted-foreground">{label}</p>
+      </div>
+    </div>
+  );
+}
+
 function PropertyDetailSkeleton() {
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2 space-y-6">
-          <AspectRatio ratio={16 / 9} className="bg-muted rounded-lg overflow-hidden">
+    <div className="container mx-auto max-w-6xl px-4 py-8 md:py-10">
+      <Skeleton className="mb-6 h-4 w-40" />
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_340px]">
+        <div className="space-y-6">
+          <AspectRatio ratio={16 / 10} className="overflow-hidden rounded-2xl bg-muted">
             <Skeleton className="h-full w-full" />
           </AspectRatio>
           <Card>
-            <CardHeader>
-              <Skeleton className="h-8 w-3/4 mb-2" />
-              <Skeleton className="h-6 w-1/2" />
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <Skeleton className="h-6 w-full" />
-              <Skeleton className="h-20 w-full" />
-              <Skeleton className="h-16 w-full" />
+            <CardContent className="space-y-5 p-6">
+              <Skeleton className="h-9 w-3/4" />
+              <Skeleton className="h-5 w-1/2" />
+              <div className="grid gap-3 sm:grid-cols-3">
+                <Skeleton className="h-16" />
+                <Skeleton className="h-16" />
+                <Skeleton className="h-16" />
+              </div>
+              <Skeleton className="h-24 w-full" />
             </CardContent>
           </Card>
         </div>
-        <div className="lg:col-span-1 space-y-6">
-          <Card className="sticky top-20 shadow-lg">
-            <CardHeader>
-              <Skeleton className="h-8 w-1/2" />
-            </CardHeader>
-            <CardContent>
-              <Skeleton className="h-10 w-full" />
-              <Skeleton className="h-10 w-full mt-2" />
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader><Skeleton className="h-6 w-1/3" /></CardHeader>
-            <CardContent>
-              <Skeleton className="h-60 w-full bg-muted rounded-md" />
-              <Skeleton className="h-4 w-1/2 mt-2 mx-auto" />
-            </CardContent>
-          </Card>
+        <div className="space-y-5">
+          <Card><CardContent className="space-y-4 p-6"><Skeleton className="h-10 w-3/4" /><Skeleton className="h-11 w-full" /></CardContent></Card>
+          <Card><CardContent className="h-64 p-0"><Skeleton className="h-full w-full rounded-xl" /></CardContent></Card>
         </div>
       </div>
     </div>
   );
 }
 
-
 export default function PropertyDetailPage({ params: paramsProp }: { params: Promise<{ id: string }> }) {
-  const params = use(paramsProp); // Unwrap the promise using React.use()
+  const params = use(paramsProp);
   const [property, setProperty] = useState<Property | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -155,167 +163,289 @@ export default function PropertyDetailPage({ params: paramsProp }: { params: Pro
   const [reportSent, setReportSent] = useState(false);
 
   useEffect(() => {
-    if (params && params.id) {
-      setIsLoading(true);
-      setError(null);
-      console.log(`[PropertyDetail Page Effect] Using property ID: ${params.id}`);
-      fetchPropertyById(params.id)
-        .then(data => {
-          if (data) {
-            setProperty(data);
-          } else {
-            setError(`The property you are looking for with ID "${params.id}" does not exist or could not be loaded.`);
-          }
-        })
-        .catch(err => {
-          console.error("[PropertyDetail Page Effect] Catch block error:", err);
-          setError(err.message || 'An unexpected error occurred while fetching property details.');
-        })
-        .finally(() => setIsLoading(false));
-    } else {
-      console.warn("[PropertyDetail Page Effect] No property ID found in resolved params:", params);
-      setError("No property ID provided or params not resolved.");
+    if (!params?.id) {
+      setError('No property ID provided.');
       setIsLoading(false);
+      return;
     }
+
+    setIsLoading(true);
+    setError(null);
+
+    fetchPropertyById(params.id)
+      .then((data) => {
+        if (data) {
+          setProperty(data);
+        } else {
+          setError('The property you are looking for does not exist or could not be loaded.');
+        }
+      })
+      .catch((err) => {
+        setError(err instanceof Error ? err.message : 'An unexpected error occurred while fetching property details.');
+      })
+      .finally(() => setIsLoading(false));
   }, [params?.id]);
 
-  if (isLoading) {
-    return <PropertyDetailSkeleton />;
-  }
+  if (isLoading) return <PropertyDetailSkeleton />;
 
   if (error || !property) {
-    const displayId = params?.id || "the requested ID";
     return (
-        <div className="container mx-auto px-4 py-12 text-center">
-            <AlertTriangle className="mx-auto h-12 w-12 text-destructive mb-4" />
-            <h1 className="text-3xl font-bold text-destructive mb-2">Property Not Found</h1>
-            <p className="text-muted-foreground mb-6">{error || `The property with ID "${displayId}" could not be loaded.`}</p>
-            <Button asChild className="mt-6">
-                <Link href="/properties">Back to Properties</Link>
-            </Button>
-        </div>
+      <div className="container mx-auto px-4 py-16 text-center">
+        <AlertTriangle className="mx-auto mb-4 h-12 w-12 text-destructive" />
+        <h1 className="mb-2 text-3xl font-semibold">Property Not Found</h1>
+        <p className="mx-auto mb-6 max-w-md text-muted-foreground">{error || 'This property could not be loaded.'}</p>
+        <Button asChild>
+          <Link href="/properties">Back to Properties</Link>
+        </Button>
+      </div>
     );
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2 space-y-6">
-          <ImageCarousel images={property.images || []} title={property.title} />
-          <Card>
-            <CardHeader>
-              <div className="flex justify-between items-start">
-                <div>
-                    <CardTitle className="text-2xl md:text-3xl font-bold">{property.title}</CardTitle>
-                    <div className="flex items-center text-lg text-muted-foreground mt-1">
-                        <MapPin className="w-5 h-5 mr-2 flex-shrink-0" />
-                        <span>{property.location}</span>
-                    </div>
-                </div>
-                {/* Basic Edit Button - No auth check yet */}
-                <Button variant="outline" size="sm" asChild>
-                    <Link href={`/list-property?edit=${property.id}`}>
-                        <Edit3 className="mr-2 h-4 w-4" /> Edit Property
-                    </Link>
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex flex-wrap gap-x-6 gap-y-3 text-md text-foreground">
-                 {property.bedrooms > 0 && (
-                    <span className="flex items-center font-medium"><BedDouble className="w-5 h-5 mr-2 text-primary" /> {property.bedrooms} Bedrooms</span>
-                 )}
-                  {property.bedrooms === 0 && (
-                    <span className="flex items-center font-medium"><BedDouble className="w-5 h-5 mr-2 text-primary" /> Studio</span>
-                  )}
-                <span className="flex items-center font-medium"><Bath className="w-5 h-5 mr-2 text-primary" /> {property.bathrooms} Bathrooms</span>
-                {property.area !== undefined && property.area > 0 && (
-                  <span className="flex items-center font-medium"><Ruler className="w-5 h-5 mr-2 text-primary" /> {property.area} sq m</span>
-                )}
-              </div>
-              <div>
-                <h3 className="text-xl font-semibold mb-2">Description</h3>
-                <p className="text-foreground leading-relaxed">{property.description}</p>
-              </div>
-               {property.amenities && property.amenities.length > 0 && (
-                <div>
-                  <h3 className="text-xl font-semibold mb-2">Amenities</h3>
-                  <ul className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                    {property.amenities.map((amenity, index) => (
-                      <li key={index} className="flex items-center text-foreground">
-                        <CheckCircle className="w-4 h-4 mr-2 text-green-600 flex-shrink-0" />
-                        {amenity}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+    <main className="min-h-screen bg-muted/20">
+      <div className="container mx-auto max-w-6xl px-4 py-6 md:py-10">
+        <div className="mb-5 flex items-center justify-between gap-4">
+          <Link href="/properties" className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
+            ← Back to properties
+          </Link>
+          <Button variant="outline" size="sm" asChild className="rounded-full">
+            <Link href={'/list-property?edit=' + property.id}>
+              <Edit3 className="mr-2 h-3.5 w-3.5" />
+              Edit Property
+            </Link>
+          </Button>
         </div>
 
-        <div className="lg:col-span-1 space-y-6">
-          <Card className="sticky top-20 shadow-lg border-primary border-2">
-            <CardHeader>
-              <CardTitle className="text-2xl font-bold text-primary">
-                Ksh {property.price.toLocaleString()}
-                <span className="text-base font-normal text-muted-foreground"> / month</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <h3 className="text-lg font-semibold mb-3">Contact Landlord</h3>
-              {property.phoneNumber ? (
-                showPhoneNumber ? (
-                  <p className="text-lg font-medium text-accent flex items-center">
-                    <Phone className="mr-2 h-4 w-4" /> {property.phoneNumber}
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start">
+          <div className="space-y-7">
+            <ImageCarousel images={property.images || []} title={property.title} />
+
+            <section className="rounded-2xl border bg-background shadow-sm">
+              <div className="border-b px-5 py-6 md:px-7">
+                <div className="flex items-start gap-3">
+                  <div className="mt-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                    <Home className="h-5 w-5" />
+                  </div>
+                  <div className="min-w-0">
+                    <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">{property.title}</h1>
+                    <div className="mt-2 flex items-center gap-2 text-sm text-muted-foreground">
+                      <MapPin className="h-4 w-4 shrink-0 text-primary" />
+                      <span>{property.location}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-7 px-5 py-6 md:px-7">
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <DetailStat
+                    icon={BedDouble}
+                    label="Bedrooms"
+                    value={property.bedrooms === 0 ? 'Studio' : String(property.bedrooms)}
+                  />
+                  <DetailStat
+                    icon={Bath}
+                    label="Bathrooms"
+                    value={String(property.bathrooms)}
+                  />
+                  {property.area !== undefined && property.area > 0 ? (
+                    <DetailStat icon={Ruler} label="Floor area" value={property.area + ' m²'} />
+                  ) : (
+                    <DetailStat icon={Home} label="Property type" value={property.propertyType || 'Property'} />
+                  )}
+                </div>
+
+                <div>
+                  <h2 className="mb-3 text-lg font-semibold">About this property</h2>
+                  <p className="whitespace-pre-line text-sm leading-7 text-muted-foreground md:text-base">
+                    {property.description}
                   </p>
+                </div>
+
+                {property.amenities && property.amenities.length > 0 && (
+                  <div className="border-t pt-6">
+                    <h2 className="mb-4 text-lg font-semibold">Amenities & features</h2>
+                    <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
+                      {property.amenities.map((amenity, index) => (
+                        <div key={index} className="flex items-center gap-2.5 text-sm">
+                          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                            <Check className="h-3.5 w-3.5" />
+                          </span>
+                          <span>{amenity}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </section>
+
+            <section className="rounded-2xl border bg-background shadow-sm">
+              <div className="border-b px-5 py-5 md:px-7">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                    <MapPin className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <h2 className="font-semibold">Property location</h2>
+                    <p className="text-xs text-muted-foreground">Approximate map location</p>
+                  </div>
+                </div>
+              </div>
+              <div className="p-4 md:p-5">
+                {property.latitude != null && property.longitude != null ? (
+                  <InteractiveLocationMap
+                    value={{ lat: property.latitude, lng: property.longitude }}
+                    interactive={false}
+                    heightClassName="h-72 md:h-80"
+                  />
                 ) : (
-                  <Button 
-                    className="w-full bg-accent hover:bg-accent/90 text-accent-foreground"
-                    onClick={() => setShowPhoneNumber(true)}
-                  >
-                    <Phone className="mr-2 h-4 w-4" /> Show Phone Number
-                  </Button>
-                )
-              ) : (
-                <p className="text-sm text-muted-foreground">Phone number not provided.</p>
-              )}
-            </CardContent>
-          </Card>
-           <Card>
-             <CardHeader><CardTitle className="text-xl">Report a problem</CardTitle></CardHeader>
-             <CardContent className="space-y-3">
-               <select value={reportType} onChange={(e) => setReportType(e.target.value)} className="h-10 w-full border bg-background px-2 text-sm">
-                 <option>Incorrect information</option><option>No longer available</option><option>Duplicate listing</option><option>Wrong location</option><option>Possible scam</option><option>Inappropriate content</option>
-               </select>
-               <textarea value={reportDescription} onChange={(e) => setReportDescription(e.target.value)} placeholder="Optional details" className="min-h-20 w-full border bg-background p-2 text-sm" />
-               <Button variant="outline" className="w-full" disabled={reportSent} onClick={async () => {
-                 const response = await fetch('/api/property-reports', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ propertyId: property.id, type: reportType, description: reportDescription }) });
-                 if (response.ok) { setReportSent(true); setReportDescription(''); }
-               }}>{reportSent ? 'Report submitted' : 'Submit report'}</Button>
-             </CardContent>
-           </Card>
-           <Card>
-             <CardHeader>
-               <CardTitle className="text-xl">Location</CardTitle>
-             </CardHeader>
-             <CardContent>
-               {property.latitude != null && property.longitude != null ? (
-                 <InteractiveLocationMap
-                   value={{ lat: property.latitude, lng: property.longitude }}
-                   interactive={false}
-                   heightClassName="h-60"
-                 />
-               ) : (
-                 <div className="h-60 rounded-xl bg-muted flex items-center justify-center text-sm text-muted-foreground">
-                   Map location not available for this listing.
-                 </div>
-               )}
-               <p className="mt-2 text-sm text-center text-muted-foreground">{property.location}</p>
-             </CardContent>
-           </Card>
+                  <div className="flex h-72 items-center justify-center rounded-xl bg-muted text-sm text-muted-foreground">
+                    Map location not available for this listing.
+                  </div>
+                )}
+                <div className="mt-3 flex items-start gap-2 text-sm text-muted-foreground">
+                  <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                  <span>{property.location}</span>
+                </div>
+              </div>
+            </section>
+
+            <section className="rounded-2xl border bg-background shadow-sm">
+              <div className="border-b px-5 py-5 md:px-7">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+                    <ShieldAlert className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <h2 className="font-semibold">Something wrong with this listing?</h2>
+                    <p className="text-xs text-muted-foreground">Help us keep NyumbaFinder accurate and safe.</p>
+                  </div>
+                </div>
+              </div>
+              <div className="space-y-3 p-5 md:p-7">
+                <select
+                  value={reportType}
+                  onChange={(e) => setReportType(e.target.value)}
+                  className="h-11 w-full rounded-xl border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-primary/20"
+                >
+                  <option>Incorrect information</option>
+                  <option>No longer available</option>
+                  <option>Duplicate listing</option>
+                  <option>Wrong location</option>
+                  <option>Possible scam</option>
+                  <option>Inappropriate content</option>
+                </select>
+                <textarea
+                  value={reportDescription}
+                  onChange={(e) => setReportDescription(e.target.value)}
+                  placeholder="Optional details"
+                  className="min-h-24 w-full resize-y rounded-xl border bg-background p-3 text-sm outline-none focus:ring-2 focus:ring-primary/20"
+                />
+                <Button
+                  variant="outline"
+                  className="w-full rounded-xl"
+                  disabled={reportSent}
+                  onClick={async () => {
+                    const response = await fetch('/api/property-reports', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        propertyId: property.id,
+                        type: reportType,
+                        description: reportDescription,
+                      }),
+                    });
+                    if (response.ok) {
+                      setReportSent(true);
+                      setReportDescription('');
+                    }
+                  }}
+                >
+                  {reportSent ? 'Report submitted' : 'Submit report'}
+                </Button>
+              </div>
+            </section>
+          </div>
+
+          <aside className="space-y-5">
+            <Card className="overflow-hidden rounded-2xl border shadow-sm">
+              <div className="border-b bg-primary/[0.04] px-5 py-6">
+                <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">Monthly rent</p>
+                <p className="mt-1 text-3xl font-semibold tracking-tight">
+                  Ksh {property.price.toLocaleString()}
+                </p>
+              </div>
+              <CardContent className="space-y-4 p-5">
+                <div className="rounded-xl border bg-muted/20 p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-background text-primary shadow-sm">
+                      <Phone className="h-4 w-4" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold">Contact landlord</p>
+                      <p className="mt-1 text-xs text-muted-foreground">Reach out about availability and viewing.</p>
+                    </div>
+                  </div>
+
+                  {property.phoneNumber ? (
+                    showPhoneNumber ? (
+                      <a
+                        href={'tel:' + property.phoneNumber}
+                        className="mt-4 flex h-11 items-center justify-center rounded-xl bg-accent px-4 text-sm font-semibold text-accent-foreground transition-colors hover:bg-accent/90"
+                      >
+                        <Phone className="mr-2 h-4 w-4" />
+                        {property.phoneNumber}
+                      </a>
+                    ) : (
+                      <Button
+                        className="mt-4 h-11 w-full rounded-xl bg-accent text-accent-foreground hover:bg-accent/90"
+                        onClick={() => setShowPhoneNumber(true)}
+                      >
+                        <Phone className="mr-2 h-4 w-4" />
+                        Show phone number
+                      </Button>
+                    )
+                  ) : (
+                    <p className="mt-4 text-sm text-muted-foreground">Phone number not provided.</p>
+                  )}
+                </div>
+
+                <div className="flex items-start gap-2 px-1 text-xs leading-5 text-muted-foreground">
+                  <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
+                  <span>{property.location}</span>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="rounded-2xl border shadow-sm">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base">At a glance</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex items-center justify-between border-b pb-3 text-sm">
+                  <span className="text-muted-foreground">Property type</span>
+                  <span className="font-medium">{property.propertyType || '—'}</span>
+                </div>
+                <div className="flex items-center justify-between border-b pb-3 text-sm">
+                  <span className="text-muted-foreground">Bedrooms</span>
+                  <span className="font-medium">{property.bedrooms === 0 ? 'Studio' : property.bedrooms}</span>
+                </div>
+                <div className="flex items-center justify-between border-b pb-3 text-sm">
+                  <span className="text-muted-foreground">Bathrooms</span>
+                  <span className="font-medium">{property.bathrooms}</span>
+                </div>
+                {property.area !== undefined && property.area > 0 && (
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Floor area</span>
+                    <span className="font-medium">{property.area} m²</span>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </aside>
         </div>
       </div>
-    </div>
+    </main>
   );
 }
