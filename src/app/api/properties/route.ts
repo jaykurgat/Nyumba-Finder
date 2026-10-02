@@ -202,7 +202,6 @@ export async function POST(request: NextRequest) {
 
     const result = await prisma.$transaction(async (tx) => {
       const requestedLocationNodeId = getOptionalString(rawData.locationNodeId);
-      const normalizedLocation = location.trim().toLowerCase();
       const matchedNode = requestedLocationNodeId
         ? await tx.locationNode.findUnique({ where: { id: requestedLocationNodeId } })
         : await tx.locationNode.findFirst({
