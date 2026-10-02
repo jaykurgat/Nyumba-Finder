@@ -12,7 +12,7 @@ import { Form, FormControl, FormField, FormItem, FormMessage } from "@/component
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 
-const locations = ["Nairobi","Mombasa","Kisumu","Nakuru","Eldoret","Thika","Kiambu","Machakos","Meru","Nyeri","Kakamega","Naivasha","Kitale"];
+const locations = ["Mombasa","Kwale","Kilifi","Hola","Lamu","Voi","Garissa","Wajir","Mandera","Marsabit","Isiolo","Meru","Kathwana","Embu","Kitui","Machakos","Wote","Ol Kalou","Nyeri","Kerugoya","Murang'a","Kiambu","Lodwar","Kapenguria","Maralal","Kitale","Eldoret","Iten","Kapsabet","Kabarnet","Nanyuki","Nakuru","Narok","Kajiado","Kericho","Bomet","Kakamega","Vihiga","Bungoma","Busia","Siaya","Kisumu","Homa Bay","Migori","Kisii","Nyamira","Nairobi"];
 const amenities = ["Parking","Swimming Pool","Gym","Security","Balcony","Garden","Internet Ready","Servant Quarters","Lift","Water Included","Beach Access","Air Conditioning"];
 
 const schema = z.object({
