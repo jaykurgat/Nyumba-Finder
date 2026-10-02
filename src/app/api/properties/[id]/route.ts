@@ -140,6 +140,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     if ('phoneNumber' in rawData) data.phoneNumber = getOptionalString(rawData.phoneNumber) ?? null;
 
     if ('location' in rawData || 'locationNodeId' in rawData) {
+      const requestedCountyId = getOptionalString(rawData.countyId);
       const requestedLocationNodeId = getOptionalString(rawData.locationNodeId);
       const location = getString(rawData.location).trim();
       const matchedNode = requestedLocationNodeId
@@ -151,7 +152,12 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       if (!matchedNode) {
         return NextResponse.json({ message: 'Please select a valid location from the location suggestions.' }, { status: 400 });
       }
+      if (requestedCountyId && matchedNode.countyId !== requestedCountyId) {
+        return NextResponse.json({ message: 'The selected location does not belong to the selected county.' }, { status: 400 });
+      }
       data.locationNodeId = matchedNode.id;
+      data.locationSource = getOptionalString(rawData.locationSource) ?? 'USER_SELECTED';
+      data.locationAccuracy = getOptionalNumber(rawData.latitude) != null && getOptionalNumber(rawData.longitude) != null ? 'PROPERTY_PIN' : (matchedNode.latitude != null && matchedNode.longitude != null ? 'LOCATION_NODE' : 'AREA_ONLY');
       data.countyId = matchedNode.countyId;
       if (!('latitude' in rawData) && matchedNode.latitude != null) data.latitude = matchedNode.latitude;
       if (!('longitude' in rawData) && matchedNode.longitude != null) data.longitude = matchedNode.longitude;
