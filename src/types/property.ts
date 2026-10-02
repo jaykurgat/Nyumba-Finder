@@ -16,4 +16,7 @@ export interface Property {
   promotionId?: string;
   promotionLabel?: string;
   promotionBoost?: number;
+  latitude?: number;
+  longitude?: number;
+  distanceKm?: number;
 }
