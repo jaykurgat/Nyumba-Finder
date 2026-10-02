@@ -72,11 +72,9 @@ export default function ListPropertyPage() {
   const [counties, setCounties] = useState<any[]>([]);
   const [countiesLoading, setCountiesLoading] = useState(true);
   const [countiesError, setCountiesError] = useState<string | null>(null);
-  const [selectedAdminUnitId, setSelectedAdminUnitId] = useState("");
-  const [adminUnits, setAdminUnits] = useState<any[]>([]);
-  const [adminUnitsLoading, setAdminUnitsLoading] = useState(false);
-  const [adminLocations, setAdminLocations] = useState<any[]>([]);
-  const [adminLocationsLoading, setAdminLocationsLoading] = useState(false);
+  const [selectedTownId, setSelectedTownId] = useState("");
+  const [towns, setTowns] = useState<any[]>([]);
+  const [townsLoading, setTownsLoading] = useState(false);
   const [mapPosition, setMapPosition] = useState<{ lat: number; lng: number } | null>(null);
   const [locationSource, setLocationSource] = useState<"USER_SELECTED" | "BROWSER_GEOLOCATION">("USER_SELECTED");
 
@@ -140,69 +138,38 @@ export default function ListPropertyPage() {
 
   useEffect(() => {
     if (!watchedCountyId) {
-      setAdminUnits([]);
-      setSelectedAdminUnitId("");
-      setAdminLocations([]);
+      setTowns([]);
+      setSelectedTownId("");
+      form.setValue('location', '', { shouldValidate: true, shouldDirty: true });
+      form.setValue('locationNodeId', '', { shouldValidate: true, shouldDirty: true });
       return;
     }
 
     let cancelled = false;
-    setAdminUnitsLoading(true);
+    setTownsLoading(true);
 
     fetch('/api/locations?' + new URLSearchParams({
       countyId: watchedCountyId,
-      level: 'ADMIN_UNIT',
+      level: 'TOWN',
     }).toString(), { cache: 'no-store' })
       .then(async (response) => {
         const data = await response.json().catch(() => ({}));
-        if (!response.ok) throw new Error(data.message || 'Failed to load administrative units.');
+        if (!response.ok) throw new Error(data.message || 'Failed to load towns and cities.');
         return data;
       })
       .then((data) => {
-        if (!cancelled) setAdminUnits(Array.isArray(data.locations) ? data.locations : []);
+        if (!cancelled) setTowns(Array.isArray(data.locations) ? data.locations : []);
       })
       .catch((error) => {
-        console.error('Failed to load administrative units:', error);
-        if (!cancelled) setAdminUnits([]);
+        console.error('Failed to load towns and cities:', error);
+        if (!cancelled) setTowns([]);
       })
       .finally(() => {
-        if (!cancelled) setAdminUnitsLoading(false);
+        if (!cancelled) setTownsLoading(false);
       });
 
     return () => { cancelled = true; };
-  }, [watchedCountyId]);
-
-  useEffect(() => {
-    if (!selectedAdminUnitId) {
-      setAdminLocations([]);
-      return;
-    }
-
-    let cancelled = false;
-    setAdminLocationsLoading(true);
-
-    fetch('/api/locations?' + new URLSearchParams({
-      parentId: selectedAdminUnitId,
-      level: 'ADMIN_LOCATION',
-    }).toString(), { cache: 'no-store' })
-      .then(async (response) => {
-        const data = await response.json().catch(() => ({}));
-        if (!response.ok) throw new Error(data.message || 'Failed to load administrative locations.');
-        return data;
-      })
-      .then((data) => {
-        if (!cancelled) setAdminLocations(Array.isArray(data.locations) ? data.locations : []);
-      })
-      .catch((error) => {
-        console.error('Failed to load administrative locations:', error);
-        if (!cancelled) setAdminLocations([]);
-      })
-      .finally(() => {
-        if (!cancelled) setAdminLocationsLoading(false);
-      });
-
-    return () => { cancelled = true; };
-  }, [selectedAdminUnitId]);
+  }, [watchedCountyId, form]);
 
   useEffect(() => {
     const editId = searchParamsHook.get('edit');
@@ -467,8 +434,8 @@ export default function ListPropertyPage() {
                             onChange={(event) => {
                               const value = event.target.value;
                               field.onChange(value);
-                              setSelectedAdminUnitId("");
-                              setAdminUnits([]);
+                              setSelectedTownId("");
+                              setTowns([]);
                               form.setValue('location', '', { shouldValidate: true, shouldDirty: true });
                               form.setValue('locationNodeId', '', { shouldValidate: true, shouldDirty: true });
                               setMapPosition(null);
@@ -484,49 +451,43 @@ export default function ListPropertyPage() {
                         </FormItem>
                       )} />
 
-                      <div className="grid gap-5 md:grid-cols-3"><div className="space-y-2">
-                          <FormLabel>Administrative Unit</FormLabel>
+                      <div className="grid gap-5 md:grid-cols-2">
+                        <div className="space-y-2">
+                          <FormLabel>Town / City</FormLabel>
                           <select
-                            value={selectedAdminUnitId}
-                            disabled={!watchedCountyId || adminUnitsLoading}
+                            value={selectedTownId}
+                            disabled={!watchedCountyId || townsLoading}
                             onChange={(event) => {
-                              const value = event.target.value;
-                              setSelectedAdminUnitId(value);
-                              form.setValue('location', '', { shouldValidate: true, shouldDirty: true });
-                              form.setValue('locationNodeId', '', { shouldValidate: true, shouldDirty: true });
-                              setMapPosition(null);
+                              const townId = event.target.value;
+                              const town = towns.find((item) => item.id === townId);
+                              setSelectedTownId(townId);
+                              form.setValue('locationNodeId', townId, { shouldValidate: true, shouldDirty: true });
+                              form.setValue('location', town?.name || '', { shouldValidate: true, shouldDirty: true });
+                              setMapPosition(town?.latitude != null && town?.longitude != null ? { lat: town.latitude, lng: town.longitude } : null);
+                              setLocationSource("USER_SELECTED");
                             }}
                             className="flex h-11 w-full rounded-xl border bg-background px-3 text-sm outline-none transition focus:ring-2 focus:ring-primary/20"
                           >
-                            <option value="">{!watchedCountyId ? 'Select county first' : adminUnitsLoading ? 'Loading...' : 'Select an administrative unit'}</option>
-                            {adminUnits.map((unit) => (
-                              <option key={unit.id} value={unit.id}>{unit.name}</option>
+                            <option value="">{!watchedCountyId ? 'Select county first' : townsLoading ? 'Loading towns and cities...' : towns.length ? 'Select a town or city' : 'No towns or cities available'}</option>
+                            {towns.map((town) => (
+                              <option key={town.id} value={town.id}>{town.name}</option>
                             ))}
                           </select>
+                          <p className="text-xs text-muted-foreground">Choose the town or city where the property is located.</p>
                         </div>
 
                         <FormField control={form.control} name="location" render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Administrative Location</FormLabel>
-                            <select
-                              value={form.watch('locationNodeId') || ''}
-                              disabled={!selectedAdminUnitId || adminLocationsLoading}
-                              onChange={(event) => {
-                                const nodeId = event.target.value;
-                                const location = adminLocations.find((item) => item.id === nodeId);
-                                form.setValue('location', location?.name || '', { shouldValidate: true, shouldDirty: true });
-                                form.setValue('locationNodeId', nodeId, { shouldValidate: true, shouldDirty: true });
-                                setMapPosition(location?.latitude != null && location?.longitude != null ? { lat: location.latitude, lng: location.longitude } : null);
-                                setLocationSource("USER_SELECTED");
-                              }}
-                              className="flex h-11 w-full rounded-xl border bg-background px-3 text-sm outline-none transition focus:ring-2 focus:ring-primary/20"
-                            >
-                              <option value="">{!selectedAdminUnitId ? 'Select administrative unit first' : adminLocationsLoading ? 'Loading...' : 'Select a location'}</option>
-                              {adminLocations.map((location) => (
-                                <option key={location.id} value={location.id}>{location.name}</option>
-                              ))}
-                            </select>
-                            <FormDescription>These locations come directly from the supplied Kenyan administrative location dataset.</FormDescription>
+                            <FormLabel>Area / Estate / Neighborhood</FormLabel>
+                            <FormControl>
+                              <Input
+                                placeholder="e.g., Kilimani, Kapsoya, Milimani"
+                                value={field.value}
+                                disabled={!selectedTownId}
+                                onChange={(event) => field.onChange(event.target.value)}
+                              />
+                            </FormControl>
+                            <FormDescription>Enter the local area tenants would normally use when describing the property.</FormDescription>
                             <FormMessage />
                           </FormItem>
                         )} />
