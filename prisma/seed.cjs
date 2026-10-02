@@ -343,17 +343,65 @@ async function main() {
   // Nairobi rental-market area suggestions. These are user-facing place names, not
   // administrative boundaries. Landlords can still enter any local name not listed here.
   const nairobiAreaNames = [
-    "Nairobi Central", "Ngara", "Pangani", "Parklands", "Highridge", "Kitisuru", "Karura", "Kangemi", "Mountain View",
-    "Westlands", "Riverside", "Brookside", "Loresho", "Gigiri", "Runda", "Muthaiga", "Spring Valley", "Kileleshwa",
-    "Kilimani", "Lavington", "Hurlingham", "Upper Hill", "Haughton", "Kawangware", "Gatina", "Kabiro", "Dagoretti Corner",
-    "Riruta", "Ngando", "Uthiru", "Waithaka", "Mutuini", "Karen", "Lang'ata", "Nairobi West", "South C", "South B",
-    "Mugumo-ini", "Nyayo Highrise", "Imara Daima", "Pipeline", "Kware", "Kwa Njenga", "Kwa Reuben", "Embakasi", "Utawala",
-    "Mihang'o", "Upper Savanna", "Lower Savanna", "Umoja", "Umoja I", "Umoja II", "Kayole", "Komarock", "Matopeni", "Mowlem",
-    "Dandora", "Dandora Phase 1", "Dandora Phase 2", "Dandora Phase 3", "Dandora Phase 4", "Kariobangi", "Kariobangi North", "Kariobangi South",
-    "Buruburu", "Jericho", "Kaloleni", "Makongeni", "Maringo", "Harambee", "Viwandani", "Industrial Area", "Muthurwa", "Shauri Moyo",
-    "Eastleigh", "Pumwani", "California", "Kasarani", "Mwiki", "Clay City", "Njiru", "Ruai", "Roysambu", "Zimmerman", "Kahawa West",
-    "Githurai", "Kahawa Sukari", "Babadogo", "Utalii", "Mathare North", "Lucky Summer", "Korogocho", "Huruma", "Mabatini", "Ngei",
-    "Mlango Kubwa", "Laini Saba", "Lindi", "Makina", "Woodley", "Adams Arcade", "Jamhuri", "Yaya", "Valley Arcade", "Hurlingham Estate"
+    // CBD, Starehe, Kamukunji and central neighbourhoods
+    "Nairobi Central", "CBD", "Ngara", "Pangani", "Ziwani", "Kariokor", "Landimawe", "Nairobi River",
+    "Pumwani", "Gikomba", "Eastleigh North", "Eastleigh South", "Eastleigh", "California", "Airbase",
+    "Shauri Moyo", "Muthurwa", "Kamukunji", "Maringo", "Hamza", "Jericho", "Kaloleni", "Makongeni",
+    "Harambee", "Bahati", "Mbotela", "Makadara", "Viwandani", "Industrial Area", "Jogoo Road",
+    // Westlands, Parklands, Kitisuru and northern affluent areas
+    "Westlands", "Parklands", "Parklands/Highridge", "Highridge", "Kitisuru", "Karura", "Kangemi",
+    "Mountain View", "Loresho", "Lower Kabete", "Kyuna", "Spring Valley", "Spring Valley Extension",
+    "Muthaiga", "Muthaiga North", "New Muthaiga", "Gigiri", "Rosslyn", "Rosslyn Lone Tree",
+    "Rosslyn Riviera", "Runda", "Runda Estate", "Runda Mimosa", "Runda Meadows", "Runda Evergreen",
+    "Runda Paradise", "Nyari", "Nyari Estate", "Thigiri", "Ridgeways", "Garden Estate", "Marurui",
+    "Githogoro", "Kibagare", "Deep Sea", "Fourways", "Five Star Gardens", "City Park", "City Park Estate",
+    "Muthaiga Square", "Thindigua",
+    // Kilimani, Kileleshwa, Lavington, Hurlingham and Ngong Road corridor
+    "Kilimani", "Kilimani Estate", "Kileleshwa", "Lavington", "Lavington Green", "Hurlingham",
+    "Hurlingham Estate", "Riverside", "Riverside Drive", "Brookside", "Woodlands", "Muthangari",
+    "Yaya", "Adams Arcade", "Hatheru", "Kabarnet Gardens", "Valley Arcade", "Jamhuri", "Jamhuri Estate",
+    "Woodley", "Woodley Estate", "Kenyatta Golf Course", "Golf Course", "Prestige", "Dennis Pritt",
+    "Ngong Road", "Nairobi Dam", "Nairobi Dam Estate", "Caledonia", "Caledonia Estate", "Upper Hill",
+    "Nairobi Upper Hill", "State House", "Milimani", "Madaraka",
+    // Dagoretti and southwest
+    "Dagoretti", "Dagoretti Corner", "Gatina", "Kabiro", "Kawangware", "Kawangware 46",
+    "Kawangware 56", "Riruta", "Riruta Satellite", "Satellite", "Mutuini", "Mutuini Estate",
+    "Ngando", "Uthiru", "Uthiru/Ruthimitu", "Ruthimitu", "Waithaka", "Kinoo", "Kikuyu Road",
+    "Kangemi", "Waiyaki Way", "Muguga", "Kabete",
+    // Lang'ata, Karen and southern Nairobi
+    "Karen", "Karen Hardy", "Karen Shopping Centre", "Lang'ata", "Langata", "Nairobi West",
+    "Mugumo-ini", "Mugumoini", "South C", "South C Estate", "Nyayo Highrise", "Nyayo Estate",
+    "Otiende", "Wilson", "Wilson Airport", "Mbagathi", "Mbagathi Way", "Madaraka", "Nairobi South",
+    "Mukuru Kwa Njenga", "Mukuru Kwa Reuben", "Mukuru Kayaba", "Mukuru kwa Njenga", "Mukuru kwa Reuben",
+    // Kibra and adjacent neighbourhoods
+    "Kibra", "Kibera", "Laini Saba", "Lindi", "Makina", "Woodley/Kenyatta Golf", "Sarang'ombe",
+    "Sarangombe", "Olympic", "Olympic Estate", "Ayany", "Kibera Drive", "Toi Market",
+    // Embakasi South and Mombasa Road corridor
+    "South B", "South B Estate", "Imara Daima", "Pipeline", "Kware", "Kwa Njenga", "Kwa Reuben",
+    "Baraka", "Baraka Estate", "Nyayo Village", "Nyayo Estate", "Fedha", "Fedha Estate", "Tassia",
+    "Tassia Estate", "Tasia", "Donholm", "Donholm Estate", "Greenfields", "Savannah", "Savannah Estate",
+    "Mombasa Road", "Belle Vue", "Syokimau", "Athi View", "Airport View", "City Cabanas",
+    // Embakasi North/Central/East/West
+    "Embakasi", "Embakasi Village", "Umoja", "Umoja I", "Umoja II", "Umoja Innercore", "Umoja Estate",
+    "Mowlem", "Kariobangi South", "Kariobangi North", "Kariobangi", "Dandora", "Dandora Area I",
+    "Dandora Area II", "Dandora Area III", "Dandora Area IV", "Kayole", "Kayole North", "Kayole Central",
+    "Kayole South", "Komarock", "Komarock Estate", "Matopeni", "Mihango", "Mihang'o", "Upper Savanna",
+    "Lower Savanna", "Utawala", "Utawala Estate", "Njiru", "Ruai", "Ruai Town", "Kamulu", "Joska",
+    "Mihango Estate", "Tena", "Tena Estate", "Soweto", "Saika", "Obama Estate", "Mukuru",
+    // Kasarani, Roysambu, Ruaraka and northern residential areas
+    "Kasarani", "Kasarani Mwiki", "Mwiki", "Clay City", "Njiru", "Roysambu", "Zimmerman", "Kahawa",
+    "Kahawa West", "Kahawa Sukari", "Githurai", "Githurai 44", "Githurai 45", "Githurai Kimbo",
+    "Ruaraka", "Babadogo", "Utalii", "Mathare North", "Lucky Summer", "Korogocho", "Mathare",
+    "Mathare North", "Huruma", "Mabatini", "Ngei", "Mlango Kubwa", "Hospital", "Mlango Soko",
+    "Garden Estate", "Roysambu Estate", "Thika Road", "Mirema", "Mirema Springs", "Marurui",
+    // Named estates and commonly used residential centres
+    "Buruburu", "Buruburu Phase 1", "Buruburu Phase 2", "Buruburu Phase 3", "Buruburu Phase 4",
+    "Buruburu Phase 5", "Uhuru Estate", "Uhuru", "Jericho Estate", "Jericho", "Bahati Estate",
+    "Maringo Estate", "Makongeni Estate", "Harambee Estate", "Akiba", "Akiba Estate", "Hazina",
+    "Hazina Estate", "Mugoya", "Mugoya Estate", "Riverbank", "River Bank Estate", "Kimathi",
+    "Kimathi Estate", "Pioneer", "Pioneer Estate", "Tena Estate", "Donholm Phase 5", "Kayole Junction",
+    "Soweto Kayole", "Mukuru Kwa Njenga Estate", "Mukuru Kwa Reuben Estate", "Lavington Estate",
+    "Riverside Estate", "Kileleshwa Estate", "Kilimani Estate", "Parklands Estate", "Westlands Estate"
   ];
   const nairobiCounty = await prisma.county.findUnique({ where: { name: "Nairobi City" } });
   const nairobiTown = nairobiCounty
