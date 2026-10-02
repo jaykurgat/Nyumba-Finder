@@ -306,7 +306,42 @@ async function main() {
     });
   }
 
-  // Import the supplied Kenyan administrative location master.\n  // NAME_3 is represented as an administrative unit and NAME_4 as its child location.\n  // This is deliberately separate from rental-market towns/estates, which will be layered on later.\n  const locationMaster = require('./kenya-location-master.json');\n  const normalizeSlug = (value) => String(value)\n    .normalize('NFD')\n    .replace(/[\\u0300-\\u036f]/g, '')\n    .toLowerCase()\n    .replace(/[^a-z0-9]+/g, '-')\n    .replace(/^-|-$/g, '');\n  const parentIds = new Map();\n  for (const [countyName, adminUnitName] of [...new Set(locationMaster.rows.map(([countyName, adminUnitName]) => [countyName, adminUnitName]).map(JSON.stringify))].map(JSON.parse)) {\n    const county = await prisma.county.findUnique({ where: { name: countyName } });\n    if (!county) continue;\n    const slug = normalizeSlug(adminUnitName);\n    const node = await prisma.locationNode.upsert({\n      where: { countyId_level_slug_parentId: { countyId: county.id, level: 'ADMIN_UNIT', slug, parentId: null } },\n      update: { name: adminUnitName, source: 'KEN_adm4.csv' },\n      create: { countyId: county.id, level: 'ADMIN_UNIT', name: adminUnitName, slug, source: 'KEN_adm4.csv' }\n    });\n    parentIds.set(countyName + '::' + slug, node.id);\n  }\n  for (const [countyName, adminUnitName, locationName] of locationMaster.rows) {\n    const county = await prisma.county.findUnique({ where: { name: countyName } });\n    if (!county) continue;\n    const parentId = parentIds.get(countyName + '::' + normalizeSlug(adminUnitName));\n    if (!parentId) continue;\n    const slug = normalizeSlug(locationName);\n    await prisma.locationNode.upsert({\n      where: { countyId_level_slug_parentId: { countyId: county.id, level: 'ADMIN_LOCATION', slug, parentId } },\n      update: { name: locationName, source: 'KEN_adm4.csv' },\n      create: { countyId: county.id, parentId, level: 'ADMIN_LOCATION', name: locationName, slug, source: 'KEN_adm4.csv' }\n    });\n  }\n\n  console.log(`Seeded ${counties.length} Kenyan counties and county-capital location nodes.`);
+  // Import the supplied Kenyan administrative location master.
+  // NAME_3 is represented as an administrative unit and NAME_4 as its child location.
+  // This is deliberately separate from rental-market towns/estates, which will be layered on later.
+  const locationMaster = require('./kenya-location-master.json');
+  const normalizeSlug = (value) => String(value)
+    .normalize('NFD')
+    .replace(/[\\u0300-\\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '');
+  const parentIds = new Map();
+  for (const [countyName, adminUnitName] of [...new Set(locationMaster.rows.map(([countyName, adminUnitName]) => [countyName, adminUnitName]).map(JSON.stringify))].map(JSON.parse)) {
+    const county = await prisma.county.findUnique({ where: { name: countyName } });
+    if (!county) continue;
+    const slug = normalizeSlug(adminUnitName);
+    const node = await prisma.locationNode.upsert({
+      where: { countyId_level_slug_parentId: { countyId: county.id, level: 'ADMIN_UNIT', slug, parentId: null } },
+      update: { name: adminUnitName, source: 'KEN_adm4.csv' },
+      create: { countyId: county.id, level: 'ADMIN_UNIT', name: adminUnitName, slug, source: 'KEN_adm4.csv' }
+    });
+    parentIds.set(countyName + '::' + slug, node.id);
+  }
+  for (const [countyName, adminUnitName, locationName] of locationMaster.rows) {
+    const county = await prisma.county.findUnique({ where: { name: countyName } });
+    if (!county) continue;
+    const parentId = parentIds.get(countyName + '::' + normalizeSlug(adminUnitName));
+    if (!parentId) continue;
+    const slug = normalizeSlug(locationName);
+    await prisma.locationNode.upsert({
+      where: { countyId_level_slug_parentId: { countyId: county.id, level: 'ADMIN_LOCATION', slug, parentId } },
+      update: { name: locationName, source: 'KEN_adm4.csv' },
+      create: { countyId: county.id, parentId, level: 'ADMIN_LOCATION', name: locationName, slug, source: 'KEN_adm4.csv' }
+    });
+  }
+
+  console.log(`Seeded ${counties.length} Kenyan counties and county-capital location nodes.`);
 }
 
 main().catch((error) => {
