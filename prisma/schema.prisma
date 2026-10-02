@@ -122,9 +122,13 @@ model Property {
   countyId     String?  @db.Uuid
   townId       String?  @db.Uuid
   areaId       String?  @db.Uuid
+  locationNodeId String? @db.Uuid
+  latitude     Float?
+  longitude    Float?
   county       County?  @relation(fields: [countyId], references: [id], onDelete: SetNull)
   town         Town?    @relation(fields: [townId], references: [id], onDelete: SetNull)
   areaLocation Area?    @relation(fields: [areaId], references: [id], onDelete: SetNull)
+  locationNode LocationNode? @relation(fields: [locationNodeId], references: [id], onDelete: SetNull)
   phoneNumber  String?
   propertyType String @default("Apartment")
   status       PropertyStatus @default(ACTIVE)
@@ -138,6 +142,8 @@ model Property {
   @@index([countyId])
   @@index([townId])
   @@index([areaId])
+  @@index([locationNodeId])
+  @@index([latitude, longitude])
   @@index([price])
   @@index([bedrooms])
   @@index([createdAt])
@@ -216,6 +222,41 @@ model AuditLog {
   @@index([createdAt])
 }
 
+model LocationNode {
+  id          String   @id @default(uuid()) @db.Uuid
+  countyId    String   @db.Uuid
+  parentId    String?  @db.Uuid
+  level       String
+  name        String
+  slug        String
+  latitude    Float?
+  longitude   Float?
+  searchable Boolean  @default(true)
+  source      String   @default("KEN_adm4.csv")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  county      County   @relation(fields: [countyId], references: [id], onDelete: Cascade)
+  parent      LocationNode? @relation("LocationNodeParent", fields: [parentId], references: [id], onDelete: SetNull)
+  children    LocationNode[] @relation("LocationNodeParent")
+  properties  Property[]
+  aliases     LocationNodeAlias[]
+
+  @@unique([countyId, level, slug, parentId])
+  @@index([countyId, level])
+  @@index([name])
+  @@index([parentId])
+}
+
+model LocationNodeAlias {
+  id          String @id @default(uuid()) @db.Uuid
+  locationNodeId String @db.Uuid
+  alias       String
+  normalized  String @unique
+  locationNode LocationNode @relation(fields: [locationNodeId], references: [id], onDelete: Cascade)
+
+  @@index([locationNodeId])
+}
+
 model County {
   id         String     @id @default(uuid()) @db.Uuid
   name       String     @unique
@@ -225,6 +266,7 @@ model County {
   updatedAt  DateTime   @updatedAt
   towns      Town[]
   properties Property[]
+  locationNodes LocationNode[]
 
   @@index([name])
 }
