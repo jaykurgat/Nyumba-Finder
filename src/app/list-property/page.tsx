@@ -7,6 +7,7 @@ import * as z from "zod";
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState, useEffect, use } from 'react';
 import { PropertyImage } from "@/components/properties/PropertyImage";
+import { InteractiveLocationMap } from "@/components/properties/InteractiveLocationMap";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -23,7 +24,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Trash2, Home, MapPin, Navigation, Search, CheckCircle2, X } from "lucide-react";
+import { Loader2, Trash2, Home, MapPin, Navigation, Search, X } from "lucide-react";
 import type { Property } from "@/types/property";
 
 const amenitiesList = ["Parking", "Swimming Pool", "Gym", "Security", "Balcony", "Garden", "Internet Ready", "Servant Quarters", "Lift", "Water Included", "Beach Access", "Air Conditioning"] as const;
@@ -540,10 +541,58 @@ export default function ListPropertyPage() {
 
                       <div className="rounded-xl border bg-muted/20 p-4">
                         <div className="flex items-start justify-between gap-4">
-                          <div className="flex gap-3"><div className="mt-0.5 flex h-9 w-9 items-center justify-center rounded-lg bg-background text-primary shadow-sm"><Navigation className="h-4 w-4" /></div><div><p className="text-sm font-medium">Property map location <span className="font-normal text-muted-foreground">(Optional)</span></p><p className="mt-1 text-xs leading-5 text-muted-foreground">A location pin helps tenants find properties near the areas they search for. Your exact pin is used for search and is not shown publicly as a precise address.</p></div></div>
-                          <Button type="button" variant="outline" size="sm" className="shrink-0 rounded-lg" onClick={() => { if (!navigator.geolocation) { toast({ title: "Location unavailable", description: "Your browser does not support location access.", variant: "destructive" }); return; } navigator.geolocation.getCurrentPosition((position) => { setMapPosition({ lat: position.coords.latitude, lng: position.coords.longitude }); setLocationSource("BROWSER_GEOLOCATION"); }, () => toast({ title: "Location not available", description: "Allow location access or continue using the selected area.", variant: "destructive" }), { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }); }}>Use my location</Button>
+                          <div className="flex gap-3">
+                            <div className="mt-0.5 flex h-9 w-9 items-center justify-center rounded-lg bg-background text-primary shadow-sm">
+                              <Navigation className="h-4 w-4" />
+                            </div>
+                            <div>
+                              <p className="text-sm font-medium">Property map location <span className="font-normal text-muted-foreground">(Optional)</span></p>
+                              <p className="mt-1 text-xs leading-5 text-muted-foreground">Place the pin where the property is located. You can use your current location or move the pin manually. Your exact pin is not shown publicly as a precise address.</p>
+                            </div>
+                          </div>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="shrink-0 rounded-lg"
+                            onClick={() => {
+                              if (!navigator.geolocation) {
+                                toast({ title: "Location unavailable", description: "Your browser does not support location access.", variant: "destructive" });
+                                return;
+                              }
+                              navigator.geolocation.getCurrentPosition(
+                                (position) => {
+                                  setMapPosition({ lat: position.coords.latitude, lng: position.coords.longitude });
+                                  setLocationSource("BROWSER_GEOLOCATION");
+                                },
+                                () => toast({ title: "Location not available", description: "Allow location access or continue using the selected area.", variant: "destructive" }),
+                                { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+                              );
+                            }}
+                          >
+                            Use my location
+                          </Button>
                         </div>
-                        {mapPosition && <div className="mt-4 overflow-hidden rounded-xl border bg-background"><iframe title="Property location map" className="h-48 w-full border-0" loading="lazy" src={`https://www.openstreetmap.org/export/embed.html?bbox=${mapPosition.lng - 0.01}%2C${mapPosition.lat - 0.01}%2C${mapPosition.lng + 0.01}%2C${mapPosition.lat + 0.01}&layer=mapnik&marker=${mapPosition.lat}%2C${mapPosition.lng}`} /><div className="flex items-center justify-between gap-3 px-3 py-2 text-xs text-muted-foreground"><span className="inline-flex items-center gap-1.5"><CheckCircle2 className="h-3.5 w-3.5 text-primary" />Location pin captured</span><button type="button" className="hover:text-foreground" onClick={() => setMapPosition(null)}>Remove pin</button></div></div>}
+
+                        <div className="mt-4">
+                          <InteractiveLocationMap
+                            value={mapPosition}
+                            onChange={(position) => {
+                              setMapPosition(position);
+                              setLocationSource("USER_SELECTED");
+                            }}
+                            heightClassName="h-64 md:h-72"
+                          />
+                        </div>
+
+                        <div className="mt-3 flex items-center justify-between gap-3 text-xs text-muted-foreground">
+                          <span>{mapPosition ? "Location pin selected. Drag the pin to adjust it." : "Set the property location by dragging the pin or tapping the map."}</span>
+                          {mapPosition && (
+                            <button type="button" className="shrink-0 hover:text-foreground" onClick={() => setMapPosition(null)}>
+                              Remove pin
+                            </button>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
