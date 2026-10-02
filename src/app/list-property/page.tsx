@@ -196,6 +196,7 @@ export default function ListPropertyPage() {
             images: data.images || [],
             locationNodeId: data.locationNodeId || "",
           });
+          setSelectedTownId(data.locationNodeId || "");
           setMapPosition(data.latitude != null && data.longitude != null ? { lat: data.latitude, lng: data.longitude } : null);
           setLocationSource("USER_SELECTED");
         } catch (error) {
@@ -420,7 +421,7 @@ export default function ListPropertyPage() {
                       <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary"><MapPin className="h-5 w-5" /></div>
                       <div>
                         <h2 className="text-lg font-semibold tracking-tight">Where is the property?</h2>
-                        <p className="mt-1 text-sm text-muted-foreground">Choose the county first, then narrow the location. You don't need to know the official administrative name.</p>
+                        <p className="mt-1 text-sm text-muted-foreground">Choose the county, then select the town or city and enter the local area.</p>
                       </div>
                     </div>
 
