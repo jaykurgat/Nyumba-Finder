@@ -12,6 +12,7 @@ export async function GET(request: NextRequest) {
     const countyId = params.get('countyId')?.trim() || '';
     const parentId = params.get('parentId')?.trim() || '';
     const level = params.get('level')?.trim() || '';
+    const excludeLevel = params.get('excludeLevel')?.trim() || '';
 
     if (!query && !countyId && !parentId && !level) return NextResponse.json({ locations: [] });
 
@@ -22,6 +23,7 @@ export async function GET(request: NextRequest) {
         ...(countyId ? { countyId } : {}),
         ...(parentId ? { parentId } : {}),
         ...(level ? { level } : {}),
+        ...(excludeLevel ? { NOT: { level: excludeLevel } } : {}),
         ...(query ? {
           OR: [
             { name: { contains: query, mode: 'insensitive' } },
@@ -53,6 +55,7 @@ export async function GET(request: NextRequest) {
         id: node.id,
         name: node.name,
         level: node.level,
+        typeLabel: node.level === 'ADMIN_UNIT' ? 'Administrative unit' : node.level === 'ADMIN_LOCATION' ? 'Administrative location' : node.level === 'TOWN' ? 'Town / City' : node.level.charAt(0) + node.level.slice(1).toLowerCase().replace(/_/g, ' '),
         countyId: node.countyId,
         countyName: node.county.name,
         parentId: node.parentId,
