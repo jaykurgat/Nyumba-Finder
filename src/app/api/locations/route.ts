@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
         id: node.id,
         name: node.name,
         level: node.level,
-        typeLabel: node.level === 'ADMIN_UNIT' ? 'Administrative unit' : node.level === 'ADMIN_LOCATION' ? 'Administrative location' : node.level === 'TOWN' ? 'Town / City' : node.level.charAt(0) + node.level.slice(1).toLowerCase().replace(/_/g, ' '),
+        typeLabel: node.level === 'TOWN' ? 'Town / City' : node.level === 'ADMIN_UNIT' || node.level === 'ADMIN_LOCATION' ? 'Location' : node.level.charAt(0) + node.level.slice(1).toLowerCase().replace(/_/g, ' '),
         countyId: node.countyId,
         countyName: node.county.name,
         parentId: node.parentId,
