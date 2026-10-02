@@ -3,11 +3,14 @@ import { prisma } from '@/lib/prisma';
 
 export async function GET() {
   try {
+    // The county selector only needs the canonical county records.
+    // LocationNode is resolved later when a listing location is selected.
     const counties = await prisma.county.findMany({
       orderBy: { name: 'asc' },
-      select: { id: true, name: true, slug: true, code: true, locationNodes: { where: { level: 'COUNTY' }, select: { id: true }, take: 1 } },
+      select: { id: true, name: true, slug: true, code: true },
     });
-    return NextResponse.json({ counties: counties.map(({ locationNodes, ...county }) => ({ ...county, locationNodeId: locationNodes[0]?.id ?? null })) });
+
+    return NextResponse.json({ counties });
   } catch (error) {
     console.error('API_ROUTE_ERROR: [GET /api/counties]', error);
     return NextResponse.json({ message: 'Error fetching counties.' }, { status: 500 });
