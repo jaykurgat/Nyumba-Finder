@@ -12,6 +12,10 @@ const inter = Inter({ variable: '--font-inter', subsets: ['latin'] });
 export const metadata: Metadata = {
   title: 'NyumbaFinder | Find a Rental Home in Kenya',
   description: 'Find rental homes in Kenya by location, property type, budget and nearby places.',
+  icons: {
+    icon: '/icon.svg',
+    apple: '/nyumbafinder-mark.svg',
+  },
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
