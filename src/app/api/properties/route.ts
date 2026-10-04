@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import type { Property } from '@/types/property';
+import type { Prisma } from '@prisma/client';
 import { distanceKm, locationRelevanceScore, resolveLocationContext } from '@/lib/location-relevance';
 
 const getString = (value: unknown, defaultValue = '') =>
@@ -65,7 +66,7 @@ export async function GET(request: NextRequest) {
         })).map((item) => item.neighborId)
       : [];
 
-    const baseWhere = {
+    const baseWhere: Prisma.PropertyWhereInput = {
       status: 'ACTIVE' as const,
       ...(propertyTypeQuery && propertyTypeQuery !== 'Any type' ? { propertyType: propertyTypeQuery } : {}),
       ...(minPrice !== undefined || maxPrice !== undefined
