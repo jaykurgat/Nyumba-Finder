@@ -1,9 +1,11 @@
 import { prisma } from '@/lib/prisma';
-import { scrapeStructuredListing, discoverListingUrls } from './scraper';
+import { discoverListingUrls, scrapeStructuredListing } from './scraper';
 import type { ImportedListing } from './types';
 
 const normalize = (value: string) =>
   value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, Math.max(0, ms)));
 
 async function resolveLocation(location?: string) {
   if (!location) return null;
@@ -128,12 +130,19 @@ export async function importListing(sourceId: string, listing: ImportedListing, 
 
 export async function runAuthorizedSourceImport(sourceName: string) {
   const source = await prisma.importSource.findUnique({ where: { name: sourceName } });
-  if (!source) throw new Error(`Import source "${sourceName}" is not configured.`);
+  if (!source) throw new Error('Import source "' + sourceName + '" is not configured.');
   if (!source.enabled || !source.accessApproved) {
-    throw new Error(`Import source "${sourceName}" is disabled or not approved for automated access.`);
+    throw new Error('Import source "' + sourceName + '" is disabled or not approved for automated access.');
   }
 
-  const urls = await discoverListingUrls(source.listingUrl || source.baseUrl, 25);
+  const maxListings = Math.max(1, Math.min(source.maxPages * 100, 500));
+  const urls = await discoverListingUrls(source.listingUrl || source.baseUrl, {
+    maxListings,
+    maxPages: source.maxPages,
+    paginationParam: source.paginationParam || 'page',
+    listingPatterns: source.listingPatterns,
+  });
+
   let imported = 0;
   let deduplicated = 0;
   const errors: string[] = [];
@@ -145,18 +154,42 @@ export async function runAuthorizedSourceImport(sourceName: string) {
       imported += 1;
       if (result.deduplicated) deduplicated += 1;
     } catch (error) {
-      errors.push(`${url}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      errors.push(url + ': ' + (error instanceof Error ? error.message : 'Unknown error'));
     }
+    if (source.requestDelayMs > 0) await sleep(source.requestDelayMs);
+  }
+
+  const runCompletedAt = new Date();
+
+  // A listing that has not been seen for two consecutive source runs is no longer
+  // treated as active. We retain the record for audit/history and can reactivate it
+  // automatically when the source publishes it again.
+  const staleBefore = new Date(runCompletedAt.getTime() - 48 * 60 * 60 * 1000);
+  if (urls.length > 0) {
+    await prisma.externalListing.updateMany({
+      where: {
+        sourceId: source.id,
+        status: 'ACTIVE',
+        lastSeenAt: { lt: staleBefore },
+      },
+      data: { status: 'STALE' },
+    });
   }
 
   await prisma.importSource.update({
     where: { id: source.id },
     data: {
-      lastRunAt: new Date(),
-      lastSuccessAt: errors.length === urls.length && urls.length > 0 ? source.lastSuccessAt : new Date(),
+      lastRunAt: runCompletedAt,
+      lastSuccessAt: errors.length === urls.length && urls.length > 0 ? source.lastSuccessAt : runCompletedAt,
       lastError: errors.length ? errors.slice(0, 10).join('\n') : null,
     },
   });
 
-  return { source: source.name, discovered: urls.length, imported, deduplicated, errors };
+  return {
+    source: source.name,
+    discovered: urls.length,
+    imported,
+    deduplicated,
+    errors,
+  };
 }
