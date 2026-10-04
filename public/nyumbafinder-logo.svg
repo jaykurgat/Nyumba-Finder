@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 128" role="img" aria-label="NyumbaFinder">
+  <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#087a59"/><stop offset="1" stop-color="#00563f"/></linearGradient></defs>
+  <path d="M20 59 64 22l44 37v43c0 3-2 5-5 5H25c-3 0-5-2-5-5Z" fill="url(#g)"/>
+  <path d="M14 60 64 18l50 42-8 9-42-35-42 35Z" fill="url(#g)"/>
+  <path d="M51 77h12v12H51zM67 77h12v12H67zM51 61h12v12H51zM67 61h12v12H67z" fill="#fff"/>
+  <path d="M85 83c-7-7-18-7-25 0s-7 18 0 25 18 7 25 0l13 13 8-8-13-13c5-7 4-12-1-17-2-2-4-4-7-5Zm-6 19c-3 3-8 3-11 0s-3-8 0-11 8-3 11 0 3 8 0 11Z" fill="#f47a20"/>
+  <text x="142" y="74" font-family="Inter, Arial, sans-serif" font-size="47" font-weight="700" letter-spacing="-2"><tspan fill="#075d46">Nyumba</tspan><tspan fill="#f47a20">Finder</tspan></text>
+  <text x="145" y="101" font-family="Inter, Arial, sans-serif" font-size="12" font-weight="600" letter-spacing="2.3" fill="#4b5b55">FIND A HOME THAT WORKS FOR YOU</text>
+</svg>
