@@ -80,6 +80,7 @@ export async function GET(request: NextRequest) {
       include: {
         county: { select: { name: true } },
         propertyImages: { select: { id: true }, orderBy: { createdAt: 'asc' } },
+        externalListings: { where: { status: 'ACTIVE' }, select: { imageUrls: true }, orderBy: { createdAt: 'asc' }, take: 1 },
         promotions: {
           where: {
             status: 'ACTIVE',
@@ -117,7 +118,9 @@ export async function GET(request: NextRequest) {
       return {
         ...toProperty({
           ...row,
-          images: row.propertyImages.map((image) => '/api/properties/' + row.id + '?image=' + image.id),
+          images: row.propertyImages.length
+          ? row.propertyImages.map((image) => '/api/properties/' + row.id + '?image=' + image.id)
+          : (row.externalListings[0]?.imageUrls ?? []),
         }),
         propertyType: row.propertyType,
         status: row.status,
