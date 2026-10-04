@@ -58,39 +58,55 @@ export async function GET(request: NextRequest) {
     const locationContext = await resolveLocationContext(searchParams.get('location')?.trim() || '', prisma);
     const radiusKm = Math.max(1, Math.min(100, getOptionalNumber(searchParams.get('radiusKm')) ?? 25));
 
-    const rows = await prisma.property.findMany({
-      where: {
-        status: 'ACTIVE',
-        ...(propertyTypeQuery && propertyTypeQuery !== 'Any type' ? { propertyType: propertyTypeQuery } : {}),
-        ...(minPrice !== undefined || maxPrice !== undefined
-          ? { price: { ...(minPrice !== undefined ? { gte: minPrice } : {}), ...(maxPrice !== undefined ? { lte: maxPrice } : {}) } }
-          : {}),
-        ...(minBedrooms !== undefined ? { bedrooms: { gte: Math.ceil(minBedrooms) } } : {}),
-        ...(minBathrooms !== undefined ? { bathrooms: { gte: Math.ceil(minBathrooms) } } : {}),
+    const neighboringCountyIds = locationContext?.canonicalCountyId
+      ? (await prisma.countyNeighbor.findMany({
+          where: { countyId: locationContext.canonicalCountyId },
+          select: { neighborId: true },
+        })).map((item) => item.neighborId)
+      : [];
 
-        ...(selectedAmenities.length ? { amenities: { hasEvery: selectedAmenities } } : {}),
-        ...(generalQueryTerm ? {
-          OR: [
-            { title: { contains: generalQueryTerm, mode: 'insensitive' } },
-            { description: { contains: generalQueryTerm, mode: 'insensitive' } },
-            { location: { contains: generalQueryTerm, mode: 'insensitive' } },
-          ],
-        } : {}),
-      },
-      include: {
-        county: { select: { name: true } },
-        propertyImages: { select: { id: true }, orderBy: { createdAt: 'asc' } },
-        externalListings: { where: { status: 'ACTIVE' }, select: { imageUrls: true }, orderBy: { createdAt: 'asc' }, take: 1 },
-        promotions: {
-          where: {
-            status: 'ACTIVE',
-            startsAt: { lte: new Date() },
-            endsAt: { gte: new Date() },
+    const baseWhere = {
+      status: 'ACTIVE' as const,
+      ...(propertyTypeQuery && propertyTypeQuery !== 'Any type' ? { propertyType: propertyTypeQuery } : {}),
+      ...(minPrice !== undefined || maxPrice !== undefined
+        ? { price: { ...(minPrice !== undefined ? { gte: minPrice } : {}), ...(maxPrice !== undefined ? { lte: maxPrice } : {}) } }
+        : {}),
+      ...(minBedrooms !== undefined ? { bedrooms: { gte: Math.ceil(minBedrooms) } } : {}),
+      ...(minBathrooms !== undefined ? { bathrooms: { gte: Math.ceil(minBathrooms) } } : {}),
+      ...(selectedAmenities.length ? { amenities: { hasEvery: selectedAmenities } } : {}),
+      ...(generalQueryTerm ? {
+        OR: [
+          { title: { contains: generalQueryTerm, mode: 'insensitive' } },
+          { description: { contains: generalQueryTerm, mode: 'insensitive' } },
+          { location: { contains: generalQueryTerm, mode: 'insensitive' } },
+        ],
+      } : {}),
+      ...(locationContext?.canonicalCountyId ? {
+        countyId: { in: [locationContext.canonicalCountyId, ...neighboringCountyIds] },
+      } : {}),
+    };
+
+    const [total, rows] = await Promise.all([
+      prisma.property.count({ where: baseWhere }),
+      prisma.property.findMany({
+        where: baseWhere,
+        orderBy: [{ createdAt: 'desc' }],
+        take: 500,
+        include: {
+          county: { select: { name: true } },
+          propertyImages: { select: { id: true }, orderBy: { createdAt: 'asc' } },
+          externalListings: { where: { status: 'ACTIVE' }, select: { imageUrls: true }, orderBy: { createdAt: 'asc' }, take: 1 },
+          promotions: {
+            where: {
+              status: 'ACTIVE',
+              startsAt: { lte: new Date() },
+              endsAt: { gte: new Date() },
+            },
+            orderBy: { boost: 'desc' },
           },
-          orderBy: { boost: 'desc' },
         },
-      },
-    });
+      }),
+    ]);
 
     const results = rows.map((row) => {
       const promotion = row.promotions.find((candidate) => {
@@ -144,7 +160,10 @@ export async function GET(request: NextRequest) {
       return a.title.localeCompare(b.title);
     });
 
-    return NextResponse.json(results.map(({ _rankingScore: _ignored, ...property }) => property));
+    const response = NextResponse.json(results.slice(0, 60).map(({ _rankingScore: _ignored, ...property }) => property));
+    response.headers.set('X-Total-Count', String(total));
+    response.headers.set('X-Result-Limit', '60');
+    return response;
   } catch (error) {
     console.error('API_ROUTE_ERROR: [GET /api/properties]', error);
     return NextResponse.json({ message: 'Error fetching properties.' }, { status: 500 });
