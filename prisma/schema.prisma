@@ -211,10 +211,14 @@ model ImportSource {
   name               String   @unique
   baseUrl            String
   listingUrl          String?
+  listingPatterns     String[] @default([])
+  paginationParam     String?  @default("page")
+  maxPages            Int      @default(1)
+  requestDelayMs      Int      @default(750)
   enabled             Boolean  @default(false)
-  accessApproved     Boolean  @default(false)
-  accessMethod       String   @default("MANUAL")
-  redisplayAllowed   Boolean  @default(false)
+  accessApproved      Boolean  @default(false)
+  accessMethod        String   @default("MANUAL")
+  redisplayAllowed    Boolean  @default(false)
   lastRunAt           DateTime?
   lastSuccessAt       DateTime?
   lastError           String?
