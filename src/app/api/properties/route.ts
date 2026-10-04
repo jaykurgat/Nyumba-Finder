@@ -66,6 +66,31 @@ export async function GET(request: NextRequest) {
         })).map((item) => item.neighborId)
       : [];
 
+    const searchConditions: Prisma.PropertyWhereInput[] = [];
+
+    if (generalQueryTerm) {
+      searchConditions.push({
+        OR: [
+          { title: { contains: generalQueryTerm, mode: 'insensitive' } },
+          { description: { contains: generalQueryTerm, mode: 'insensitive' } },
+          { location: { contains: generalQueryTerm, mode: 'insensitive' } },
+        ],
+      });
+    }
+
+    if (locationContext?.query) {
+      searchConditions.push({
+        OR: [
+          ...(locationContext.canonicalCountyId
+            ? [{ countyId: { in: [locationContext.canonicalCountyId, ...neighboringCountyIds] } }]
+            : []),
+          { title: { contains: locationContext.query, mode: 'insensitive' } },
+          { description: { contains: locationContext.query, mode: 'insensitive' } },
+          { location: { contains: locationContext.query, mode: 'insensitive' } },
+        ],
+      });
+    }
+
     const baseWhere: Prisma.PropertyWhereInput = {
       status: 'ACTIVE' as const,
       ...(propertyTypeQuery && propertyTypeQuery !== 'Any type' ? { propertyType: propertyTypeQuery } : {}),
@@ -75,27 +100,7 @@ export async function GET(request: NextRequest) {
       ...(minBedrooms !== undefined ? { bedrooms: { gte: Math.ceil(minBedrooms) } } : {}),
       ...(minBathrooms !== undefined ? { bathrooms: { gte: Math.ceil(minBathrooms) } } : {}),
       ...(selectedAmenities.length ? { amenities: { hasEvery: selectedAmenities } } : {}),
-      ...(generalQueryTerm ? {
-        OR: [
-          { title: { contains: generalQueryTerm, mode: 'insensitive' } },
-          { description: { contains: generalQueryTerm, mode: 'insensitive' } },
-          { location: { contains: generalQueryTerm, mode: 'insensitive' } },
-        ],
-      } : {}),
-      ...(locationContext?.canonicalCountyId ? {
-        OR: [
-          { countyId: { in: [locationContext.canonicalCountyId, ...neighboringCountyIds] } },
-          { title: { contains: locationContext.query, mode: 'insensitive' } },
-          { description: { contains: locationContext.query, mode: 'insensitive' } },
-          { location: { contains: locationContext.query, mode: 'insensitive' } },
-        ],
-      } : locationContext?.query ? {
-        OR: [
-          { title: { contains: locationContext.query, mode: 'insensitive' } },
-          { description: { contains: locationContext.query, mode: 'insensitive' } },
-          { location: { contains: locationContext.query, mode: 'insensitive' } },
-        ],
-      } : {}),
+      ...(searchConditions.length ? { AND: searchConditions } : {}),
     };
 
     const [total, rows] = await Promise.all([
