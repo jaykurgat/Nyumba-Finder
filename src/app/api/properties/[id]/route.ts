@@ -52,7 +52,11 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
     const property = await prisma.property.findUnique({
       where: { id },
-      include: { locationNode: true, county: { select: { name: true } } },
+      include: {
+        locationNode: true,
+        county: { select: { name: true } },
+        externalListings: { where: { status: 'ACTIVE' }, select: { imageUrls: true }, orderBy: { createdAt: 'asc' }, take: 1 },
+      },
     });
     if (!property) return NextResponse.json({ message: 'Property not found' }, { status: 404 });
 
@@ -66,7 +70,9 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       ...property,
       // PropertyImage is the source of truth for uploaded images.
       // Do not append property.images here or every edit would return duplicates.
-      images: images.map((image) => '/api/properties/' + id + '?image=' + image.id),
+      images: images.length
+        ? images.map((image) => '/api/properties/' + id + '?image=' + image.id)
+        : (property.externalListings[0]?.imageUrls ?? []),
     }));
   } catch (error) {
     console.error('API_ROUTE_ERROR: [GET /api/properties/:id]', error);
