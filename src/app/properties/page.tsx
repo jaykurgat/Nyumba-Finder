@@ -20,6 +20,7 @@ function PropertyListingsSkeleton() {
 
 function PropertyListingsContent() {
   const [properties, setProperties] = useState<Property[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const params = useSearchParams();
@@ -35,9 +36,11 @@ function PropertyListingsContent() {
         throw new Error(message);
       }
       setProperties(await response.json());
+      setTotalCount(Number(response.headers.get("X-Total-Count") || 0));
     } catch (e: any) {
       setError(e.message || "Unable to load properties.");
       setProperties([]);
+      setTotalCount(0);
     } finally { setLoading(false); }
   }, [params]);
 
@@ -53,7 +56,8 @@ function PropertyListingsContent() {
     <div className="mb-5 flex items-end justify-between gap-4">
       <div>
         <p className="text-sm text-muted-foreground">{location ? "Rentals in " + location : "Homes and rentals across Kenya"}</p>
-        <h2 className="mt-1 text-xl font-semibold tracking-tight">{properties.length} {properties.length === 1 ? "property" : "properties"} found</h2>
+        <h2 className="mt-1 text-xl font-semibold tracking-tight">{totalCount || properties.length} {(totalCount || properties.length) === 1 ? "property" : "properties"} found</h2>
+        {totalCount > properties.length && <p className="mt-1 text-xs text-muted-foreground">Showing the most relevant matches first</p>}
       </div>
       {active > 0 && <p className="text-sm text-primary">{active} active filter{active === 1 ? "" : "s"}</p>}
     </div>
