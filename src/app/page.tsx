@@ -137,21 +137,21 @@ export default function Home() {
         </div>
 
         <div className="mt-7 grid gap-4 md:grid-cols-3">
-          <Link href="/properties" className="group rounded-2xl border bg-card p-6 transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-sm">
+          <div className="group rounded-2xl border bg-card p-6 transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-sm">
             <MapPin className="h-5 w-5 text-primary" />
             <h3 className="mt-5 font-semibold">Choose your area</h3>
             <p className="mt-2 text-sm leading-6 text-muted-foreground">Find homes by county, town, area and neighbourhood instead of guessing from listing titles.</p>
-          </Link>
-          <Link href="/properties" className="group rounded-2xl border bg-card p-6 transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-sm">
+          </div>
+          <div className="group rounded-2xl border bg-card p-6 transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-sm">
             <SlidersHorizontal className="h-5 w-5 text-primary" />
             <h3 className="mt-5 font-semibold">Filter what fits</h3>
             <p className="mt-2 text-sm leading-6 text-muted-foreground">Narrow results by rent, bedrooms, property type and the features you actually need.</p>
-          </Link>
-          <Link href="/properties" className="group rounded-2xl border bg-card p-6 transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-sm">
+          </div>
+          <div className="group rounded-2xl border bg-card p-6 transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-sm">
             <Search className="h-5 w-5 text-primary" />
             <h3 className="mt-5 font-semibold">Explore nearby</h3>
-            <p className="mt-2 text-sm leading-6 text-muted-foreground">Radius-based search will make it easier to discover suitable homes around the places you care about.</p>
-          </Link>
+            <p className="mt-2 text-sm leading-6 text-muted-foreground">Search can use location and distance to surface suitable homes around the places you care about.</p>
+          </div>
         </div>
       </section>
 
