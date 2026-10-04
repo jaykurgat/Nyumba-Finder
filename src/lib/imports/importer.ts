@@ -161,9 +161,9 @@ export async function runAuthorizedSourceImport(sourceName: string) {
 
   const runCompletedAt = new Date();
 
-  // A listing that has not been seen for two consecutive source runs is no longer
-  // treated as active. We retain the record for audit/history and can reactivate it
-  // automatically when the source publishes it again.
+  // A listing that has not been seen for 48 hours is no longer treated as active.
+  // We retain the record for audit/history and can reactivate it automatically
+  // when the source publishes it again.
   const staleBefore = new Date(runCompletedAt.getTime() - 48 * 60 * 60 * 1000);
   if (urls.length > 0) {
     await prisma.externalListing.updateMany({
