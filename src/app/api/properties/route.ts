@@ -83,7 +83,18 @@ export async function GET(request: NextRequest) {
         ],
       } : {}),
       ...(locationContext?.canonicalCountyId ? {
-        countyId: { in: [locationContext.canonicalCountyId, ...neighboringCountyIds] },
+        OR: [
+          { countyId: { in: [locationContext.canonicalCountyId, ...neighboringCountyIds] } },
+          { title: { contains: locationContext.query, mode: 'insensitive' } },
+          { description: { contains: locationContext.query, mode: 'insensitive' } },
+          { location: { contains: locationContext.query, mode: 'insensitive' } },
+        ],
+      } : locationContext?.query ? {
+        OR: [
+          { title: { contains: locationContext.query, mode: 'insensitive' } },
+          { description: { contains: locationContext.query, mode: 'insensitive' } },
+          { location: { contains: locationContext.query, mode: 'insensitive' } },
+        ],
       } : {}),
     };
 
@@ -125,9 +136,17 @@ export async function GET(request: NextRequest) {
         ? distanceKm(locationContext.center.lat, locationContext.center.lng, row.latitude, row.longitude)
         : undefined;
       const withinRadius = distance != null && distance <= radiusKm;
+      const locationSearchTerm = locationContext?.query.toLowerCase();
+      const titleLocationMatch = Boolean(locationSearchTerm && row.title.toLowerCase().includes(locationSearchTerm));
+      const descriptionLocationMatch = Boolean(locationSearchTerm && row.description.toLowerCase().includes(locationSearchTerm));
+      const locationTextMatch = Boolean(locationSearchTerm && row.location.toLowerCase().includes(locationSearchTerm));
+
       const relevance =
         (generalQueryTerm && row.title.toLowerCase().includes(generalQueryTerm) ? 100 : 0) +
         (generalQueryTerm && row.location.toLowerCase().includes(generalQueryTerm) ? 60 : 0) +
+        (titleLocationMatch ? 700 : 0) +
+        (descriptionLocationMatch ? 300 : 0) +
+        (locationTextMatch ? 650 : 0) +
         locationRelevanceScore(row.location + (row.county?.name ? ' ' + row.county.name : ''), locationContext) +
         (withinRadius ? 800 + Math.max(0, 200 - distance! * 8) : 0) +
         (distance != null && !withinRadius ? Math.max(0, 120 - distance) : 0);
