@@ -1,16 +1,13 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Heart, Home, Search, PlusCircle } from 'lucide-react';
+import { Heart, Search, PlusCircle } from 'lucide-react';
 
 export function Header() {
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur">
       <div className="container mx-auto flex h-16 items-center gap-6 px-4 md:px-6">
-        <Link href="/" className="flex items-center gap-2 shrink-0">
-          <span className="flex h-9 w-9 items-center justify-center bg-primary text-primary-foreground">
-            <Home className="h-5 w-5" />
-          </span>
-          <span className="text-lg font-semibold tracking-tight">NyumbaFinder</span>
+        <Link href="/" className="flex items-center shrink-0" aria-label="NyumbaFinder home">
+          <img src="/nyumbafinder-logo.svg" alt="NyumbaFinder" className="h-10 w-auto" />
         </Link>
         <nav className="hidden md:flex items-center gap-1">
           <Button variant="ghost" asChild><Link href="/properties"><Search className="mr-2 h-4 w-4" />Find a House</Link></Button>
