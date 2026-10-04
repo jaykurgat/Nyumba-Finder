@@ -19,9 +19,14 @@ export type ImportedListing = {
 export type ImportSourceConfig = {
   name: string;
   baseUrl: string;
-  listingUrl: string;
+  listingUrl?: string;
+  listingPatterns?: string[];
+  paginationParam?: string;
+  maxPages?: number;
+  requestDelayMs?: number;
   enabled: boolean;
   accessApproved: boolean;
+  accessMethod: string;
   redisplayAllowed: boolean;
   maxListingsPerRun?: number;
 };
