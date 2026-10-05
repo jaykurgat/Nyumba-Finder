@@ -32,6 +32,14 @@ export function PropertyCard({ property }: PropertyCardProps) {
     });
   };
 
+  const priceLabel = property.listingType === 'FOR_SALE'
+    ? 'For Sale'
+    : property.listingType === 'SHORT_STAY'
+      ? ' / night'
+      : property.pricePeriod === 'WEEK'
+        ? ' / week'
+        : ' / month';
+
   const displayImage = property.images && property.images.length > 0 && (
     property.images[0].startsWith('data:') ||
     property.images[0].startsWith('http') ||
@@ -54,7 +62,7 @@ export function PropertyCard({ property }: PropertyCardProps) {
           />
         </Link>
         <Badge variant="secondary" className="absolute top-2 right-2 bg-background/80 text-foreground font-semibold">
-          Ksh {property.price.toLocaleString()}/mo
+          Ksh {property.price.toLocaleString()}{priceLabel}
         </Badge>
         {property.isSponsored && (
           <span className="absolute left-2 top-2 border bg-background/90 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide">
