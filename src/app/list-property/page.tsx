@@ -44,7 +44,7 @@ const formSchema = z.object({
   price: z.coerce.number().positive("Price must be a positive number."),
   shortStayMinNights: z.coerce.number().int().positive().optional().or(z.literal("")),
   shortStayMaxNights: z.coerce.number().int().positive().optional().or(z.literal("")),
-  cleaningFee: z.preprocess((val) => (String(val).trim() === "" ? undefined : Number(val)), z.number().nonnegative().optional()),
+  cleaningFee: z.preprocess((val) => (val === undefined || val === null || String(val).trim() === "" ? undefined : Number(val)), z.number().nonnegative().optional()),
   securityDeposit: z.preprocess((val) => (String(val).trim() === "" ? undefined : Number(val)), z.number().nonnegative().optional()),
   maxGuests: z.coerce.number().int().positive().optional().or(z.literal("")),
   bedrooms: z.coerce.number().int().min(0, "Number of bedrooms cannot be negative."),
