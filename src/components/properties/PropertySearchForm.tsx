@@ -38,7 +38,6 @@ export function PropertySearchForm({ onFormSubmit, isInSheet = false }: { onForm
     resolver: zodResolver(schema),
     defaultValues: {
       listingType: params.get("listingType") || "FOR_RENT",
-      listingType: params.get("listingType") || "FOR_RENT",
       location: params.get("location") || "",
       minPrice: params.get("minPrice") ? Number(params.get("minPrice")) : "",
       maxPrice: params.get("maxPrice") ? Number(params.get("maxPrice")) : "",
@@ -50,6 +49,7 @@ export function PropertySearchForm({ onFormSubmit, isInSheet = false }: { onForm
 
   useEffect(function () {
     form.reset({
+      listingType: params.get("listingType") || "FOR_RENT",
       location: params.get("location") || "",
       minPrice: params.get("minPrice") ? Number(params.get("minPrice")) : "",
       maxPrice: params.get("maxPrice") ? Number(params.get("maxPrice")) : "",
