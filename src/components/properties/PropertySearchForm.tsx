@@ -79,7 +79,7 @@ export function PropertySearchForm({ onFormSubmit, isInSheet = false }: { onForm
 
   function submit(data: Values) {
     const next = new URLSearchParams();
-    if (data.listingType && data.listingType !== "FOR_RENT") next.set("listingType", data.listingType);
+    if (data.listingType) next.set("listingType", data.listingType);
     if (data.location?.trim()) next.set("location", data.location.trim());
     if (data.minPrice) next.set("minPrice", String(data.minPrice));
     if (data.maxPrice) next.set("maxPrice", String(data.maxPrice));
