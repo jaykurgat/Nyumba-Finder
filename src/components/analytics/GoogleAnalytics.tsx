@@ -1,28 +1,11 @@
 'use client';
 
 import Script from 'next/script';
-import { useEffect, useState } from 'react';
-import { getCookieConsent } from '@/components/privacy/CookieConsentBanner';
 
 const GA_ID = process.env.NYUMBAFINDER_GA_ID;
 
 export function GoogleAnalytics() {
-  const [analyticsAllowed, setAnalyticsAllowed] = useState(false);
-
-  useEffect(() => {
-    const syncConsent = () => {
-      setAnalyticsAllowed(getCookieConsent()?.analytics === true);
-    };
-
-    syncConsent();
-    window.addEventListener('nyumbafinder:consent', syncConsent);
-
-    return () => {
-      window.removeEventListener('nyumbafinder:consent', syncConsent);
-    };
-  }, []);
-
-  if (!GA_ID || !analyticsAllowed) return null;
+  if (!GA_ID) return null;
 
   return (
     <>
