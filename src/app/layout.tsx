@@ -3,7 +3,6 @@ import { Inter } from 'next/font/google';
 import './globals.css';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
-import { CookieConsentBanner } from '@/components/privacy/CookieConsentBanner';
 import { Toaster } from "@/components/ui/toaster";
 import { GoogleAnalytics } from '@/components/analytics/GoogleAnalytics';
 import { cn } from "@/lib/utils";
@@ -28,7 +27,6 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
           <main className="flex-1"><div className="container mx-auto px-4 md:px-6">{children}</div></main>
           <Footer />
         </div>
-        <CookieConsentBanner />
         <GoogleAnalytics />
         <Toaster />
       </body>
