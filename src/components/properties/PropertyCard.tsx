@@ -33,7 +33,7 @@ export function PropertyCard({ property }: PropertyCardProps) {
   };
 
   const priceLabel = property.listingType === 'FOR_SALE'
-    ? 'For Sale'
+    ? ' · For Sale'
     : property.listingType === 'SHORT_STAY'
       ? ' / night'
       : property.pricePeriod === 'WEEK'
