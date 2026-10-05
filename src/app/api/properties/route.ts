@@ -56,7 +56,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const generalQueryTerm = searchParams.get('q')?.trim().toLowerCase();
     const propertyTypeQuery = searchParams.get('propertyType')?.trim();
-    const listingTypeQuery = searchParams.get('listingType')?.trim();
+    const listingTypeQuery = searchParams.get('listingType')?.trim() || 'FOR_RENT';
     const minPrice = getOptionalNumber(searchParams.get('minPrice'));
     const maxPrice = getOptionalNumber(searchParams.get('maxPrice'));
     const minBedroomsParam = searchParams.get('minBedrooms');
