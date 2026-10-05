@@ -4,7 +4,7 @@ import Script from 'next/script';
 import { useEffect, useState } from 'react';
 import { getCookieConsent } from '@/components/privacy/CookieConsentBanner';
 
-const GA_ID = process.env.NEXT_PUBLIC_GA_ID;
+const GA_ID = process.env.NYUMBAFINDER_GA_ID;
 
 export function GoogleAnalytics() {
   const [analyticsAllowed, setAnalyticsAllowed] = useState(false);
