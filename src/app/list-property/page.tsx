@@ -99,8 +99,6 @@ export default function ListPropertyPage() {
       listingType: "FOR_RENT",
       shortStayMinNights: "",
       shortStayMaxNights: "",
-      cleaningFee: "",
-      securityDeposit: "",
       maxGuests: "",
       price: "" as unknown as number, // Keep as empty string for controlled input
       bedrooms: "" as unknown as number,
