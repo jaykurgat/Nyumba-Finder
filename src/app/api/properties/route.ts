@@ -34,6 +34,13 @@ const toProperty = (data: {
   locationSource: (data as any).locationSource ?? undefined,
   locationAccuracy: (data as any).locationAccuracy ?? undefined,
   price: data.price,
+  listingType: (data as any).listingType ?? "FOR_RENT",
+  pricePeriod: (data as any).pricePeriod ?? "MONTH",
+  shortStayMinNights: (data as any).shortStayMinNights ?? undefined,
+  shortStayMaxNights: (data as any).shortStayMaxNights ?? undefined,
+  cleaningFee: (data as any).cleaningFee ?? undefined,
+  securityDeposit: (data as any).securityDeposit ?? undefined,
+  maxGuests: (data as any).maxGuests ?? undefined,
   images: data.images,
   bedrooms: data.bedrooms,
   bathrooms: data.bathrooms,
@@ -49,6 +56,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const generalQueryTerm = searchParams.get('q')?.trim().toLowerCase();
     const propertyTypeQuery = searchParams.get('propertyType')?.trim();
+    const listingTypeQuery = searchParams.get('listingType')?.trim();
     const minPrice = getOptionalNumber(searchParams.get('minPrice'));
     const maxPrice = getOptionalNumber(searchParams.get('maxPrice'));
     const minBedroomsParam = searchParams.get('minBedrooms');
@@ -93,6 +101,7 @@ export async function GET(request: NextRequest) {
 
     const baseWhere: Prisma.PropertyWhereInput = {
       status: 'ACTIVE' as const,
+      ...(listingTypeQuery && listingTypeQuery !== 'ALL' ? { listingType: listingTypeQuery } : {}),
       ...(propertyTypeQuery && propertyTypeQuery !== 'Any type' ? { propertyType: propertyTypeQuery } : {}),
       ...(minPrice !== undefined || maxPrice !== undefined
         ? { price: { ...(minPrice !== undefined ? { gte: minPrice } : {}), ...(maxPrice !== undefined ? { lte: maxPrice } : {}) } }
@@ -248,6 +257,27 @@ export async function POST(request: NextRequest) {
     const amenities = getStringArray(rawData.amenities);
     const phoneNumber = getOptionalString(rawData.phoneNumber);
     const propertyType = getString(rawData.propertyType, 'Apartment');
+    const listingType = getString(rawData.listingType, 'FOR_RENT');
+    const pricePeriod = getString(rawData.pricePeriod, listingType === 'FOR_SALE' ? 'ONE_TIME' : listingType === 'SHORT_STAY' ? 'NIGHT' : 'MONTH');
+    const shortStayMinNights = getOptionalNumber(rawData.shortStayMinNights);
+    const shortStayMaxNights = getOptionalNumber(rawData.shortStayMaxNights);
+    const cleaningFee = getOptionalNumber(rawData.cleaningFee);
+    const securityDeposit = getOptionalNumber(rawData.securityDeposit);
+    const maxGuests = getOptionalNumber(rawData.maxGuests);
+    const allowedListingTypes = new Set(['FOR_RENT', 'FOR_SALE', 'SHORT_STAY']);
+    const allowedPricePeriods = new Set(['MONTH', 'WEEK', 'NIGHT', 'ONE_TIME']);
+    if (!allowedListingTypes.has(listingType) || !allowedPricePeriods.has(pricePeriod)) {
+      return NextResponse.json({ message: 'Invalid listing type or price period.' }, { status: 400 });
+    }
+    if (listingType === 'FOR_SALE' && pricePeriod !== 'ONE_TIME') {
+      return NextResponse.json({ message: 'Sale listings must use a one-time price.' }, { status: 400 });
+    }
+    if (listingType === 'SHORT_STAY' && pricePeriod !== 'NIGHT') {
+      return NextResponse.json({ message: 'Short-stay listings must use a nightly price.' }, { status: 400 });
+    }
+    if (shortStayMinNights != null && shortStayMaxNights != null && shortStayMinNights > shortStayMaxNights) {
+      return NextResponse.json({ message: 'Minimum nights cannot exceed maximum nights.' }, { status: 400 });
+    }
 
     if (title === 'Untitled Property' || price <= 0 || location === 'Unknown Location') {
       return NextResponse.json({ message: 'Missing or invalid required fields: title, price, and location must be valid.' }, { status: 400 });
@@ -277,7 +307,7 @@ export async function POST(request: NextRequest) {
       const countyId = matchedNode.countyId;
       const created = await tx.property.create({
         data: {
-          title, description, location, price, bedrooms, bathrooms, sizeSqm, amenities, images: [], phoneNumber, propertyType, status: 'ACTIVE',
+          title, description, location, price, listingType, pricePeriod, shortStayMinNights, shortStayMaxNights, cleaningFee, securityDeposit, maxGuests, bedrooms, bathrooms, sizeSqm, amenities, images: [], phoneNumber, propertyType, status: 'ACTIVE',
           latitude,
           longitude,
           countyId,
