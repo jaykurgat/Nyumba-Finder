@@ -257,6 +257,19 @@ export default function PropertyDetailPage({ params: paramsProp }: { params: Pro
                   )}
                 </div>
 
+                {property.listingType === 'SHORT_STAY' && (
+                  <div className="rounded-xl border bg-muted/20 p-4">
+                    <p className="text-sm font-semibold">Short-stay details</p>
+                    <div className="mt-3 grid gap-3 sm:grid-cols-2 md:grid-cols-3 text-sm">
+                      {property.shortStayMinNights != null && <div><span className="text-muted-foreground">Minimum stay</span><p className="font-medium">{property.shortStayMinNights} night{property.shortStayMinNights === 1 ? '' : 's'}</p></div>}
+                      {property.shortStayMaxNights != null && <div><span className="text-muted-foreground">Maximum stay</span><p className="font-medium">{property.shortStayMaxNights} nights</p></div>}
+                      {property.maxGuests != null && <div><span className="text-muted-foreground">Maximum guests</span><p className="font-medium">{property.maxGuests}</p></div>}
+                      {property.cleaningFee != null && <div><span className="text-muted-foreground">Cleaning fee</span><p className="font-medium">Ksh {property.cleaningFee.toLocaleString()}</p></div>}
+                      {property.securityDeposit != null && <div><span className="text-muted-foreground">Security deposit</span><p className="font-medium">Ksh {property.securityDeposit.toLocaleString()}</p></div>}
+                    </div>
+                  </div>
+                )}
+
                 <div>
                   <h2 className="mb-3 text-lg font-semibold">About this property</h2>
                   <p className="whitespace-pre-line text-sm leading-7 text-muted-foreground md:text-base">
