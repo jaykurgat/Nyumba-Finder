@@ -130,30 +130,44 @@ export default async function InfoPage({ params }: { params: Promise<{ slug: str
   if (!page) notFound();
 
   return (
-    <div className="mx-auto max-w-3xl py-12 md:py-16">
-      <div className="mb-10">
-        <p className="text-sm font-medium text-muted-foreground">NyumbaFinder</p>
-        <h1 className="mt-2 text-3xl font-semibold tracking-tight md:text-4xl">{page.title}</h1>
-        <p className="mt-4 text-muted-foreground">{page.description}</p>
+    <div className="mx-auto max-w-4xl py-10 md:py-14">
+      <div className="mb-8 rounded-2xl border bg-card px-6 py-7 md:px-8">
+        <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
+          NyumbaFinder
+        </p>
+        <h1 className="mt-2 text-2xl font-semibold tracking-tight md:text-3xl">{page.title}</h1>
+        <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground">{page.description}</p>
       </div>
 
-      <div className="space-y-8 text-sm leading-7 text-muted-foreground">
-        {page.sections.map(([heading, body]) => (
-          <section key={heading}>
-            <h2 className="text-xl font-semibold text-foreground">{heading}</h2>
-            <p className="mt-3">{body}</p>
+      <div className="grid gap-3">
+        {page.sections.map(([heading, body], index) => (
+          <section
+            key={heading}
+            className="rounded-xl border bg-card px-5 py-5 md:px-6"
+          >
+            <div className="flex gap-4">
+              <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-semibold text-muted-foreground">
+                {index + 1}
+              </span>
+              <div>
+                <h2 className="text-base font-semibold text-foreground">{heading}</h2>
+                <p className="mt-2 text-sm leading-6 text-muted-foreground">{body}</p>
+              </div>
+            </div>
           </section>
         ))}
 
         {slug === 'cookies' && (
-          <p>
-            <Link href="/privacy" className="font-medium text-foreground underline underline-offset-4">
+          <section className="rounded-xl border border-dashed bg-muted/30 px-5 py-4 md:px-6">
+            <Link href="/privacy" className="text-sm font-medium text-foreground underline underline-offset-4">
               Read Privacy & Analytics
             </Link>
-          </p>
+          </section>
         )}
 
-        <p className="border-t pt-6 text-xs">Last updated: October 5, 2026</p>
+        <p className="pt-3 text-xs text-muted-foreground">
+          Last updated: October 5, 2026
+        </p>
       </div>
     </div>
   );
