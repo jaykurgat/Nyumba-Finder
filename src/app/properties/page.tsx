@@ -56,7 +56,7 @@ function PropertyListingsContent() {
   return <div>
     <div className="mb-5 flex items-end justify-between gap-4">
       <div>
-        <p className="text-sm text-muted-foreground">{location ? listingType === "FOR_SALE" ? ("Homes for sale" + (location ? " in " + location : " across Kenya")) : listingType === "SHORT_STAY" ? ("Short stays" + (location ? " in " + location : " across Kenya")) : ("Rentals in " + location)}</p>
+        <p className="text-sm text-muted-foreground">{listingType === "FOR_SALE" ? ("Homes for sale" + (location ? " in " + location : " across Kenya")) : listingType === "SHORT_STAY" ? ("Short stays" + (location ? " in " + location : " across Kenya")) : ("Rentals" + (location ? " in " + location : " across Kenya"))}</p>
         <h2 className="mt-1 text-xl font-semibold tracking-tight">{totalCount || properties.length} {(totalCount || properties.length) === 1 ? "property" : "properties"} found</h2>
         {totalCount > properties.length && <p className="mt-1 text-xs text-muted-foreground">Showing the most relevant matches first</p>}
       </div>
