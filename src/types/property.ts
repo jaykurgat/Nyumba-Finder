@@ -9,6 +9,13 @@ export interface Property {
   locationSource?: string;
   locationAccuracy?: string;
   price: number;
+  listingType?: "FOR_RENT" | "FOR_SALE" | "SHORT_STAY";
+  pricePeriod?: "MONTH" | "WEEK" | "NIGHT" | "ONE_TIME";
+  shortStayMinNights?: number;
+  shortStayMaxNights?: number;
+  cleaningFee?: number;
+  securityDeposit?: number;
+  maxGuests?: number;
   images: string[];
   bedrooms: number;
   bathrooms: number;
