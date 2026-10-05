@@ -23,7 +23,10 @@ const toProperty = (data: any): Property => ({
   locationSource: data.locationSource ?? undefined,
   locationAccuracy: data.locationAccuracy ?? undefined,
   countyName: data.county?.name ?? undefined,
-  price: data.price, images: data.images, bedrooms: data.bedrooms, bathrooms: data.bathrooms,
+  price: data.price, listingType: data.listingType ?? 'FOR_RENT', pricePeriod: data.pricePeriod ?? 'MONTH',
+  shortStayMinNights: data.shortStayMinNights ?? undefined, shortStayMaxNights: data.shortStayMaxNights ?? undefined,
+  cleaningFee: data.cleaningFee ?? undefined, securityDeposit: data.securityDeposit ?? undefined, maxGuests: data.maxGuests ?? undefined,
+  images: data.images, bedrooms: data.bedrooms, bathrooms: data.bathrooms,
   area: data.area ?? undefined, amenities: data.amenities, phoneNumber: data.phoneNumber ?? undefined,
   propertyType: data.propertyType ?? 'Apartment', status: data.status,
   latitude: data.latitude ?? undefined, longitude: data.longitude ?? undefined,
@@ -129,6 +132,13 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     if ('location' in rawData) data.location = getString(rawData.location);
     if ('propertyType' in rawData) data.propertyType = getString(rawData.propertyType, 'Apartment');
     if ('price' in rawData) data.price = getNumber(rawData.price);
+    if ('listingType' in rawData) data.listingType = getString(rawData.listingType, 'FOR_RENT');
+    if ('pricePeriod' in rawData) data.pricePeriod = getString(rawData.pricePeriod, 'MONTH');
+    if ('shortStayMinNights' in rawData) data.shortStayMinNights = getOptionalNumber(rawData.shortStayMinNights) ?? null;
+    if ('shortStayMaxNights' in rawData) data.shortStayMaxNights = getOptionalNumber(rawData.shortStayMaxNights) ?? null;
+    if ('cleaningFee' in rawData) data.cleaningFee = getOptionalNumber(rawData.cleaningFee) ?? null;
+    if ('securityDeposit' in rawData) data.securityDeposit = getOptionalNumber(rawData.securityDeposit) ?? null;
+    if ('maxGuests' in rawData) data.maxGuests = getOptionalNumber(rawData.maxGuests) ?? null;
     if ('bedrooms' in rawData) data.bedrooms = Math.max(0, Math.trunc(getNumber(rawData.bedrooms)));
     if ('bathrooms' in rawData) data.bathrooms = Math.max(1, Math.trunc(getNumber(rawData.bathrooms, 1)));
     if ('area' in rawData) data.sizeSqm = getOptionalNumber(rawData.area) ?? null;
@@ -177,6 +187,11 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       return NextResponse.json({ message: 'No valid fields provided for update.' }, { status: 400 });
     }
 
+    if ('listingType' in data && !['FOR_RENT', 'FOR_SALE', 'SHORT_STAY'].includes(String(data.listingType))) return NextResponse.json({ message: 'Invalid listing type.' }, { status: 400 });
+    if ('pricePeriod' in data && !['MONTH', 'WEEK', 'NIGHT', 'ONE_TIME'].includes(String(data.pricePeriod))) return NextResponse.json({ message: 'Invalid price period.' }, { status: 400 });
+    if (String(data.listingType ?? '') === 'FOR_SALE' && data.pricePeriod !== undefined && data.pricePeriod !== 'ONE_TIME') return NextResponse.json({ message: 'Sale listings must use a one-time price.' }, { status: 400 });
+    if (String(data.listingType ?? '') === 'SHORT_STAY' && data.pricePeriod !== undefined && data.pricePeriod !== 'NIGHT') return NextResponse.json({ message: 'Short-stay listings must use a nightly price.' }, { status: 400 });
+    if ('shortStayMinNights' in data && 'shortStayMaxNights' in data && data.shortStayMinNights != null && data.shortStayMaxNights != null && Number(data.shortStayMinNights) > Number(data.shortStayMaxNights)) return NextResponse.json({ message: 'Minimum nights cannot exceed maximum nights.' }, { status: 400 });
     if ('price' in data && Number(data.price) <= 0) {
       return NextResponse.json({ message: 'Price must be greater than zero.' }, { status: 400 });
     }
