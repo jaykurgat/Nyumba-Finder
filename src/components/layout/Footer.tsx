@@ -41,12 +41,12 @@ export function Footer() {
   const currentYear = new Date().getFullYear();
 
   return (
-    <footer className="border-t bg-secondary/50">
-      <div className="container mx-auto px-4 py-10 md:px-8">
-        <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
+    <footer className="border-t bg-secondary/30">
+      <div className="container mx-auto px-4 py-9 md:px-8">
+        <div className="grid gap-7 sm:grid-cols-2 lg:grid-cols-4">
           {groups.map((group) => (
             <div key={group.title}>
-              <h2 className="text-sm font-semibold text-foreground">{group.title}</h2>
+              <h2 className="text-xs font-semibold uppercase tracking-[0.14em] text-foreground">{group.title}</h2>
               <nav className="mt-3 flex flex-col items-start gap-2" aria-label={group.title}>
                 {group.links.map(([label, href]) => (
                   <Link
@@ -62,7 +62,7 @@ export function Footer() {
           ))}
         </div>
 
-        <div className="mt-10 flex flex-col gap-2 border-t pt-5 text-sm text-muted-foreground md:flex-row md:items-center md:justify-between">
+        <div className="mt-8 flex flex-col gap-2 border-t pt-5 text-xs text-muted-foreground md:flex-row md:items-center md:justify-between">
           <span>&copy; {currentYear} NyumbaFinder. All rights reserved.</span>
           <span>Find your next home in Kenya.</span>
         </div>
