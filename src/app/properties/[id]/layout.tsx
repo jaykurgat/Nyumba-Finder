@@ -19,6 +19,8 @@ export async function generateMetadata({
         description: true,
         location: true,
         price: true,
+        listingType: true,
+        pricePeriod: true,
         propertyType: true,
         bedrooms: true,
         status: true,
@@ -35,7 +37,13 @@ export async function generateMetadata({
     const summary = [
       property.propertyType,
       property.bedrooms === 0 ? 'studio' : property.bedrooms ? `${property.bedrooms}-bedroom` : null,
-      property.price ? `KES ${property.price.toLocaleString()} per month` : null,
+      property.price
+        ? property.listingType === 'FOR_SALE'
+          ? `KES ${property.price.toLocaleString()} for sale`
+          : property.listingType === 'SHORT_STAY'
+            ? `KES ${property.price.toLocaleString()} per night`
+            : `KES ${property.price.toLocaleString()} per ${property.pricePeriod === 'WEEK' ? 'week' : 'month'}`
+        : null,
       property.location,
     ]
       .filter(Boolean)
