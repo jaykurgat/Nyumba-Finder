@@ -40,7 +40,13 @@ const formSchema = z.object({
   location: z.string().min(2, "Please specify a location."),
   locationNodeId: z.string().min(1, "Please select a Town / City."),
   propertyType: z.string().min(2, "Please select a property type."),
+  listingType: z.enum(["FOR_RENT", "FOR_SALE", "SHORT_STAY"]),
   price: z.coerce.number().positive("Price must be a positive number."),
+  shortStayMinNights: z.coerce.number().int().positive().optional().or(z.literal("")),
+  shortStayMaxNights: z.coerce.number().int().positive().optional().or(z.literal("")),
+  cleaningFee: z.preprocess((val) => (String(val).trim() === "" ? undefined : Number(val)), z.number().nonnegative().optional()),
+  securityDeposit: z.preprocess((val) => (String(val).trim() === "" ? undefined : Number(val)), z.number().nonnegative().optional()),
+  maxGuests: z.coerce.number().int().positive().optional().or(z.literal("")),
   bedrooms: z.coerce.number().int().min(0, "Number of bedrooms cannot be negative."),
   bathrooms: z.coerce.number().int().min(1, "Must have at least 1 bathroom."),
   area: z.preprocess(
@@ -90,6 +96,12 @@ export default function ListPropertyPage() {
       location: "",
       locationNodeId: "",
       propertyType: "Apartment",
+      listingType: "FOR_RENT",
+      shortStayMinNights: "",
+      shortStayMaxNights: "",
+      cleaningFee: "",
+      securityDeposit: "",
+      maxGuests: "",
       price: "" as unknown as number, // Keep as empty string for controlled input
       bedrooms: "" as unknown as number,
       bathrooms: "" as unknown as number,
@@ -103,6 +115,7 @@ export default function ListPropertyPage() {
   const watchedImages = form.watch('images');
   const watchedLocation = form.watch('location');
   const watchedCountyId = form.watch('countyId');
+  const watchedListingType = form.watch('listingType');
 
   useEffect(() => {
     let cancelled = false;
@@ -251,6 +264,12 @@ export default function ListPropertyPage() {
              location: "",
              locationNodeId: "",
              propertyType: "Apartment",
+             listingType: "FOR_RENT",
+             shortStayMinNights: "",
+             shortStayMaxNights: "",
+             cleaningFee: "",
+             securityDeposit: "",
+             maxGuests: "",
              price: "" as unknown as number,
              bedrooms: "" as unknown as number,
              bathrooms: "" as unknown as number,
@@ -331,9 +350,16 @@ export default function ListPropertyPage() {
       }
       formData.append('locationSource', locationSource);
       formData.append('propertyType', values.propertyType);
+      formData.append('listingType', values.listingType);
+      formData.append('pricePeriod', values.listingType === 'FOR_SALE' ? 'ONE_TIME' : values.listingType === 'SHORT_STAY' ? 'NIGHT' : 'MONTH');
       formData.append('price', String(Number(values.price)));
       formData.append('bedrooms', String(Number(values.bedrooms)));
       formData.append('bathrooms', String(Number(values.bathrooms)));
+      if (values.shortStayMinNights !== '' && values.shortStayMinNights !== undefined) formData.append('shortStayMinNights', String(Number(values.shortStayMinNights)));
+      if (values.shortStayMaxNights !== '' && values.shortStayMaxNights !== undefined) formData.append('shortStayMaxNights', String(Number(values.shortStayMaxNights)));
+      if (values.cleaningFee !== undefined && String(values.cleaningFee) !== '') formData.append('cleaningFee', String(Number(values.cleaningFee)));
+      if (values.securityDeposit !== undefined && String(values.securityDeposit) !== '') formData.append('securityDeposit', String(Number(values.securityDeposit)));
+      if (values.maxGuests !== '' && values.maxGuests !== undefined) formData.append('maxGuests', String(Number(values.maxGuests)));
       if (values.area !== undefined && values.area !== null && String(values.area) !== '') formData.append('area', String(Number(values.area)));
       formData.append('phoneNumber', values.phoneNumber || '');
       formData.append('amenities', JSON.stringify(values.amenities || []));
@@ -600,6 +626,27 @@ export default function ListPropertyPage() {
 
                   <FormField
                     control={form.control}
+                    name="listingType"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Listing Type</FormLabel>
+                        <FormControl>
+                          <select {...field} className="h-11 w-full rounded-xl border bg-background px-3 text-sm">
+                            <option value="FOR_RENT">For Rent</option>
+                            <option value="FOR_SALE">For Sale</option>
+                            <option value="SHORT_STAY">Short Stay</option>
+                          </select>
+                        </FormControl>
+                        <FormDescription>
+                          Choose whether you are renting, selling, or offering the property for short stays.
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
                     name="propertyType"
                     render={({ field }) => (
                       <FormItem>
@@ -636,9 +683,9 @@ export default function ListPropertyPage() {
                         name="price"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Monthly Rent (KES)</FormLabel>
+                            <FormLabel>{watchedListingType === 'FOR_SALE' ? 'Sale Price (KES)' : watchedListingType === 'SHORT_STAY' ? 'Nightly Price (KES)' : 'Monthly Rent (KES)'}</FormLabel>
                             <FormControl>
-                              <Input type="number" placeholder="e.g., 50000" {...field} value={field.value ?? ""} suppressHydrationWarning />
+                              <Input type="number" placeholder={watchedListingType === 'FOR_SALE' ? 'e.g., 15000000' : watchedListingType === 'SHORT_STAY' ? 'e.g., 5000' : 'e.g., 50000'} {...field} value={field.value ?? ""} suppressHydrationWarning />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -671,6 +718,30 @@ export default function ListPropertyPage() {
                         )}
                       />
                   </div>
+
+                  {watchedListingType === 'SHORT_STAY' && (
+                    <div className="rounded-2xl border bg-card p-5 shadow-sm md:p-6">
+                      <h2 className="text-base font-semibold">Short-stay details</h2>
+                      <p className="mt-1 text-sm text-muted-foreground">Optional details for furnished, holiday, serviced, or Airbnb-style stays.</p>
+                      <div className="mt-5 grid gap-4 md:grid-cols-3">
+                        <FormField control={form.control} name="shortStayMinNights" render={({ field }) => (
+                          <FormItem><FormLabel>Minimum nights</FormLabel><FormControl><Input type="number" min="1" placeholder="e.g., 1" {...field} value={field.value ?? ""} /></FormControl><FormMessage /></FormItem>
+                        )} />
+                        <FormField control={form.control} name="shortStayMaxNights" render={({ field }) => (
+                          <FormItem><FormLabel>Maximum nights <span className="text-muted-foreground">(Optional)</span></FormLabel><FormControl><Input type="number" min="1" placeholder="e.g., 30" {...field} value={field.value ?? ""} /></FormControl><FormMessage /></FormItem>
+                        )} />
+                        <FormField control={form.control} name="maxGuests" render={({ field }) => (
+                          <FormItem><FormLabel>Maximum guests <span className="text-muted-foreground">(Optional)</span></FormLabel><FormControl><Input type="number" min="1" placeholder="e.g., 4" {...field} value={field.value ?? ""} /></FormControl><FormMessage /></FormItem>
+                        )} />
+                        <FormField control={form.control} name="cleaningFee" render={({ field }) => (
+                          <FormItem><FormLabel>Cleaning fee (KES) <span className="text-muted-foreground">(Optional)</span></FormLabel><FormControl><Input type="number" min="0" placeholder="e.g., 1000" {...field} value={field.value ?? ""} /></FormControl><FormMessage /></FormItem>
+                        )} />
+                        <FormField control={form.control} name="securityDeposit" render={({ field }) => (
+                          <FormItem><FormLabel>Security deposit (KES) <span className="text-muted-foreground">(Optional)</span></FormLabel><FormControl><Input type="number" min="0" placeholder="e.g., 5000" {...field} value={field.value ?? ""} /></FormControl><FormMessage /></FormItem>
+                        )} />
+                      </div>
+                    </div>
+                  )}
 
                   <FormField
                     control={form.control}
