@@ -5,6 +5,7 @@ import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { CookieConsentBanner } from '@/components/privacy/CookieConsentBanner';
 import { Toaster } from "@/components/ui/toaster";
+import { GoogleAnalytics } from '@/components/analytics/GoogleAnalytics';
 import { cn } from "@/lib/utils";
 
 const inter = Inter({ variable: '--font-inter', subsets: ['latin'] });
@@ -28,6 +29,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
           <Footer />
         </div>
         <CookieConsentBanner />
+        <GoogleAnalytics />
         <Toaster />
       </body>
     </html>
