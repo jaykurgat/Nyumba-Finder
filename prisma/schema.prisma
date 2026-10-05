@@ -114,6 +114,13 @@ model Property {
   description  String   @default("")
   location     String
   price        Float
+  listingType  String   @default("FOR_RENT")
+  pricePeriod  String   @default("MONTH")
+  shortStayMinNights Int?
+  shortStayMaxNights Int?
+  cleaningFee  Float?
+  securityDeposit Float?
+  maxGuests    Int?
   bedrooms     Int
   bathrooms    Int      @default(1)
   sizeSqm      Float?
