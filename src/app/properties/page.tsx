@@ -50,13 +50,13 @@ function PropertyListingsContent() {
   if (error) return <Alert variant="destructive"><AlertTriangle className="h-4 w-4" /><AlertTitle>Error loading properties</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>;
 
   const location = params.get("location");
-  const listingType = params.get("listingType") || "FOR_RENT";
-  const active = params.getAll("amenities").length + (params.get("minPrice") || params.get("maxPrice") ? 1 : 0) + (params.get("minBedrooms") ? 1 : 0) + (params.get("minBathrooms") ? 1 : 0) + (listingType !== "FOR_RENT" ? 1 : 0);
+  const listingType = params.get("listingType") || "ALL";
+  const active = params.getAll("amenities").length + (params.get("minPrice") || params.get("maxPrice") ? 1 : 0) + (params.get("minBedrooms") ? 1 : 0) + (params.get("minBathrooms") ? 1 : 0) + (listingType !== "ALL" ? 1 : 0);
 
   return <div>
     <div className="mb-5 flex items-end justify-between gap-4">
       <div>
-        <p className="text-sm text-muted-foreground">{listingType === "FOR_SALE" ? ("Homes for sale" + (location ? " in " + location : " across Kenya")) : listingType === "SHORT_STAY" ? ("Short stays" + (location ? " in " + location : " across Kenya")) : ("Rentals" + (location ? " in " + location : " across Kenya"))}</p>
+        <p className="text-sm text-muted-foreground">{listingType === "FOR_SALE" ? ("Homes for sale" + (location ? " in " + location : " across Kenya")) : listingType === "SHORT_STAY" ? ("Short stays" + (location ? " in " + location : " across Kenya")) : listingType === "FOR_RENT" ? ("Rentals" + (location ? " in " + location : " across Kenya")) : ("Homes across Kenya" + (location ? " near " + location : ""))}</p>
         <h2 className="mt-1 text-xl font-semibold tracking-tight">{totalCount || properties.length} {(totalCount || properties.length) === 1 ? "property" : "properties"} found</h2>
         {totalCount > properties.length && <p className="mt-1 text-xs text-muted-foreground">Showing the most relevant matches first</p>}
       </div>
@@ -83,7 +83,7 @@ export default function PropertiesPage() {
         {isMobile ? <Sheet open={filtersOpen} onOpenChange={setFiltersOpen}>
           <SheetTrigger asChild><Button variant="outline" className="h-12 w-full justify-between bg-background px-4 shadow-sm"><span className="flex items-center gap-2"><SlidersHorizontal className="h-4 w-4 text-primary" />Search & filters</span><span className="text-sm text-muted-foreground">Open</span></Button></SheetTrigger>
           <SheetContent side="bottom" className="h-[92vh] rounded-t-2xl p-0">
-            <SheetHeader className="border-b px-5 py-4 text-left"><SheetTitle>Find your rental</SheetTitle></SheetHeader>
+            <SheetHeader className="border-b px-5 py-4 text-left"><SheetTitle>Find a property</SheetTitle></SheetHeader>
             <div className="h-[calc(92vh-73px)] overflow-y-auto px-4 py-5"><Suspense fallback={<Skeleton className="h-96 w-full" />}><PropertySearchForm isInSheet onFormSubmit={function () { setFiltersOpen(false); }} /></Suspense></div>
           </SheetContent>
         </Sheet> :
