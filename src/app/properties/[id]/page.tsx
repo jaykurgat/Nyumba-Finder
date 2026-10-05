@@ -188,6 +188,8 @@ export default function PropertyDetailPage({ params: paramsProp }: { params: Pro
 
   if (isLoading) return <PropertyDetailSkeleton />;
 
+  const pricePeriodLabel = property?.listingType === 'FOR_SALE' ? 'For Sale' : property?.listingType === 'SHORT_STAY' ? 'per night' : property?.pricePeriod === 'WEEK' ? 'per week' : 'per month';
+
   if (error || !property) {
     return (
       <div className="container mx-auto px-4 py-16 text-center">
@@ -371,9 +373,10 @@ export default function PropertyDetailPage({ params: paramsProp }: { params: Pro
           <aside className="space-y-5">
             <Card className="overflow-hidden rounded-2xl border shadow-sm">
               <div className="border-b bg-primary/[0.04] px-5 py-6">
-                <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">Monthly rent</p>
+                <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">{property.listingType === 'FOR_SALE' ? 'Sale price' : property.listingType === 'SHORT_STAY' ? 'Short-stay price' : 'Monthly rent'}</p>
                 <p className="mt-1 text-3xl font-semibold tracking-tight">
                   Ksh {property.price.toLocaleString()}
+                  {property.listingType !== 'FOR_SALE' && <span className="ml-1 text-sm font-medium text-muted-foreground">{pricePeriodLabel}</span>}
                 </p>
               </div>
               <CardContent className="space-y-4 p-5">
@@ -423,6 +426,10 @@ export default function PropertyDetailPage({ params: paramsProp }: { params: Pro
                 <CardTitle className="text-base">At a glance</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
+                <div className="flex items-center justify-between border-b pb-3 text-sm">
+                  <span className="text-muted-foreground">Listing</span>
+                  <span className="font-medium">{property.listingType === 'FOR_SALE' ? 'For Sale' : property.listingType === 'SHORT_STAY' ? 'Short Stay' : 'For Rent'}</span>
+                </div>
                 <div className="flex items-center justify-between border-b pb-3 text-sm">
                   <span className="text-muted-foreground">Property type</span>
                   <span className="font-medium">{property.propertyType || '—'}</span>
