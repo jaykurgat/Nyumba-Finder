@@ -50,12 +50,13 @@ function PropertyListingsContent() {
   if (error) return <Alert variant="destructive"><AlertTriangle className="h-4 w-4" /><AlertTitle>Error loading properties</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>;
 
   const location = params.get("location");
-  const active = params.getAll("amenities").length + (params.get("minPrice") || params.get("maxPrice") ? 1 : 0) + (params.get("minBedrooms") ? 1 : 0) + (params.get("minBathrooms") ? 1 : 0);
+  const listingType = params.get("listingType") || "FOR_RENT";
+  const active = params.getAll("amenities").length + (params.get("minPrice") || params.get("maxPrice") ? 1 : 0) + (params.get("minBedrooms") ? 1 : 0) + (params.get("minBathrooms") ? 1 : 0) + (listingType !== "FOR_RENT" ? 1 : 0);
 
   return <div>
     <div className="mb-5 flex items-end justify-between gap-4">
       <div>
-        <p className="text-sm text-muted-foreground">{location ? "Rentals in " + location : "Homes and rentals across Kenya"}</p>
+        <p className="text-sm text-muted-foreground">{location ? listingType === "FOR_SALE" ? ("Homes for sale" + (location ? " in " + location : " across Kenya")) : listingType === "SHORT_STAY" ? ("Short stays" + (location ? " in " + location : " across Kenya")) : ("Rentals in " + location)}</p>
         <h2 className="mt-1 text-xl font-semibold tracking-tight">{totalCount || properties.length} {(totalCount || properties.length) === 1 ? "property" : "properties"} found</h2>
         {totalCount > properties.length && <p className="mt-1 text-xs text-muted-foreground">Showing the most relevant matches first</p>}
       </div>
@@ -75,7 +76,7 @@ export default function PropertiesPage() {
       <div className="mb-6 max-w-3xl">
         <p className="text-sm font-semibold tracking-[0.16em] text-primary">NYUMBAFINDER</p>
         <h1 className="mt-1 text-3xl font-semibold tracking-tight sm:text-4xl">Find a place that feels like home.</h1>
-        <p className="mt-2 text-sm text-muted-foreground sm:text-base">Search rentals by location, budget and the features you care about.</p>
+        <p className="mt-2 text-sm text-muted-foreground sm:text-base">Search rentals, homes for sale, and short stays by location, budget and the features you care about.</p>
       </div>
 
       <div className="mb-8">
