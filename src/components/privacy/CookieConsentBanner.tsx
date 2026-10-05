@@ -23,6 +23,7 @@ export function getCookieConsent(): CookieConsent | null {
 
 export function setCookieConsent(consent: CookieConsent) {
   document.cookie = `${CONSENT_KEY}=${encodeURIComponent(JSON.stringify(consent))}; Max-Age=31536000; Path=/; SameSite=Lax`;
+  window.dispatchEvent(new Event('nyumbafinder:consent'));
 }
 
 export function CookieConsentBanner() {
