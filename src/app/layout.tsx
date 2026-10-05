@@ -12,6 +12,8 @@ const inter = Inter({ variable: '--font-inter', subsets: ['latin'] });
 export const metadata: Metadata = {
   title: 'NyumbaFinder | Find a Rental Home in Kenya',
   description: 'Find rental homes in Kenya by location, property type, budget and nearby places.',
+  metadataBase: new URL('https://www.nyumba-finder.com'),
+  alternates: { canonical: '/' },
   icons: {
     icon: '/icon.svg',
     apple: '/nyumbafinder-mark.svg',
@@ -28,6 +30,18 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
           <Footer />
         </div>
         <GoogleAnalytics />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              '@context': 'https://schema.org',
+              '@type': 'Organization',
+              name: 'NyumbaFinder',
+              url: 'https://www.nyumba-finder.com',
+              logo: 'https://www.nyumba-finder.com/nyumbafinder-logo.svg',
+            }),
+          }}
+        />
         <Toaster />
       </body>
     </html>
