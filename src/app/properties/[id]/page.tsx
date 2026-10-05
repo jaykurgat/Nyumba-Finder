@@ -188,8 +188,6 @@ export default function PropertyDetailPage({ params: paramsProp }: { params: Pro
 
   if (isLoading) return <PropertyDetailSkeleton />;
 
-  const pricePeriodLabel = property?.listingType === 'FOR_SALE' ? 'For Sale' : property?.listingType === 'SHORT_STAY' ? 'per night' : property?.pricePeriod === 'WEEK' ? 'per week' : 'per month';
-
   if (error || !property) {
     return (
       <div className="container mx-auto px-4 py-16 text-center">
@@ -202,6 +200,8 @@ export default function PropertyDetailPage({ params: paramsProp }: { params: Pro
       </div>
     );
   }
+
+  const pricePeriodLabel = property.listingType === 'FOR_SALE' ? 'For Sale' : property.listingType === 'SHORT_STAY' ? 'per night' : property.pricePeriod === 'WEEK' ? 'per week' : 'per month';
 
   return (
     <main className="min-h-screen bg-muted/20">
