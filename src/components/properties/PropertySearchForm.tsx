@@ -16,6 +16,7 @@ const locations = ["Mombasa","Kwale","Kilifi","Hola","Lamu","Voi","Garissa","Waj
 const amenities = ["Parking","Swimming Pool","Gym","Security","Balcony","Garden","Internet Ready","Servant Quarters","Lift","Water Included","Beach Access","Air Conditioning"];
 
 const schema = z.object({
+  listingType: z.string().optional(),
   location: z.string().optional(),
   minPrice: z.coerce.number().positive("Enter a valid minimum").optional().or(z.literal("")),
   maxPrice: z.coerce.number().positive("Enter a valid maximum").optional().or(z.literal("")),
@@ -36,6 +37,8 @@ export function PropertySearchForm({ onFormSubmit, isInSheet = false }: { onForm
   const form = useForm<Values>({
     resolver: zodResolver(schema),
     defaultValues: {
+      listingType: params.get("listingType") || "FOR_RENT",
+      listingType: params.get("listingType") || "FOR_RENT",
       location: params.get("location") || "",
       minPrice: params.get("minPrice") ? Number(params.get("minPrice")) : "",
       maxPrice: params.get("maxPrice") ? Number(params.get("maxPrice")) : "",
@@ -62,18 +65,21 @@ export function PropertySearchForm({ onFormSubmit, isInSheet = false }: { onForm
   const bedsActive = Boolean(v.minBedrooms && v.minBedrooms !== "all");
   const bathsActive = Boolean(v.minBathrooms && v.minBathrooms !== "all");
 
+  const listingType = v.listingType || "FOR_RENT";
+  const pricePeriodLabel = listingType === "FOR_SALE" ? "Sale price" : listingType === "SHORT_STAY" ? "Nightly price" : "Monthly rent";
   const priceLabel = useMemo(function () {
     if (v.minPrice && v.maxPrice) return "KSh " + Number(v.minPrice).toLocaleString() + " – " + Number(v.maxPrice).toLocaleString();
     if (v.minPrice) return "KSh " + Number(v.minPrice).toLocaleString() + "+";
     if (v.maxPrice) return "Up to KSh " + Number(v.maxPrice).toLocaleString();
-    return "Price";
-  }, [v.minPrice, v.maxPrice]);
+    return pricePeriodLabel;
+  }, [v.minPrice, v.maxPrice, pricePeriodLabel]);
 
   const bedsLabel = v.minBedrooms === "0" ? "Studio" : v.minBedrooms && v.minBedrooms !== "all" ? v.minBedrooms + "+ beds" : "Beds";
   const bathsLabel = v.minBathrooms && v.minBathrooms !== "all" ? v.minBathrooms + "+ baths" : "Baths";
 
   function submit(data: Values) {
     const next = new URLSearchParams();
+    if (data.listingType && data.listingType !== "FOR_RENT") next.set("listingType", data.listingType);
     if (data.location?.trim()) next.set("location", data.location.trim());
     if (data.minPrice) next.set("minPrice", String(data.minPrice));
     if (data.maxPrice) next.set("maxPrice", String(data.maxPrice));
@@ -86,7 +92,7 @@ export function PropertySearchForm({ onFormSubmit, isInSheet = false }: { onForm
   }
 
   function clear() {
-    form.reset({ location: "", minPrice: "", maxPrice: "", minBedrooms: "all", minBathrooms: "all", amenities: [] });
+    form.reset({ listingType: "FOR_RENT", location: "", minPrice: "", maxPrice: "", minBedrooms: "all", minBathrooms: "all", amenities: [] });
     router.push("/properties");
     setOpen(null);
     onFormSubmit?.();
@@ -96,8 +102,9 @@ export function PropertySearchForm({ onFormSubmit, isInSheet = false }: { onForm
     return (
       <Form {...form}>
         <form onSubmit={form.handleSubmit(submit)} className="space-y-6">
+          <ListingTypeField form={form} />
           <LocationField form={form} />
-          <Panel title="Price range" description="Monthly rent">
+          <Panel title="Price range" description={pricePeriodLabel}>
             <PriceFields form={form} />
           </Panel>
           <Panel title="Bedrooms" description="Minimum bedrooms">
@@ -120,6 +127,7 @@ export function PropertySearchForm({ onFormSubmit, isInSheet = false }: { onForm
     <Form {...form}>
       <form onSubmit={form.handleSubmit(submit)} className="relative rounded-2xl border bg-background p-2 shadow-sm">
         <div className="flex flex-col lg:flex-row lg:items-center">
+          <ListingTypeField form={form} compact />
           <LocationField form={form} compact />
           <div className="hidden h-8 w-px bg-border lg:block" />
           <FilterMenu name="price" label={priceLabel} active={priceActive} open={open === "price"} setOpen={setOpen} icon={null}>
@@ -138,6 +146,26 @@ export function PropertySearchForm({ onFormSubmit, isInSheet = false }: { onForm
         </div>
       </form>
     </Form>
+  );
+}
+
+function ListingTypeField({ form, compact = false }: { form: any; compact?: boolean }) {
+  return (
+    <div className={compact ? "flex min-h-12 items-center px-3 lg:min-w-[145px]" : "space-y-2"}>
+      {!compact && <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Listing type</p>}
+      <FormField control={form.control} name="listingType" render={function ({ field }: any) {
+        return <FormItem className={compact ? "w-full space-y-0" : ""}>
+          <FormControl>
+            <select {...field} className={compact ? "h-10 w-full border-0 bg-transparent px-0 text-sm font-medium outline-none" : "h-11 w-full rounded-xl border bg-background px-3 text-sm"}>
+              <option value="FOR_RENT">For Rent</option>
+              <option value="FOR_SALE">For Sale</option>
+              <option value="SHORT_STAY">Short Stay</option>
+            </select>
+          </FormControl>
+          {!compact && <FormMessage />}
+        </FormItem>;
+      }} />
+    </div>
   );
 }
 
