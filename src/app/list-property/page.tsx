@@ -395,7 +395,9 @@ export default function ListPropertyPage() {
         description: result.message || `Your property has been successfully ${isEditMode ? 'updated' : 'submitted'}.`,
       });
 
-      router.push(isEditMode && propertyIdToEdit ? `/properties/${propertyIdToEdit}` : `/properties/${result.propertyId || ''}`);
+      const adminPromotionFlow = searchParamsHook.get('adminPromote') === '1';
+      const savedPropertyId = isEditMode && propertyIdToEdit ? propertyIdToEdit : result.propertyId || '';
+      router.push(adminPromotionFlow && savedPropertyId ? `/admin/promotions?property=${savedPropertyId}` : `/properties/${savedPropertyId}`);
       router.refresh();
     } catch (error) {
       console.error(`Failed to ${isEditMode ? 'update' : 'list'} property via API:`, error);

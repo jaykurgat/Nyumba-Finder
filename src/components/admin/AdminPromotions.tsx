@@ -25,7 +25,11 @@ export default function AdminPromotions() {
     setProperties((l || []).map((item: any) => ({ id: item.id, title: item.title, location: item.location })));
   }
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    const propertyId = new URLSearchParams(window.location.search).get('property');
+    if (propertyId) setForm((current) => ({ ...current, propertyId }));
+    load();
+  }, []);
 
   async function create(event: FormEvent) {
     event.preventDefault(); setError('');
@@ -53,7 +57,8 @@ export default function AdminPromotions() {
       <div className="mx-auto max-w-7xl px-4 py-8">
         <div className="flex items-center gap-2 text-primary"><Sparkles className="h-4 w-4" /><p className="text-xs font-semibold uppercase tracking-[0.18em]">Promotion studio</p></div>
         <h1 className="mt-2 text-3xl font-semibold tracking-tight md:text-4xl">Sponsored listings</h1>
-        <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground">Give eligible listings additional visibility while keeping relevance, location and search filters in control.</p>
+        <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground">Give an active listing additional visibility while keeping relevance, location and search filters in control.</p>
+        <div className="mt-5 flex flex-wrap gap-3"><Link href="/list-property?adminPromote=1" className="inline-flex h-10 items-center rounded-xl border bg-background px-4 text-sm font-semibold transition-colors hover:bg-muted">Add a new property for sponsorship</Link><Link href="/admin/properties" className="inline-flex h-10 items-center rounded-xl border border-primary/20 bg-primary/[0.05] px-4 text-sm font-semibold text-primary transition-colors hover:bg-primary/10">Choose an existing property</Link></div>
         <form onSubmit={create} className="mt-7 grid gap-4 rounded-2xl border bg-background p-5 shadow-sm md:grid-cols-3 md:p-6">
           <label className="text-sm font-medium">Property<select required value={form.propertyId} onChange={(e) => setForm({ ...form, propertyId: e.target.value })} className="mt-2 h-10 w-full border bg-background px-2">{<option value="">Choose property</option>}{properties.map((p) => <option key={p.id} value={p.id}>{p.title} — {p.location}</option>)}</select></label>
           <label className="text-sm font-medium">Package<select value={form.package} onChange={(e) => setForm({ ...form, package: e.target.value })} className="mt-2 h-10 w-full border bg-background px-2"><option>Featured</option><option>Premium</option><option>Top Placement</option></select></label>

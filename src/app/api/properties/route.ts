@@ -138,8 +138,9 @@ export async function GET(request: NextRequest) {
       const promotion = row.promotions.find((candidate) => {
         const targetLocation = candidate.targetLocation?.trim().toLowerCase();
         const targetType = candidate.targetType?.trim().toLowerCase();
-        const locationMatches = !targetLocation || row.location.toLowerCase().includes(targetLocation);
-        const typeMatches = !targetType || row.propertyType.toLowerCase() === targetType;
+        const searchableLocation = [row.location, row.title, row.county?.name].filter(Boolean).join(' ').toLowerCase();
+        const locationMatches = !targetLocation || searchableLocation.includes(targetLocation);
+        const typeMatches = !targetType || row.propertyType.trim().toLowerCase() === targetType;
         const bedroomMatches =
           (candidate.minBedrooms == null || row.bedrooms >= candidate.minBedrooms) &&
           (candidate.maxBedrooms == null || row.bedrooms <= candidate.maxBedrooms);
@@ -154,6 +155,8 @@ export async function GET(request: NextRequest) {
       const titleLocationMatch = Boolean(locationSearchTerm && row.title.toLowerCase().includes(locationSearchTerm));
       const descriptionLocationMatch = Boolean(locationSearchTerm && row.description.toLowerCase().includes(locationSearchTerm));
       const locationTextMatch = Boolean(locationSearchTerm && row.location.toLowerCase().includes(locationSearchTerm));
+
+      const promotionBoost = promotion ? Math.min(250, Math.max(1, promotion.boost)) : 0;
 
       const relevance =
         (generalQueryTerm && row.title.toLowerCase().includes(generalQueryTerm) ? 100 : 0) +
@@ -177,9 +180,9 @@ export async function GET(request: NextRequest) {
         isSponsored: Boolean(promotion),
         promotionId: promotion?.id,
         promotionLabel: promotion ? 'Sponsored' : undefined,
-        promotionBoost: promotion?.boost,
+        promotionBoost,
         distanceKm: distance != null ? Math.round(distance * 10) / 10 : undefined,
-        _rankingScore: relevance + (promotion?.boost ?? 0),
+        _rankingScore: relevance + promotionBoost,
       };
     });
 
