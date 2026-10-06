@@ -108,6 +108,7 @@ export function PropertySearchForm({ onFormSubmit, isInSheet = false }: { onForm
     form.reset({ listingType: "ALL", location: "", minPrice: "", maxPrice: "", minBedrooms: "all", minBathrooms: "all", amenities: [] });
     router.push("/properties");
     setOpen(null);
+    setLocationOpen(false);
     onFormSubmit?.();
   }
 
@@ -147,10 +148,10 @@ export function PropertySearchForm({ onFormSubmit, isInSheet = false }: { onForm
             <PriceFields form={form} />
           </FilterMenu>
           <FilterMenu name="beds" label={bedsLabel} active={bedsActive} open={open === "beds"} setOpen={setOpen} icon={<BedDouble className="h-4 w-4" />}>
-            <ChoiceGrid value={v.minBedrooms || "all"} options={["all","0","1","2","3","4"]} labels={["Any","Studio","1+","2+","3+","4+"]} onChange={function (x) { form.setValue("minBedrooms", x); }} />
+            <ChoiceGrid value={v.minBedrooms || "all"} options={["all","0","1","2","3","4"]} labels={["Any","Studio","1+","2+","3+","4+"]} onChange={function (x) { form.setValue("minBedrooms", x); setOpen(null); }} />
           </FilterMenu>
           <FilterMenu name="baths" label={bathsLabel} active={bathsActive} open={open === "baths"} setOpen={setOpen} icon={<Bath className="h-4 w-4" />}>
-            <ChoiceGrid value={v.minBathrooms || "all"} options={["all","1","2","3","4","5"]} labels={["Any","1+","2+","3+","4+","5+"]} onChange={function (x) { form.setValue("minBathrooms", x); }} />
+            <ChoiceGrid value={v.minBathrooms || "all"} options={["all","1","2","3","4","5"]} labels={["Any","1+","2+","3+","4+","5+"]} onChange={function (x) { form.setValue("minBathrooms", x); setOpen(null); }} />
           </FilterMenu>
           <FilterMenu name="more" label={amenityCount ? "More filters (" + amenityCount + ")" : "More filters"} active={amenityCount > 0} open={open === "more"} setOpen={setOpen} icon={<SlidersHorizontal className="h-4 w-4" />}>
             <AmenityPanel form={form} />
