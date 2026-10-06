@@ -876,6 +876,17 @@ export default function ListPropertyPage() {
                     )}
 
 
+                  <div className="mb-5 rounded-2xl border border-primary/15 bg-gradient-to-br from-primary/[0.05] via-background to-accent/[0.06] p-5">
+                    <div className="flex items-start gap-3">
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary"><Sparkles className="h-4 w-4" /></div>
+                      <div>
+                        <p className="text-sm font-semibold">Want more visibility?</p>
+                        <p className="mt-1 text-sm leading-6 text-muted-foreground">Once your listing is active, you can request Sponsored placement to give it additional visibility in relevant searches.</p>
+                        <a href={propertyIdToEdit ? '/promote?property=' + propertyIdToEdit : '/promote'} className="mt-3 inline-flex text-sm font-semibold text-primary underline-offset-4 hover:underline">View sponsored placement options</a>
+                      </div>
+                    </div>
+                  </div>
+
                   <Button type="submit" className="w-full" disabled={isLoading || isUploading}>
                     {isLoading ? (
                         <>
