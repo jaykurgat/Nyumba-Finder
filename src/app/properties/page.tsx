@@ -51,7 +51,7 @@ function PropertyListingsContent() {
 
   const location = params.get("location");
   const listingType = params.get("listingType") || "ALL";
-  const active = params.get("location") ? 1 : 0 + params.getAll("amenities").length + (params.get("minPrice") || params.get("maxPrice") ? 1 : 0) + (params.get("minBedrooms") ? 1 : 0) + (params.get("minBathrooms") ? 1 : 0) + (listingType !== "ALL" ? 1 : 0);
+  const active = (params.get("location") ? 1 : 0) + params.getAll("amenities").length + (params.get("minPrice") || params.get("maxPrice") ? 1 : 0) + (params.get("minBedrooms") ? 1 : 0) + (params.get("minBathrooms") ? 1 : 0) + (listingType !== "ALL" ? 1 : 0);
 
   return <div>
     <div className="mb-5 flex items-end justify-between gap-4">
