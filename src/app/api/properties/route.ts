@@ -203,7 +203,7 @@ export async function GET(request: NextRequest) {
       .filter((item) => item.isSponsored)
       .sort((a, b) => {
         if (b._promotionTier !== a._promotionTier) return b._promotionTier - a._promotionTier;
-        if (b._promotionBoost !== a._promotionBoost) return b._promotionBoost - a._promotionBoost;
+        if (b.promotionBoost !== a.promotionBoost) return b.promotionBoost - a.promotionBoost;
         if (b._relevanceScore !== a._relevanceScore) return b._relevanceScore - a._relevanceScore;
         if (a.distanceKm !== undefined || b.distanceKm !== undefined) {
           if (a.distanceKm === undefined) return 1;
@@ -226,33 +226,25 @@ export async function GET(request: NextRequest) {
         return a.title.localeCompare(b.title);
       });
 
-    // Up to three sponsored positions are reserved in the first ten results.
-    // Top Placement gets the first available slot; Premium/Featured follow by tier.
-    // Additional sponsored listings continue in later sponsored slots instead of
-    // displacing the entire organic result set.
+    // Reserve three sponsored positions in the first ten results, then one
+    // sponsored position every ten results. This keeps paid visibility meaningful
+    // without allowing sponsorship to flood the search experience.
     const merged: typeof results = [];
     let sponsoredIndex = 0;
     let organicIndex = 0;
-    const sponsoredSlots = new Set([0, 3, 6]);
 
-    while (merged.length < 60 && (organicIndex < organic.length || sponsoredIndex < sponsored.length)) {
-      if (sponsoredSlots.has(merged.length) && sponsoredIndex < sponsored.length) {
+    for (let position = 0; position < 60; position += 1) {
+      const isReservedSponsoredSlot =
+        position === 0 || position === 3 || position === 6 || (position >= 10 && position % 10 === 0);
+
+      if (isReservedSponsoredSlot && sponsoredIndex < sponsored.length) {
         merged.push(sponsored[sponsoredIndex++]);
       } else if (organicIndex < organic.length) {
         merged.push(organic[organicIndex++]);
       } else if (sponsoredIndex < sponsored.length) {
         merged.push(sponsored[sponsoredIndex++]);
-      }
-    }
-
-    // After the first ten results, allow remaining sponsored listings to occupy
-    // every tenth position so paid visibility scales without flooding search.
-    while (merged.length < 60 && sponsoredIndex < sponsored.length) {
-      const nextOrganic = organic[organicIndex++];
-      if (nextOrganic) merged.push(nextOrganic);
-      else merged.push(sponsored[sponsoredIndex++]);
-      if (merged.length % 10 === 0 && sponsoredIndex < sponsored.length) {
-        merged.push(sponsored[sponsoredIndex++]);
+      } else {
+        break;
       }
     }
 
