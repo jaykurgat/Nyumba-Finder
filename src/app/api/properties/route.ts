@@ -158,6 +158,8 @@ export async function GET(request: NextRequest) {
 
       const promotionBoost = promotion ? Math.min(250, Math.max(1, promotion.boost)) : 0;
 
+      // Relevance is calculated first. Sponsored placement can only affect listings
+      // that already passed the same search filters and targeting rules as organic results.
       const relevance =
         (generalQueryTerm && row.title.toLowerCase().includes(generalQueryTerm) ? 100 : 0) +
         (generalQueryTerm && row.location.toLowerCase().includes(generalQueryTerm) ? 60 : 0) +
@@ -167,6 +169,13 @@ export async function GET(request: NextRequest) {
         locationRelevanceScore(row.location + (row.county?.name ? ' ' + row.county.name : ''), locationContext) +
         (withinRadius ? 800 + Math.max(0, 200 - distance! * 8) : 0) +
         (distance != null && !withinRadius ? Math.max(0, 120 - distance) : 0);
+
+      const packageName = promotion?.package?.trim().toLowerCase() ?? '';
+      const promotionTier = promotion
+        ? packageName === 'top placement' || packageName === 'premium plus' ? 3
+          : packageName === 'premium' || packageName === 'premium featured' ? 2
+          : 1
+        : 0;
 
       return {
         ...toProperty({
@@ -181,23 +190,65 @@ export async function GET(request: NextRequest) {
         promotionId: promotion?.id,
         promotionLabel: promotion ? 'Sponsored' : undefined,
         promotionBoost,
-        distanceKm: distance != null ? Math.round(distance * 10) / 10 : undefined,
+        _relevanceScore: relevance,
+        _promotionTier: promotionTier,
         _rankingScore: relevance + promotionBoost,
       };
     });
 
-    results.sort((a, b) => {
-      if (b._rankingScore !== a._rankingScore) return b._rankingScore - a._rankingScore;
-      if (a.distanceKm !== undefined || b.distanceKm !== undefined) {
-        if (a.distanceKm === undefined) return 1;
-        if (b.distanceKm === undefined) return -1;
-        if (a.distanceKm !== b.distanceKm && locationContext?.center) return a.distanceKm - b.distanceKm;
-      }
-      if (minPrice !== undefined || maxPrice !== undefined) return a.price - b.price;
-      return a.title.localeCompare(b.title);
-    });
+    // Sponsored results use dedicated placement slots rather than relying on a
+    // numeric boost alone. This prevents a large organic relevance score from
+    // pushing a paid listing to the bottom of the results.
+    const sponsored = results
+      .filter((item) => item.isSponsored)
+      .sort((a, b) => {
+        if (b._promotionTier !== a._promotionTier) return b._promotionTier - a._promotionTier;
+        if (b.promotionBoost !== a.promotionBoost) return b.promotionBoost - a.promotionBoost;
+        if (b._relevanceScore !== a._relevanceScore) return b._relevanceScore - a._relevanceScore;
+        if (a.distanceKm !== undefined || b.distanceKm !== undefined) {
+          if (a.distanceKm === undefined) return 1;
+          if (b.distanceKm === undefined) return -1;
+          if (a.distanceKm !== b.distanceKm && locationContext?.center) return a.distanceKm - b.distanceKm;
+        }
+        return a.title.localeCompare(b.title);
+      });
 
-    const response = NextResponse.json(results.slice(0, 60).map(({ _rankingScore: _ignored, ...property }) => property));
+    const organic = results
+      .filter((item) => !item.isSponsored)
+      .sort((a, b) => {
+        if (b._relevanceScore !== a._relevanceScore) return b._relevanceScore - a._relevanceScore;
+        if (a.distanceKm !== undefined || b.distanceKm !== undefined) {
+          if (a.distanceKm === undefined) return 1;
+          if (b.distanceKm === undefined) return -1;
+          if (a.distanceKm !== b.distanceKm && locationContext?.center) return a.distanceKm - b.distanceKm;
+        }
+        if (minPrice !== undefined || maxPrice !== undefined) return a.price - b.price;
+        return a.title.localeCompare(b.title);
+      });
+
+    // Reserve three sponsored positions in the first ten results, then one
+    // sponsored position every ten results. This keeps paid visibility meaningful
+    // without allowing sponsorship to flood the search experience.
+    const merged: typeof results = [];
+    let sponsoredIndex = 0;
+    let organicIndex = 0;
+
+    for (let position = 0; position < 60; position += 1) {
+      const isReservedSponsoredSlot =
+        position === 0 || position === 3 || position === 6 || (position >= 10 && position % 10 === 0);
+
+      if (isReservedSponsoredSlot && sponsoredIndex < sponsored.length) {
+        merged.push(sponsored[sponsoredIndex++]);
+      } else if (organicIndex < organic.length) {
+        merged.push(organic[organicIndex++]);
+      } else if (sponsoredIndex < sponsored.length) {
+        merged.push(sponsored[sponsoredIndex++]);
+      } else {
+        break;
+      }
+    }
+
+    const response = NextResponse.json(merged.slice(0, 60).map(({ _rankingScore: _ignored, _relevanceScore: _r, _promotionTier: _t, ...property }) => property));
     response.headers.set('X-Total-Count', String(total));
     response.headers.set('X-Result-Limit', '60');
     return response;
