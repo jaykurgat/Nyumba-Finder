@@ -116,7 +116,7 @@ export function PropertySearchForm({ onFormSubmit, isInSheet = false }: { onForm
       <Form {...form}>
         <form onSubmit={form.handleSubmit(submit)} className="space-y-6">
           <ListingTypeField form={form} />
-          <LocationField form={form} />
+          <LocationField form={form} locationOpen={locationOpen} setLocationOpen={setLocationOpen} />
           <Panel title="Price range" description={pricePeriodLabel}>
             <PriceFields form={form} />
           </Panel>
