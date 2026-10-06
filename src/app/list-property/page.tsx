@@ -24,7 +24,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Trash2, Home, MapPin, Navigation, Search, X } from "lucide-react";
+import { Loader2, Trash2, Home, MapPin, Navigation, Search, X, Sparkles } from "lucide-react";
 import type { Property } from "@/types/property";
 
 const amenitiesList = ["Parking", "Swimming Pool", "Gym", "Security", "Balcony", "Garden", "Internet Ready", "Servant Quarters", "Lift", "Water Included", "Beach Access", "Air Conditioning"] as const;
