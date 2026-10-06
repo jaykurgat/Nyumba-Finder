@@ -16,6 +16,7 @@ import {
   Phone,
   Ruler,
   ShieldAlert,
+  Sparkles,
 } from 'lucide-react';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import { AspectRatio } from "@/components/ui/aspect-ratio";
@@ -292,6 +293,16 @@ export default function PropertyDetailPage({ params: paramsProp }: { params: Pro
                     </div>
                   </div>
                 )}
+              </div>
+            </section>
+
+            <section className="overflow-hidden rounded-2xl border border-primary/15 bg-gradient-to-br from-primary/[0.06] via-background to-accent/[0.08] shadow-sm">
+              <div className="p-5 md:p-7">
+                <div className="flex items-start gap-4">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary"><Sparkles className="h-5 w-5" /></div>
+                  <div><p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">More visibility</p><h2 className="mt-1 text-lg font-semibold tracking-tight">Promote this listing</h2><p className="mt-2 text-sm leading-6 text-muted-foreground">Give this property a premium sponsored placement so it can stand out more prominently in relevant searches. Sponsored listings remain subject to the same listing and search rules.</p></div>
+                </div>
+                <Button asChild className="mt-5 w-full rounded-xl sm:w-auto"><Link href={'/promote?property=' + property.id}>Explore sponsored placement</Link></Button>
               </div>
             </section>
 

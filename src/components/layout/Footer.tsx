@@ -14,6 +14,7 @@ const groups = [
     title: 'For Landlords',
     links: [
       ['List Your Property', '/list-property'],
+      ['Promote a Listing', '/promote'],
       ['Landlord Guidelines', '/info/landlord-guidelines'],
       ['Listing Rules', '/info/listing-rules'],
       ['Report a Listing', '/info/report-listing'],

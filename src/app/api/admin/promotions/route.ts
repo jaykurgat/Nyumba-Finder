@@ -38,8 +38,9 @@ export async function POST(request: NextRequest) {
     const endsAt = parseDate(body.endsAt);
     if (!propertyId || !startsAt || !endsAt || endsAt <= startsAt) return NextResponse.json({ message: 'Property, start date and end date are required.' }, { status: 400 });
 
-    const property = await prisma.property.findUnique({ where: { id: propertyId }, select: { id: true } });
+    const property = await prisma.property.findUnique({ where: { id: propertyId }, select: { id: true, status: true } });
     if (!property) return NextResponse.json({ message: 'Property not found.' }, { status: 404 });
+    if (property.status !== 'ACTIVE') return NextResponse.json({ message: 'Only active listings can be promoted.' }, { status: 400 });
 
     const promotion = await prisma.propertyPromotion.create({
       data: {

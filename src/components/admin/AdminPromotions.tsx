@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { FormEvent, useEffect, useState } from 'react';
+import { BarChart3, CalendarDays, Sparkles } from 'lucide-react';
 
 type Promotion = {
   id: string; package: string; status: string; boost: number; targetLocation: string | null; targetType: string | null;
@@ -41,7 +42,7 @@ export default function AdminPromotions() {
   }
 
   return (
-    <main className="min-h-screen bg-muted/20">
+    <main className="min-h-screen bg-[#f7f7f3]">
       <header className="border-b bg-background">
         <div className="mx-auto flex max-w-7xl items-center gap-6 px-4 py-4">
           <Link href="/admin" className="font-semibold">NyumbaFinder Admin</Link>
@@ -50,9 +51,10 @@ export default function AdminPromotions() {
         </div>
       </header>
       <div className="mx-auto max-w-7xl px-4 py-8">
-        <h1 className="text-3xl font-semibold">Sponsored listings</h1>
-        <p className="mt-2 max-w-3xl text-sm text-muted-foreground">Paid placement adds a controlled boost to otherwise eligible results. Relevance, filters and listing status still determine eligibility.</p>
-        <form onSubmit={create} className="mt-7 grid gap-4 border bg-background p-6 md:grid-cols-3">
+        <div className="flex items-center gap-2 text-primary"><Sparkles className="h-4 w-4" /><p className="text-xs font-semibold uppercase tracking-[0.18em]">Promotion studio</p></div>
+        <h1 className="mt-2 text-3xl font-semibold tracking-tight md:text-4xl">Sponsored listings</h1>
+        <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground">Give eligible listings additional visibility while keeping relevance, location and search filters in control.</p>
+        <form onSubmit={create} className="mt-7 grid gap-4 rounded-2xl border bg-background p-5 shadow-sm md:grid-cols-3 md:p-6">
           <label className="text-sm font-medium">Property<select required value={form.propertyId} onChange={(e) => setForm({ ...form, propertyId: e.target.value })} className="mt-2 h-10 w-full border bg-background px-2">{<option value="">Choose property</option>}{properties.map((p) => <option key={p.id} value={p.id}>{p.title} — {p.location}</option>)}</select></label>
           <label className="text-sm font-medium">Package<select value={form.package} onChange={(e) => setForm({ ...form, package: e.target.value })} className="mt-2 h-10 w-full border bg-background px-2"><option>Featured</option><option>Premium</option><option>Top Placement</option></select></label>
           <label className="text-sm font-medium">Ranking boost<input type="number" min="1" max="1000" value={form.boost} onChange={(e) => setForm({ ...form, boost: e.target.value })} className="mt-2 h-10 w-full border bg-background px-2" /></label>
@@ -61,10 +63,10 @@ export default function AdminPromotions() {
           <div className="grid grid-cols-2 gap-2"><label className="text-sm font-medium">Min beds<input type="number" min="0" value={form.minBedrooms} onChange={(e) => setForm({ ...form, minBedrooms: e.target.value })} className="mt-2 h-10 w-full border bg-background px-2" /></label><label className="text-sm font-medium">Max beds<input type="number" min="0" value={form.maxBedrooms} onChange={(e) => setForm({ ...form, maxBedrooms: e.target.value })} className="mt-2 h-10 w-full border bg-background px-2" /></label></div>
           <label className="text-sm font-medium">Starts<input required type="datetime-local" value={form.startsAt} onChange={(e) => setForm({ ...form, startsAt: e.target.value })} className="mt-2 h-10 w-full border bg-background px-2" /></label>
           <label className="text-sm font-medium">Ends<input required type="datetime-local" value={form.endsAt} onChange={(e) => setForm({ ...form, endsAt: e.target.value })} className="mt-2 h-10 w-full border bg-background px-2" /></label>
-          <div className="flex items-end"><button className="h-10 bg-primary px-5 text-sm font-medium text-primary-foreground">Create promotion</button></div>
+          <div className="flex items-end md:col-span-3"><button className="inline-flex h-11 items-center gap-2 rounded-xl bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-sm"><Sparkles className="h-4 w-4" />Create sponsored placement</button></div>
         </form>
         {error && <p className="mt-4 text-sm text-destructive">{error}</p>}
-        <div className="mt-7 overflow-x-auto border bg-background">
+        <div className="mt-8 grid gap-3 md:grid-cols-3"><div className="rounded-2xl border bg-background p-5 shadow-sm"><Sparkles className="h-5 w-5 text-primary" /><p className="mt-4 text-sm font-semibold">Premium visibility</p><p className="mt-1 text-xs leading-5 text-muted-foreground">Sponsored placement is clearly labeled and receives a controlled ranking boost.</p></div><div className="rounded-2xl border bg-background p-5 shadow-sm"><BarChart3 className="h-5 w-5 text-primary" /><p className="mt-4 text-sm font-semibold">Measure performance</p><p className="mt-1 text-xs leading-5 text-muted-foreground">Track impressions, clicks and click-through rate for each promotion.</p></div><div className="rounded-2xl border bg-background p-5 shadow-sm"><CalendarDays className="h-5 w-5 text-primary" /><p className="mt-4 text-sm font-semibold">Time-controlled</p><p className="mt-1 text-xs leading-5 text-muted-foreground">Set a defined start and end date for every promotion.</p></div></div><div className="mt-8 overflow-x-auto rounded-2xl border bg-background shadow-sm">
           <table className="w-full min-w-[950px] text-sm">
             <thead className="border-b bg-muted/40 text-left"><tr><th className="p-3">Property</th><th className="p-3">Package</th><th className="p-3">Boost</th><th className="p-3">Target</th><th className="p-3">Period</th><th className="p-3">Performance</th><th className="p-3">Status</th></tr></thead>
             <tbody className="divide-y">
