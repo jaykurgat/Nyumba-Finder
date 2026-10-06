@@ -37,7 +37,7 @@ export function PropertySearchForm({ onFormSubmit, isInSheet = false }: { onForm
   const form = useForm<Values>({
     resolver: zodResolver(schema),
     defaultValues: {
-      listingType: params.get("listingType") || "FOR_RENT",
+      listingType: params.get("listingType") || "ALL",
       location: params.get("location") || "",
       minPrice: params.get("minPrice") ? Number(params.get("minPrice")) : "",
       maxPrice: params.get("maxPrice") ? Number(params.get("maxPrice")) : "",
@@ -49,7 +49,7 @@ export function PropertySearchForm({ onFormSubmit, isInSheet = false }: { onForm
 
   useEffect(function () {
     form.reset({
-      listingType: params.get("listingType") || "FOR_RENT",
+      listingType: params.get("listingType") || "ALL",
       location: params.get("location") || "",
       minPrice: params.get("minPrice") ? Number(params.get("minPrice")) : "",
       maxPrice: params.get("maxPrice") ? Number(params.get("maxPrice")) : "",
@@ -65,8 +65,8 @@ export function PropertySearchForm({ onFormSubmit, isInSheet = false }: { onForm
   const bedsActive = Boolean(v.minBedrooms && v.minBedrooms !== "all");
   const bathsActive = Boolean(v.minBathrooms && v.minBathrooms !== "all");
 
-  const listingType = v.listingType || "FOR_RENT";
-  const pricePeriodLabel = listingType === "FOR_SALE" ? "Sale price" : listingType === "SHORT_STAY" ? "Nightly price" : "Monthly rent";
+  const listingType = v.listingType || "ALL";
+  const pricePeriodLabel = listingType === "FOR_SALE" ? "Sale price" : listingType === "SHORT_STAY" ? "Nightly price" : listingType === "FOR_RENT" ? "Monthly rent" : "Price";
   const priceLabel = useMemo(function () {
     if (v.minPrice && v.maxPrice) return "KSh " + Number(v.minPrice).toLocaleString() + " – " + Number(v.maxPrice).toLocaleString();
     if (v.minPrice) return "KSh " + Number(v.minPrice).toLocaleString() + "+";
@@ -92,7 +92,7 @@ export function PropertySearchForm({ onFormSubmit, isInSheet = false }: { onForm
   }
 
   function clear() {
-    form.reset({ listingType: "FOR_RENT", location: "", minPrice: "", maxPrice: "", minBedrooms: "all", minBathrooms: "all", amenities: [] });
+    form.reset({ listingType: "ALL", location: "", minPrice: "", maxPrice: "", minBedrooms: "all", minBathrooms: "all", amenities: [] });
     router.push("/properties");
     setOpen(null);
     onFormSubmit?.();
@@ -156,11 +156,15 @@ function ListingTypeField({ form, compact = false }: { form: any; compact?: bool
       <FormField control={form.control} name="listingType" render={function ({ field }: any) {
         return <FormItem className={compact ? "w-full space-y-0" : ""}>
           <FormControl>
-            <select {...field} className={compact ? "h-10 w-full border-0 bg-transparent px-0 text-sm font-medium outline-none" : "h-11 w-full rounded-xl border bg-background px-3 text-sm"}>
-              <option value="FOR_RENT">For Rent</option>
-              <option value="FOR_SALE">For Sale</option>
-              <option value="SHORT_STAY">Short Stay</option>
-            </select>
+            <div className="relative w-full">
+              <select {...field} className={(compact ? "h-10 w-full rounded-lg border border-border/70 bg-background px-3 pr-9 text-sm font-medium shadow-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/15 " : "h-11 w-full appearance-none rounded-xl border bg-background px-3 pr-10 text-sm shadow-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/15 ") + "appearance-none"}>
+                <option value="ALL">All listings</option>
+                <option value="FOR_RENT">For Rent</option>
+                <option value="FOR_SALE">For Sale</option>
+                <option value="SHORT_STAY">Short Stay</option>
+              </select>
+              <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            </div>
           </FormControl>
           {!compact && <FormMessage />}
         </FormItem>;

@@ -131,8 +131,8 @@ export default function Home() {
             <p className="text-sm font-medium text-primary">A simpler way to search</p>
             <h2 className="mt-1 text-2xl font-semibold tracking-tight">Search around what matters</h2>
           </div>
-          <Button variant="ghost" asChild className="hidden sm:flex">
-            <Link href="/properties">Browse houses <ArrowRight className="ml-2 h-4 w-4" /></Link>
+          <Button variant="outline" asChild className="shrink-0 rounded-xl bg-background">
+            <Link href="/properties">Explore homes <ArrowRight className="ml-2 h-4 w-4" /></Link>
           </Button>
         </div>
 
