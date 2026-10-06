@@ -5,7 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Bath, BedDouble, ChevronDown, MapPin, Search, SlidersHorizontal, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormMessage } from "@/components/ui/form";
@@ -33,6 +33,7 @@ export function PropertySearchForm({ onFormSubmit, isInSheet = false }: { onForm
   const router = useRouter();
   const params = useSearchParams();
   const [open, setOpen] = useState<string | null>(null);
+  const [locationOpen, setLocationOpen] = useState(false);
 
   const form = useForm<Values>({
     resolver: zodResolver(schema),
@@ -66,6 +67,7 @@ export function PropertySearchForm({ onFormSubmit, isInSheet = false }: { onForm
   const bathsActive = Boolean(v.minBathrooms && v.minBathrooms !== "all");
 
   const listingType = v.listingType || "ALL";
+  const locationValue = String(v.location || "").trim();
   const pricePeriodLabel = listingType === "FOR_SALE" ? "Sale price" : listingType === "SHORT_STAY" ? "Nightly price" : listingType === "FOR_RENT" ? "Monthly rent" : "Price";
   const priceLabel = useMemo(function () {
     if (v.minPrice && v.maxPrice) return "KSh " + Number(v.minPrice).toLocaleString() + " – " + Number(v.maxPrice).toLocaleString();
@@ -79,7 +81,7 @@ export function PropertySearchForm({ onFormSubmit, isInSheet = false }: { onForm
 
   function submit(data: Values) {
     const next = new URLSearchParams();
-    if (data.listingType) next.set("listingType", data.listingType);
+    if (data.listingType && data.listingType !== "ALL") next.set("listingType", data.listingType);
     if (data.location?.trim()) next.set("location", data.location.trim());
     if (data.minPrice) next.set("minPrice", String(data.minPrice));
     if (data.maxPrice) next.set("maxPrice", String(data.maxPrice));
@@ -88,7 +90,18 @@ export function PropertySearchForm({ onFormSubmit, isInSheet = false }: { onForm
     (data.amenities || []).forEach(function (item) { next.append("amenities", item); });
     router.push(next.toString() ? "/properties?" + next.toString() : "/properties");
     setOpen(null);
+    setLocationOpen(false);
     onFormSubmit?.();
+  }
+
+  function removeFilter(name: keyof Values, value?: string) {
+    const next = { ...v };
+    if (name === "amenities") next.amenities = (next.amenities || []).filter(function (item) { return item !== value; });
+    else if (name === "minPrice" || name === "maxPrice") next[name] = "";
+    else if (name === "minBedrooms" || name === "minBathrooms") next[name] = "all";
+    else if (name === "listingType") next.listingType = "ALL";
+    else if (name === "location") next.location = "";
+    submit(next);
   }
 
   function clear() {
@@ -108,10 +121,10 @@ export function PropertySearchForm({ onFormSubmit, isInSheet = false }: { onForm
             <PriceFields form={form} />
           </Panel>
           <Panel title="Bedrooms" description="Minimum bedrooms">
-            <ChoiceGrid value={v.minBedrooms || "all"} options={["all","0","1","2","3","4"]} labels={["Any","Studio","1+","2+","3+","4+"]} onChange={function (x) { form.setValue("minBedrooms", x); }} />
+            <ChoiceGrid value={v.minBedrooms || "all"} options={["all","0","1","2","3","4"]} labels={["Any","Studio","1+","2+","3+","4+"]} onChange={function (x) { form.setValue("minBedrooms", x); setOpen(null); }} />
           </Panel>
           <Panel title="Bathrooms" description="Minimum bathrooms">
-            <ChoiceGrid value={v.minBathrooms || "all"} options={["all","1","2","3","4","5"]} labels={["Any","1+","2+","3+","4+","5+"]} onChange={function (x) { form.setValue("minBathrooms", x); }} />
+            <ChoiceGrid value={v.minBathrooms || "all"} options={["all","1","2","3","4","5"]} labels={["Any","1+","2+","3+","4+","5+"]} onChange={function (x) { form.setValue("minBathrooms", x); setOpen(null); }} />
           </Panel>
           <AmenityPanel form={form} />
           <div className="sticky bottom-0 -mx-4 flex gap-2 border-t bg-background px-4 py-4">
@@ -128,7 +141,7 @@ export function PropertySearchForm({ onFormSubmit, isInSheet = false }: { onForm
       <form onSubmit={form.handleSubmit(submit)} className="relative rounded-2xl border bg-background p-2 shadow-sm">
         <div className="flex flex-col lg:flex-row lg:items-center">
           <ListingTypeField form={form} compact />
-          <LocationField form={form} compact />
+          <LocationField form={form} compact locationOpen={locationOpen} setLocationOpen={setLocationOpen} />
           <div className="hidden h-8 w-px bg-border lg:block" />
           <FilterMenu name="price" label={priceLabel} active={priceActive} open={open === "price"} setOpen={setOpen} icon={null}>
             <PriceFields form={form} />
@@ -145,6 +158,17 @@ export function PropertySearchForm({ onFormSubmit, isInSheet = false }: { onForm
           <Button type="submit" className="h-11 gap-2 px-5 lg:ml-1"><Search className="h-4 w-4" /><span>Search</span></Button>
         </div>
       </form>
+      {(locationValue || listingType !== "ALL" || priceActive || bedsActive || bathsActive || amenityCount > 0) && (
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          {locationValue && <FilterChip label={locationValue} onRemove={function () { removeFilter("location"); }} />}
+          {listingType !== "ALL" && <FilterChip label={listingType === "FOR_RENT" ? "For Rent" : listingType === "FOR_SALE" ? "For Sale" : "Short Stay"} onRemove={function () { removeFilter("listingType"); }} />}
+          {priceActive && <FilterChip label={priceLabel} onRemove={function () { const next = { ...v, minPrice: "", maxPrice: "" }; submit(next); }} />}
+          {bedsActive && <FilterChip label={bedsLabel} onRemove={function () { removeFilter("minBedrooms"); }} />}
+          {bathsActive && <FilterChip label={bathsLabel} onRemove={function () { removeFilter("minBathrooms"); }} />}
+          {(v.amenities || []).map(function (item) { return <FilterChip key={item} label={item} onRemove={function () { removeFilter("amenities", item); }} />; })}
+          <button type="button" onClick={clear} className="ml-1 inline-flex h-8 items-center px-2 text-sm font-medium text-primary hover:underline">Clear all</button>
+        </div>
+      )}
     </Form>
   );
 }
@@ -173,9 +197,21 @@ function ListingTypeField({ form, compact = false }: { form: any; compact?: bool
   );
 }
 
-function LocationField({ form, compact = false }: { form: any; compact?: boolean }) {
+function LocationField({ form, compact = false, locationOpen = false, setLocationOpen }: { form: any; compact?: boolean; locationOpen?: boolean; setLocationOpen?: (x: boolean) => void }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const value = String(form.watch("location") || "");
+  const matches = locations.filter(function (item) { return !value.trim() || item.toLowerCase().includes(value.trim().toLowerCase()); }).slice(0, 8);
+
+  useEffect(function () {
+    function handlePointer(event: MouseEvent) { if (ref.current && !ref.current.contains(event.target as Node)) setLocationOpen?.(false); }
+    function handleKey(event: KeyboardEvent) { if (event.key === "Escape") setLocationOpen?.(false); }
+    document.addEventListener("mousedown", handlePointer);
+    document.addEventListener("keydown", handleKey);
+    return function () { document.removeEventListener("mousedown", handlePointer); document.removeEventListener("keydown", handleKey); };
+  }, [setLocationOpen]);
+
   return (
-    <div className={compact ? "flex min-h-12 flex-1 items-center gap-3 px-3" : "space-y-2"}>
+    <div ref={ref} className={(compact ? "flex min-h-12 flex-1 items-center gap-3 px-3" : "space-y-2") + " relative"}>
       {!compact && <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Location</p>}
       <FormField control={form.control} name="location" render={function ({ field }: any) {
         return (
@@ -184,33 +220,49 @@ function LocationField({ form, compact = false }: { form: any; compact?: boolean
               <div className={compact ? "flex items-center gap-3" : "flex items-center gap-3 border bg-background px-3"}>
                 {compact && <MapPin className="h-5 w-5 shrink-0 text-primary" />}
                 {!compact && <MapPin className="h-4 w-4 text-primary" />}
-                <Input {...field} value={field.value || ""} list="nyumba-locations" placeholder={compact ? "Search city, neighbourhood or estate" : "City, neighbourhood or estate"} className={compact ? "h-10 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0" : "h-12 border-0 px-0 shadow-none focus-visible:ring-0"} />
+                <Input {...field} value={field.value || ""} onFocus={function () { setLocationOpen?.(true); }} onChange={function (event) { field.onChange(event); setLocationOpen?.(true); }} placeholder={compact ? "Search city, neighbourhood or estate" : "City, neighbourhood or estate"} className={compact ? "h-10 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0" : "h-12 border-0 px-0 shadow-none focus-visible:ring-0"} />
               </div>
             </FormControl>
             <FormMessage />
           </FormItem>
         );
       }} />
-      <datalist id="nyumba-locations">{locations.map(function (x) { return <option key={x} value={x} />; })}</datalist>
-    </div>
-  );
-}
-
-function FilterMenu({ name, label, active, open, setOpen, icon, children }: { name: string; label: string; active: boolean; open: boolean; setOpen: (x: string | null) => void; icon: ReactNode; children: ReactNode }) {
-  return (
-    <div className="relative">
-      <Button type="button" variant="ghost" onClick={function () { setOpen(open ? null : name); }} className={"h-11 w-full justify-between gap-2 border px-3 lg:w-auto lg:justify-center " + (active || open ? "border-primary/30 bg-primary/5 text-primary" : "border-transparent")}>
-        {icon}{label}<ChevronDown className={"h-4 w-4 " + (open ? "rotate-180" : "")} />
-      </Button>
-      {open && (
-        <div className="absolute left-0 top-12 z-50 w-[330px] rounded-xl border bg-background p-5 shadow-xl">
-          {children}
+      {locationOpen && matches.length > 0 && (
+        <div className="absolute left-0 right-0 top-14 z-50 overflow-hidden rounded-xl border bg-background shadow-xl">
+          <div className="border-b px-3 py-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">Location suggestions</div>
+          {matches.map(function (item) {
+            return <button key={item} type="button" onMouseDown={function (event) { event.preventDefault(); form.setValue("location", item, { shouldDirty: true }); setLocationOpen?.(false); }} className="flex w-full items-center gap-3 px-3 py-3 text-left text-sm hover:bg-muted focus:bg-muted focus:outline-none"><MapPin className="h-4 w-4 shrink-0 text-primary" /><span>{item}</span></button>;
+          })}
         </div>
       )}
     </div>
   );
 }
 
+function FilterMenu({ name, label, active, open, setOpen, icon, children }: { name: string; label: string; active: boolean; open: boolean; setOpen: (x: string | null) => void; icon: ReactNode; children: ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(function () {
+    if (!open) return;
+    function handlePointer(event: MouseEvent) { if (ref.current && !ref.current.contains(event.target as Node)) setOpen(null); }
+    function handleKey(event: KeyboardEvent) { if (event.key === "Escape") setOpen(null); }
+    document.addEventListener("mousedown", handlePointer);
+    document.addEventListener("keydown", handleKey);
+    return function () { document.removeEventListener("mousedown", handlePointer); document.removeEventListener("keydown", handleKey); };
+  }, [open, setOpen]);
+
+  return (
+    <div ref={ref} className="relative">
+      <Button type="button" variant="ghost" onClick={function () { setOpen(open ? null : name); }} aria-expanded={open} className={"h-11 w-full justify-between gap-2 border px-3 lg:w-auto lg:justify-center " + (active || open ? "border-primary/30 bg-primary/5 text-primary" : "border-transparent")}>
+        {icon}{label}<ChevronDown className={"h-4 w-4 transition-transform " + (open ? "rotate-180" : "")} />
+      </Button>
+      {open && <div className="absolute left-0 top-12 z-50 w-[330px] max-w-[calc(100vw-2rem)] rounded-xl border bg-background p-5 shadow-xl">{children}</div>}
+    </div>
+  );
+}
+
+function FilterChip({ label, onRemove }: { label: string; onRemove: () => void }) {
+  return <span className="inline-flex h-8 items-center gap-1.5 rounded-full border bg-background px-3 text-sm text-foreground shadow-sm"><span className="max-w-[220px] truncate">{label}</span><button type="button" onClick={onRemove} aria-label={"Remove " + label} className="rounded-full p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground"><X className="h-3.5 w-3.5" /></button></span>;
+}
 function Panel({ title, description, children }: { title: string; description: string; children: ReactNode }) {
   return <section className="space-y-3"><div><h3 className="font-semibold">{title}</h3><p className="text-sm text-muted-foreground">{description}</p></div>{children}</section>;
 }
