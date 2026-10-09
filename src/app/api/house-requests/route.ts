@@ -118,7 +118,7 @@ export async function POST(request: NextRequest) {
             if (!parent) parent = await prisma.locationNode.create({ data: { countyId: county.id, level: "TOWN", name: location.townName, slug: parentSlug, searchable: false, source: "USER_SUBMITTED_PENDING_REVIEW" } });
             parentId = parent.id;
           }
-          const slug = location.name.normalize("NFD").replace(/[\\u0300-\\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+          const slug = location.name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
           let node = await prisma.locationNode.findFirst({ where: { countyId: county.id, level, slug, parentId } });
           if (!node) {
             node = await prisma.locationNode.create({ data: { countyId: county.id, parentId, level, name: location.name, slug, searchable: false, source: "USER_SUBMITTED_PENDING_REVIEW" } });
