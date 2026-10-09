@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { FormEvent, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowRight, Home, MapPin, Search, SlidersHorizontal } from 'lucide-react';
+import { ArrowRight, Home as HomeIcon, MapPin, Search, SlidersHorizontal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { rememberSearchPreference } from '@/components/privacy/search-preferences';
@@ -164,7 +164,7 @@ export default function Home() {
             <Button asChild className="mt-5 rounded-xl bg-[#53694b] hover:bg-[#43563c]"><Link href="/find-a-house">Find me a house <ArrowRight className="ml-2 h-4 w-4" /></Link></Button>
           </div>
           <div className="rounded-2xl border bg-card p-6 sm:p-8">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-muted text-primary"><Home className="h-5 w-5" /></div>
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-muted text-primary"><HomeIcon className="h-5 w-5" /></div>
             <h2 className="mt-5 text-xl font-semibold tracking-tight">Have a house to rent?</h2>
             <p className="mt-2 max-w-md text-sm leading-6 text-muted-foreground">Reach tenants searching for homes in your area by listing your property on NyumbaFinder.</p>
             <Button asChild variant="outline" className="mt-5 rounded-xl"><Link href="/list-property">List your house <ArrowRight className="ml-2 h-4 w-4" /></Link></Button>
