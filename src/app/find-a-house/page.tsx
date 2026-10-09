@@ -305,7 +305,7 @@ export default function FindAHousePage() {
           <Link href="/" className="inline-flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"><ArrowLeft className="h-4 w-4" /> Back to NyumbaFinder</Link>
           <div className="mt-8 max-w-2xl">
             <div className="inline-flex items-center gap-2 rounded-full border border-[#dfe5d9] bg-[#f5f6f0] px-3 py-1.5 text-xs font-medium text-[#52674b]"><Sparkles className="h-3.5 w-3.5" /> A more personal way to find a home</div>
-            <h1 className="mt-5 text-4xl font-semibold leading-[1.08] tracking-[-0.04em] sm:text-5xl">Let's find a place that feels right.</h1>
+            <h1 className="mt-5 text-4xl font-semibold leading-[1.08] tracking-[-0.04em] sm:text-5xl">Find a house that suits your needs.</h1>
             <p className="mt-4 max-w-xl text-base leading-7 text-muted-foreground">Tell us what matters to you. We'll match your needs with listed rentals, then you can contact our team if you'd like a little more help.</p>
           </div>
 
