@@ -303,22 +303,22 @@ export default function FindAHousePage() {
   }
 
   return (
-    <main className="mx-auto max-w-6xl px-4 py-6 md:px-6 md:py-12">
-      <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_320px] lg:gap-14">
+    <main className="mx-auto max-w-6xl px-4 py-5 md:px-6 md:py-8">
+      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_280px] lg:gap-8">
         <section>
           <Link href="/" className="inline-flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"><ArrowLeft className="h-4 w-4" /> Back to NyumbaFinder</Link>
-          <div className="mt-8 max-w-2xl">
+          <div className="mt-5 max-w-2xl">
             <div className="inline-flex items-center gap-2 rounded-full border border-[#dfe5d9] bg-[#f5f6f0] px-3 py-1.5 text-xs font-medium text-[#52674b]"><Sparkles className="h-3.5 w-3.5" /> A more personal way to find a home</div>
-            <h1 className="mt-5 text-4xl font-semibold leading-[1.08] tracking-[-0.04em] sm:text-5xl">Find a house that suits your needs.</h1>
-            <p className="mt-4 max-w-xl text-base leading-7 text-muted-foreground">Tell us what matters to you. We'll match your needs with listed rentals, then you can contact our team if you'd like a little more help.</p>
+            <h1 className="mt-3 text-3xl font-semibold leading-tight tracking-[-0.035em] sm:text-4xl">Find a house that suits your needs.</h1>
+            <p className="mt-2 max-w-xl text-sm leading-6 text-muted-foreground">Tell us what matters to you. We'll match your needs with listed rentals, then you can contact our team if you'd like a little more help.</p>
           </div>
 
-          <div className="mt-8 flex items-center gap-2" aria-label={"Step " + step + " of 4"}>
+          <div className="mt-5 flex items-center gap-2" aria-label={"Step " + step + " of 4"}>
             {[1, 2, 3, 4].map((item) => <div key={item} className={"h-1.5 flex-1 rounded-full transition-colors " + (item <= step ? "bg-[#627957]" : "bg-muted")} />)}
           </div>
           <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground"><span>STEP 0{step} OF 04</span><span>{["Your home", "Location", "Your budget", "Contact"][step - 1]}</span></div>
 
-          <form onSubmit={submit} className="mt-8">
+          <form onSubmit={submit} className="mt-5">
             {step === 1 && (
               <section className="animate-in fade-in duration-300">
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">First, the basics</p>
@@ -344,9 +344,9 @@ export default function FindAHousePage() {
             {step === 2 && (
               <section className="animate-in fade-in duration-300">
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">A place to call home</p>
-                <h2 className="mt-2 text-2xl font-semibold tracking-tight">Where would you like to live?</h2>
-                <p className="mt-2 text-sm leading-6 text-muted-foreground">Start with a town or neighbourhood. Nearby alternatives can be explored if the exact area has few listings.</p>
-                <div className="relative mt-6">
+                <h2 className="mt-1 text-xl font-semibold tracking-tight">Where would you like to live?</h2>
+                <p className="mt-1 text-sm leading-5 text-muted-foreground">Add your preferred locations in order. You can choose different towns or estates, including within the same county.</p>
+                <div className="relative mt-4 rounded-2xl border bg-card p-3 sm:p-4">
                   <label htmlFor="location-search" className="mb-2 block text-sm font-medium">Find a town, estate or neighbourhood</label>
                   <div className="relative">
                     <MapPin className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -359,12 +359,12 @@ export default function FindAHousePage() {
                     </div>
                   )}
                 </div>
-                <div className="mt-5 grid gap-4 sm:grid-cols-2">
+                <div className="mt-3 grid gap-3 sm:grid-cols-2">
                   <div><label htmlFor="county-name" className="mb-2 block text-sm font-medium">County <span className="text-primary">*</span></label><Input id="county-name" value={form.countyName} onChange={(event) => update("countyName", event.target.value)} placeholder="e.g. Nairobi" className="h-12 rounded-xl" /></div>
                   <div><label htmlFor="town-name" className="mb-2 block text-sm font-medium">Town or city <span className="text-muted-foreground">(optional)</span></label><Input id="town-name" value={form.townName} onChange={(event) => update("townName", event.target.value)} placeholder="e.g. Kapsabet" className="h-12 rounded-xl" /></div>
                 </div>
-                {form.preferredAreas.length > 0 && <div className="mt-5"><p className="mb-2 text-sm font-medium">Preferred areas</p><div className="flex flex-wrap gap-2">{form.preferredAreas.map((area) => <button key={area} type="button" onClick={() => removeLocation(area)} className="inline-flex items-center gap-1.5 rounded-full border border-[#dce4d5] bg-[#f5f7f2] px-3 py-1.5 text-xs font-medium text-[#4f6348]">{area}<X className="h-3 w-3" /></button>)}</div></div>}
-                <div className="mt-5 rounded-xl bg-muted/50 p-4 text-sm leading-6 text-muted-foreground"><ShieldCheck className="mr-2 inline h-4 w-4 text-primary" />We'll prioritize your selected area first. We'll only show broader suggestions when no close match is available, and we'll label them clearly.</div>
+                {form.preferredAreas.length > 0 && <div className="mt-3 rounded-xl bg-muted/40 p-3"><p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Added areas</p><div className="flex flex-wrap gap-1.5">{form.preferredAreas.map((area) => <button key={area} type="button" onClick={() => removeLocation(area)} className="inline-flex items-center gap-1 rounded-full border border-[#dce4d5] bg-[#f5f7f2] px-2.5 py-1 text-xs font-medium text-[#4f6348]">{area}<X className="h-3 w-3" /></button>)}</div></div>}
+                <div className="mt-3 rounded-xl bg-muted/50 px-3 py-2.5 text-xs leading-5 text-muted-foreground"><ShieldCheck className="mr-2 inline h-4 w-4 text-primary" />We'll prioritize your selected area first. We'll only show broader suggestions when no close match is available, and we'll label them clearly.</div>
               </section>
             )}
 
@@ -409,7 +409,7 @@ export default function FindAHousePage() {
             )}
 
             {error && <div role="alert" className="mt-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{error}</div>}
-            <div className="mt-8 flex items-center justify-between gap-3 border-t pt-5">
+            <div className="mt-5 flex items-center justify-between gap-3 border-t pt-4">
               {step > 1 ? <Button type="button" variant="outline" onClick={() => { setError(""); setStep((current) => current - 1); }} className="h-12 rounded-xl px-5"><ArrowLeft className="mr-2 h-4 w-4" />Back</Button> : <span className="text-xs text-muted-foreground">No account needed</span>}
               {step < 4 ? <Button type="button" onClick={nextStep} className="h-12 rounded-xl bg-[#53694b] px-6 hover:bg-[#43563c]">Continue <ArrowRight className="ml-2 h-4 w-4" /></Button> : <Button type="submit" disabled={busy} className="h-12 rounded-xl bg-[#53694b] px-6 hover:bg-[#43563c]">{busy ? "Sending your request…" : "Request House Hunt"} {!busy && <ArrowRight className="ml-2 h-4 w-4" />}</Button>}
             </div>
@@ -417,7 +417,7 @@ export default function FindAHousePage() {
         </section>
 
         <aside className="hidden lg:block">
-          <div className="sticky top-8 rounded-[1.75rem] border border-[#e0e4da] bg-[#f5f6f0] p-6">
+          <div className="sticky top-6 rounded-2xl border border-[#e0e4da] bg-[#f5f6f0] p-5">
             <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white text-[#53694b]"><Heart className="h-5 w-5" /></div>
             <h2 className="mt-5 text-lg font-semibold tracking-tight">A search built around you.</h2>
             <p className="mt-2 text-sm leading-6 text-[#626b5e]">Share your requirements. A representative can help narrow the options and arrange WhatsApp video previews of suitable homes.</p>
