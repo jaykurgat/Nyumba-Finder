@@ -341,6 +341,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: 'You can upload a maximum of 5 images.' }, { status: 400 });
     }
 
+    let pendingLocationSubmission: { countyId: string; parentId: string; name: string; slug: string } | null = null;
     const result = await prisma.$transaction(async (tx) => {
       const requestedCountyId = getOptionalString(rawData.countyId);
       const requestedLocationNodeId = getOptionalString(rawData.locationNodeId);
@@ -357,10 +358,8 @@ export async function POST(request: NextRequest) {
         throw new Error('The selected location does not belong to the selected county.');
       }
 
-      // Keep property publication independent from location verification. The listing form
-      // selects a verified town/city, while the free-text area may be new to our directory.
-      // Record a missing area as a non-searchable submission for admin review, but keep the
-      // property itself ACTIVE and searchable by its entered location text.
+      // Capture an unrecognized area for a best-effort review submission after the
+      // property transaction commits. A location-review problem must never block a listing.
       const areaName = location.trim();
       const areaSlug = areaName.toLowerCase().normalize('NFKD').replace(/[\\u0300-\\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
       const existingArea = await tx.locationNode.findFirst({
@@ -369,20 +368,15 @@ export async function POST(request: NextRequest) {
           parentId: matchedNode.id,
           name: { equals: areaName, mode: 'insensitive' },
         },
-        select: { id: true, searchable: true, source: true },
+        select: { id: true },
       });
       if (!existingArea && areaSlug) {
-        await tx.locationNode.create({
-          data: {
-            countyId: matchedNode.countyId,
-            parentId: matchedNode.id,
-            level: 'AREA',
-            name: areaName,
-            slug: areaSlug,
-            searchable: false,
-            source: 'USER_SUBMITTED_PENDING_REVIEW',
-          },
-        });
+        pendingLocationSubmission = {
+          countyId: matchedNode.countyId,
+          parentId: matchedNode.id,
+          name: areaName,
+          slug: areaSlug,
+        };
       }
 
       const latitude = getOptionalNumber(rawData.latitude) ?? matchedNode.latitude ?? undefined;
@@ -430,6 +424,34 @@ export async function POST(request: NextRequest) {
 
     if (!result) {
       return NextResponse.json({ message: 'Property could not be created.' }, { status: 500 });
+    }
+
+    if (pendingLocationSubmission) {
+      try {
+        const slugCollision = await prisma.locationNode.findFirst({
+          where: {
+            countyId: pendingLocationSubmission.countyId,
+            level: 'AREA',
+            slug: pendingLocationSubmission.slug,
+            parentId: pendingLocationSubmission.parentId,
+          },
+          select: { id: true },
+        });
+        if (!slugCollision) {
+          await prisma.locationNode.create({
+            data: {
+              ...pendingLocationSubmission,
+              level: 'AREA',
+              searchable: false,
+              source: 'USER_SUBMITTED_PENDING_REVIEW',
+            },
+          });
+        }
+      } catch (locationReviewError) {
+        // The property is already saved and must remain live even if the review queue
+        // cannot record this location right now. Log it for operational follow-up.
+        console.error('LOCATION_SUBMISSION_CREATE_FAILED:', locationReviewError);
+      }
     }
 
     const property = toProperty(result);
