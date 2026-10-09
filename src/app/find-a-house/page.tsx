@@ -180,6 +180,7 @@ export default function FindAHousePage() {
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (step < 4) { nextStep(); return; }
     const message = validateStep();
     if (message) {
       setError(message);
@@ -230,12 +231,19 @@ export default function FindAHousePage() {
                 </Button>
               ) : (
                 <Button asChild className="h-12 rounded-xl bg-[#53694b] px-5 hover:bg-[#43563c]">
-                  <a href="mailto:"><Mail className="mr-2 h-4 w-4" />Contact NyumbaFinder</a>
+                  <Link href="/properties"><Search className="mr-2 h-4 w-4" />Browse available homes</Link>
                 </Button>
               )}
               <Button asChild variant="outline" className="h-12 rounded-xl border-[#d7dfd0] bg-white px-5"><Link href="/properties">Browse all homes <ArrowRight className="ml-2 h-4 w-4" /></Link></Button>
             </div>
-            <p className="mt-4 text-xs leading-5 text-[#6c7569]">Property availability must be confirmed with the listing contact. Your request reference is {result.reference}.</p>
+            <p className="mt-4 text-sm leading-6 text-[#53634d]">
+              {result.notifications.clientEmailSent
+                ? "A confirmation email has been sent to " + form.email + "."
+                : form.email
+                  ? "Your request is saved. Email confirmation is not available right now, so keep your reference number."
+                  : "Add an email address on your next request if you would also like an email confirmation."}
+            </p>
+            <p className="mt-2 text-xs leading-5 text-[#6c7569]">Property availability must be confirmed with the listing contact. Your request reference is {result.reference}.</p>
           </div>
 
           <div className="mt-10">
