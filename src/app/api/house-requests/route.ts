@@ -15,7 +15,18 @@ const schema = z.object({
   bedrooms: z.coerce.number().int().min(0).max(10),
   countyName: z.string().trim().min(2).max(100),
   townName: z.string().trim().max(100).optional().default(""),
-  preferredAreas: z.array(z.string().trim().min(1).max(100)).max(6).default([]),
+  preferredAreas: z.array(z.string().trim().min(1).max(200)).max(6).default([]),
+  preferredLocations: z.array(z.object({
+    label: z.string().trim().min(2).max(250),
+    name: z.string().trim().min(2).max(100),
+    level: z.string().trim().min(2).max(40),
+    countyName: z.string().trim().min(2).max(100),
+    townName: z.string().trim().max(100).default(""),
+    areaName: z.string().trim().max(100).default(""),
+    locationNodeId: z.string().uuid().nullable().optional(),
+    parentId: z.string().uuid().nullable().optional(),
+    source: z.enum(["DATABASE", "CUSTOM"]),
+  })).min(1).max(5).optional().default([]),
   minRent: z.coerce.number().min(0).max(100000000).optional(),
   maxRent: z.coerce.number().positive().max(100000000),
   moveIn: z.enum(["Immediately", "Within 2 weeks", "Within a month", "Flexible", "Later"]),
@@ -61,6 +72,7 @@ export async function POST(request: NextRequest) {
         countyName: data.countyName,
         townName: data.townName || null,
         preferredAreas: data.preferredAreas,
+        preferredLocations: data.preferredLocations,
         minRent: data.minRent ?? null,
         maxRent: data.maxRent,
         moveIn: data.moveIn,
@@ -90,7 +102,34 @@ export async function POST(request: NextRequest) {
       take: 250,
     });
 
-    const targetTerms = [data.countyName, data.townName, ...data.preferredAreas].filter(Boolean).map(normalize);
+    // Resolve user-added locations into the shared location tree as pending, non-searchable nodes.
+    // Existing database locations are never duplicated; custom nodes keep their parent county/town.
+    const resolvedLocations = [];
+    for (const location of data.preferredLocations) {
+      let nodeId = location.locationNodeId || null;
+      if (location.source === "CUSTOM") {
+        const county = await prisma.county.findFirst({ where: { name: { equals: location.countyName, mode: "insensitive" } } });
+        if (county) {
+          const level = location.level.toUpperCase();
+          let parentId = null;
+          if (location.townName && !["TOWN", "CITY"].includes(level)) {
+            const parentSlug = location.townName.normalize("NFD").replace(/[\\u0300-\\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+            let parent = await prisma.locationNode.findFirst({ where: { countyId: county.id, level: { in: ["TOWN", "CITY"] }, slug: parentSlug } });
+            if (!parent) parent = await prisma.locationNode.create({ data: { countyId: county.id, level: "TOWN", name: location.townName, slug: parentSlug, searchable: false, source: "USER_SUBMITTED_PENDING_REVIEW" } });
+            parentId = parent.id;
+          }
+          const slug = location.name.normalize("NFD").replace(/[\\u0300-\\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+          let node = await prisma.locationNode.findFirst({ where: { countyId: county.id, level, slug, parentId } });
+          if (!node) {
+            node = await prisma.locationNode.create({ data: { countyId: county.id, parentId, level, name: location.name, slug, searchable: false, source: "USER_SUBMITTED_PENDING_REVIEW" } });
+          }
+          nodeId = node.id;
+        }
+      }
+      resolvedLocations.push({ ...location, locationNodeId: nodeId });
+    }
+    const locationTerms = resolvedLocations.flatMap((location) => [location.name, location.townName, location.countyName, location.areaName, location.label]).filter(Boolean).map(normalize);
+    const targetTerms = [...locationTerms, data.countyName, data.townName, ...data.preferredAreas].filter(Boolean).map(normalize);
     const mustHaves = data.mustHaves.map(normalize);
     const ranked = candidates.map((property) => {
       const locationText = normalize([
@@ -164,7 +203,7 @@ export async function POST(request: NextRequest) {
       "Hello NyumbaFinder, I need help finding a rental home.",
       "Request: " + reference,
       "House: " + data.propertyType + (data.bedrooms ? " · " + data.bedrooms + " bedroom(s)" : ""),
-      "Location: " + [data.countyName, data.townName, ...data.preferredAreas].filter(Boolean).join(", "),
+      "Preferred locations (in order): " + (resolvedLocations.length ? resolvedLocations.map((location, index) => (index + 1) + ". " + location.label).join(" | ") : [data.countyName, data.townName, ...data.preferredAreas].filter(Boolean).join(", ")),
       "Budget: " + (data.minRent ? rent(data.minRent) + "–" : "Up to ") + rent(data.maxRent) + " monthly",
       "Move-in: " + data.moveIn,
       "Name: " + data.name,
