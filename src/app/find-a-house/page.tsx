@@ -11,12 +11,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
 type LocationSuggestion = {
-  id: string;
-  name: string;
-  level: string;
-  countyName: string;
-  parentName?: string | null;
-  label: string;
+  id: string; name: string; level: string; countyId?: string; countyName: string;
+  parentId?: string | null; parentName?: string | null; label: string;
+};
+type PreferredLocation = {
+  label: string; name: string; level: string; countyName: string; townName: string;
+  areaName: string; locationNodeId: string | null; parentId: string | null;
+  source: "DATABASE" | "CUSTOM";
 };
 type MatchedProperty = {
   id: string;
@@ -73,12 +74,16 @@ export default function FindAHousePage() {
   const [locationBusy, setLocationBusy] = useState(false);
   const [locationOpen, setLocationOpen] = useState(false);
   const [addingLocation, setAddingLocation] = useState(true);
+  const [customCounty, setCustomCounty] = useState("");
+  const [customTown, setCustomTown] = useState("");
+  const [customLevel, setCustomLevel] = useState("NEIGHBORHOOD");
   const [form, setForm] = useState({
     propertyType: "Apartment",
     bedrooms: 1,
     countyName: "",
     townName: "",
     preferredAreas: [] as string[],
+    preferredLocations: [] as PreferredLocation[],
     minRent: "",
     maxRent: "",
     moveIn: "Within a month",
@@ -122,35 +127,85 @@ export default function FindAHousePage() {
     };
   }, [locationQuery]);
 
+  function applyPreferredLocations(next: PreferredLocation[]) {
+    const locations = next.slice(0, 5);
+    const first = locations[0];
+    setForm((current) => ({
+      ...current,
+      preferredLocations: locations,
+      countyName: first?.countyName || "",
+      townName: first?.townName || "",
+      preferredAreas: locations.filter((location, index) => Boolean(location.areaName) || index > 0).map((location) => location.label).slice(0, 5),
+    }));
+  }
+
   function chooseLocation(option: LocationSuggestion) {
-    const hasPrimaryLocation = Boolean(form.countyName || form.townName || form.preferredAreas.length);
     const isArea = !["COUNTY", "TOWN", "CITY"].includes(option.level);
-    const selectedLabel = option.label || [option.name, option.parentName, option.countyName].filter(Boolean).join(", ");
-
-    if (!hasPrimaryLocation) {
-      update("countyName", option.countyName);
-      if (["TOWN", "CITY"].includes(option.level)) {
-        update("townName", option.name);
-      } else if (isArea && option.parentName) {
-        update("townName", option.parentName);
-        update("preferredAreas", [selectedLabel].slice(0, 5));
-      }
-    } else {
-      const alreadySelected = [form.countyName, form.townName, ...form.preferredAreas]
-        .some((item) => item && item.toLowerCase() === selectedLabel.toLowerCase());
-      if (!alreadySelected) update("preferredAreas", [...form.preferredAreas, selectedLabel].slice(0, 5));
+    const isTown = ["TOWN", "CITY"].includes(option.level);
+    const label = option.label || [option.name, option.parentName, option.countyName].filter(Boolean).join(", ");
+    const selected: PreferredLocation = {
+      label, name: option.name, level: option.level, countyName: option.countyName,
+      townName: isTown ? option.name : (isArea ? option.parentName || "" : ""),
+      areaName: isArea ? option.name : "",
+      locationNodeId: option.id, parentId: option.parentId || null, source: "DATABASE",
+    };
+    if (form.preferredLocations.some((item) => item.label.toLowerCase() === label.toLowerCase())) {
+      setError("That location is already in your preferred list.");
+      return;
     }
-
+    if (form.preferredLocations.length >= 5) {
+      setError("You can add up to five preferred locations.");
+      return;
+    }
+    setError("");
+    applyPreferredLocations([...form.preferredLocations, selected]);
     setLocationQuery("");
     setLocationResults([]);
     setLocationOpen(false);
     setAddingLocation(false);
   }
 
+  function addCustomLocation() {
+    const name = locationQuery.trim();
+    const countyName = customCounty.trim();
+    const townName = customTown.trim();
+    if (name.length < 2) { setError("Enter the name of the location you want to add."); return; }
+    if (countyName.length < 2) { setError("Enter the parent county for this location."); return; }
+    if (["ESTATE", "NEIGHBORHOOD", "AREA", "VILLAGE", "LOCALITY"].includes(customLevel) && !townName) {
+      setError("Add the town or nearest known city for this estate, area or neighbourhood where possible.");
+      return;
+    }
+    const areaName = ["ESTATE", "NEIGHBORHOOD", "AREA", "VILLAGE", "LOCALITY"].includes(customLevel) ? name : "";
+    const resolvedTown = ["TOWN", "CITY"].includes(customLevel) ? name : townName;
+    const label = [name, resolvedTown && resolvedTown !== name ? resolvedTown : "", countyName].filter(Boolean).join(", ");
+    if (form.preferredLocations.some((item) => item.label.toLowerCase() === label.toLowerCase())) {
+      setError("That location is already in your preferred list.");
+      return;
+    }
+    if (form.preferredLocations.length >= 5) { setError("You can add up to five preferred locations."); return; }
+    const selected: PreferredLocation = {
+      label, name, level: customLevel, countyName, townName: resolvedTown,
+      areaName, locationNodeId: null, parentId: null, source: "CUSTOM",
+    };
+    setError("");
+    applyPreferredLocations([...form.preferredLocations, selected]);
+    setLocationQuery("");
+    setLocationResults([]);
+    setLocationOpen(false);
+    setAddingLocation(false);
+    setCustomTown("");
+  }
+
+  function moveLocation(index: number, direction: -1 | 1) {
+    const target = index + direction;
+    if (target < 0 || target >= form.preferredLocations.length) return;
+    const next = [...form.preferredLocations];
+    [next[index], next[target]] = [next[target], next[index]];
+    applyPreferredLocations(next);
+  }
+
   function removeLocation(value: string) {
-    if (value === form.countyName) update("countyName", "");
-    else if (value === form.townName) update("townName", "");
-    else update("preferredAreas", form.preferredAreas.filter((item) => item !== value));
+    applyPreferredLocations(form.preferredLocations.filter((item) => item.label !== value));
   }
 
   function toggleFeature(feature: string) {
@@ -162,7 +217,7 @@ export default function FindAHousePage() {
   function validateStep() {
     setError("");
     if (step === 1 && !form.propertyType) return "Choose the kind of home you would like.";
-    if (step === 2 && !form.countyName.trim()) return "Choose a location suggestion or enter a county.";
+    if (step === 2 && form.preferredLocations.length === 0) return "Add at least one preferred location, using a suggestion or your own entry.";
     if (step === 3) {
       if (!form.maxRent || Number(form.maxRent) <= 0) return "Enter your maximum monthly rent.";
       if (form.minRent && Number(form.minRent) > Number(form.maxRent)) return "Your minimum rent cannot be higher than your maximum.";
@@ -208,6 +263,7 @@ export default function FindAHousePage() {
           minRent: form.minRent ? Number(form.minRent) : undefined,
           maxRent: Number(form.maxRent),
           preferredAreas: form.preferredAreas,
+          preferredLocations: form.preferredLocations,
         }),
       });
       const data = await response.json();
@@ -359,40 +415,47 @@ export default function FindAHousePage() {
               <section className="animate-in fade-in duration-300">
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">A place to call home</p>
                 <h2 className="mt-1 text-xl font-semibold tracking-tight">Where would you like to live?</h2>
-                <p className="mt-1 text-sm leading-5 text-muted-foreground">Add your preferred locations in order. You can choose different towns or estates, including within the same county.</p>
+                <p className="mt-1 text-sm leading-5 text-muted-foreground">Add up to five locations in priority order. Choose from our location database or add a missing estate, village, town or neighbourhood yourself.</p>
                 <div className="relative mt-4 rounded-2xl border bg-card p-3 sm:p-4">
-                  <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-                    <label htmlFor="location-search" className="block text-sm font-medium">Preferred locations <span className="font-normal text-muted-foreground">(up to 5, in priority order)</span></label>
-                    <span className="text-xs text-muted-foreground">{Math.min(5, 1 + form.preferredAreas.length)} of 5 selected</span>
+                  <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                    <label htmlFor="location-search" className="block text-sm font-medium">Preferred locations</label>
+                    <span className="text-xs text-muted-foreground">{form.preferredLocations.length} of 5 selected</span>
                   </div>
-                  {addingLocation && <div className="relative">
-                    <label htmlFor="location-search" className="mb-2 block text-xs text-muted-foreground">Search and select a town, city, estate or neighbourhood</label>
+                  {form.preferredLocations.length > 0 && <div className="mb-4 flex flex-col gap-2">
+                    {form.preferredLocations.map((location, index) => <div key={location.label} className="flex items-center gap-2 rounded-xl border border-[#dce4d5] bg-white px-3 py-2.5 text-sm">
+                      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#53694b] text-xs font-semibold text-white">{index + 1}</span>
+                      <span className="min-w-0 flex-1"><span className="block font-medium text-[#33432f]">{location.name}</span><span className="block text-xs text-muted-foreground">{[location.townName && location.townName !== location.name ? location.townName : "", location.countyName].filter(Boolean).join(", ")}{location.source === "CUSTOM" ? " · Added by you" : ""}</span></span>
+                      <div className="flex shrink-0 items-center gap-1">
+                        <button type="button" disabled={index === 0} onClick={() => moveLocation(index, -1)} aria-label="Move location up" className="rounded-md p-1.5 hover:bg-muted disabled:opacity-30"><ArrowLeft className="h-3.5 w-3.5" /></button>
+                        <button type="button" disabled={index === form.preferredLocations.length - 1} onClick={() => moveLocation(index, 1)} aria-label="Move location down" className="rounded-md p-1.5 hover:bg-muted disabled:opacity-30"><ArrowRight className="h-3.5 w-3.5" /></button>
+                        <button type="button" onClick={() => removeLocation(location.label)} aria-label={"Remove " + location.label} className="rounded-md p-1.5 hover:bg-muted"><X className="h-4 w-4" /></button>
+                      </div>
+                    </div>)}
+                  </div>}
+                  {form.preferredLocations.length < 5 ? <>
+                    <label htmlFor="location-search" className="mb-2 block text-xs text-muted-foreground">{form.preferredLocations.length ? "Search for another location" : "Search a county, town, city, estate or neighbourhood"}</label>
                     <div className="relative">
-                    <MapPin className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                    <Input id="location-search" value={locationQuery} onChange={(event) => { setLocationQuery(event.target.value); setLocationOpen(true); }} onFocus={() => setLocationOpen(true)} placeholder={form.countyName || form.preferredAreas.length ? "Add another location — e.g. Kileleshwa, Kilimani, Kapsabet…" : "Start with a town or estate — e.g. Kapsabet, Kilimani…"} className="h-12 rounded-xl pl-11 pr-10" autoComplete="off" />
-                    {locationQuery && <button type="button" onClick={() => { setLocationQuery(""); setLocationResults([]); }} aria-label="Clear location search" className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-1 text-muted-foreground hover:bg-muted"><X className="h-4 w-4" /></button>}
-                  </div>
-                  {locationOpen && locationQuery.trim().length >= 2 && (
-                    <div className="absolute z-20 mt-2 max-h-64 w-full overflow-y-auto rounded-xl border bg-background p-1 shadow-xl">
-                      {locationBusy ? <p className="px-3 py-4 text-sm text-muted-foreground">Finding locations…</p> : locationResults.length ? locationResults.map((option) => <button key={option.id} type="button" onClick={() => chooseLocation(option)} className="flex w-full items-start gap-3 rounded-lg px-3 py-3 text-left transition-colors hover:bg-muted"><MapPin className="mt-0.5 h-4 w-4 shrink-0 text-primary" /><span className="min-w-0 flex-1"><span className="block text-sm font-medium">{option.name}</span><span className="mt-0.5 block text-xs text-muted-foreground">{option.label}</span></span><span className="text-[10px] uppercase tracking-wide text-muted-foreground">{option.level.replace(/_/g, " ").toLowerCase()}</span></button>) : <p className="px-3 py-4 text-sm text-muted-foreground">No suggestions yet. You can enter your county and town below.</p>}
+                      <MapPin className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                      <Input id="location-search" value={locationQuery} onChange={(event) => { setLocationQuery(event.target.value); setLocationOpen(true); setError(""); }} onFocus={() => setLocationOpen(true)} placeholder={form.preferredLocations.length ? "Add another location…" : "e.g. Kapsabet, Kilimani, a village…"} className="h-12 rounded-xl pl-11 pr-10" autoComplete="off" />
+                      {locationQuery && <button type="button" onClick={() => { setLocationQuery(""); setLocationResults([]); }} aria-label="Clear location search" className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-1 text-muted-foreground hover:bg-muted"><X className="h-4 w-4" /></button>}
                     </div>
-                  )}
+                    {locationOpen && locationQuery.trim().length >= 2 && <div className="absolute z-20 mt-2 max-h-64 w-[calc(100%-2rem)] overflow-y-auto rounded-xl border bg-background p-1 shadow-xl">
+                      {locationBusy ? <p className="px-3 py-4 text-sm text-muted-foreground">Finding locations…</p> : locationResults.length ? locationResults.map((option) => <button key={option.id} type="button" onClick={() => chooseLocation(option)} className="flex w-full items-start gap-3 rounded-lg px-3 py-3 text-left transition-colors hover:bg-muted"><MapPin className="mt-0.5 h-4 w-4 shrink-0 text-primary" /><span className="min-w-0 flex-1"><span className="block text-sm font-medium">{option.name}</span><span className="mt-0.5 block text-xs text-muted-foreground">{option.label}</span></span><span className="text-[10px] uppercase tracking-wide text-muted-foreground">{option.level.replace(/_/g, " ").toLowerCase()}</span></button>) : <p className="px-3 py-3 text-sm text-muted-foreground">No matching database location found. You can add it below.</p>}
                     </div>}
-                  {!addingLocation && (form.countyName || form.townName || form.preferredAreas.length > 0) && (form.preferredAreas.length + 1) < 5 && <Button type="button" variant="outline" onClick={() => { setAddingLocation(true); setLocationQuery(""); setLocationResults([]); setLocationOpen(false); }} className="mt-3 h-10 w-full rounded-xl border-dashed"><span className="mr-2 text-base">+</span> Add another location</Button>}
+                    <div className="mt-4 rounded-xl border border-dashed p-3 sm:p-4">
+                      <p className="text-sm font-medium">Can't find your location?</p>
+                      <p className="mt-1 text-xs leading-5 text-muted-foreground">Add it manually. We'll save it with its parent county and, where supplied, town/city. New entries are kept for review before being offered as verified suggestions to everyone.</p>
+                      <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                        <div><label htmlFor="custom-location-name" className="mb-1.5 block text-xs font-medium">Location name *</label><Input id="custom-location-name" value={locationQuery} onChange={(event) => setLocationQuery(event.target.value)} placeholder="Estate, village or town name" className="h-10 rounded-lg" /></div>
+                        <div><label htmlFor="custom-location-level" className="mb-1.5 block text-xs font-medium">Type of location *</label><select id="custom-location-level" value={customLevel} onChange={(event) => setCustomLevel(event.target.value)} className="h-10 w-full rounded-lg border bg-background px-3 text-sm"><option value="TOWN">Town</option><option value="CITY">City</option><option value="ESTATE">Estate</option><option value="NEIGHBORHOOD">Neighbourhood</option><option value="AREA">Area</option><option value="VILLAGE">Village</option><option value="LOCALITY">Local centre / locality</option></select></div>
+                        <div><label htmlFor="custom-location-county" className="mb-1.5 block text-xs font-medium">Parent county *</label><Input id="custom-location-county" value={customCounty} onChange={(event) => setCustomCounty(event.target.value)} placeholder="e.g. Nandi" className="h-10 rounded-lg" /></div>
+                        {!["TOWN", "CITY"].includes(customLevel) && <div><label htmlFor="custom-location-town" className="mb-1.5 block text-xs font-medium">Parent town / city <span className="font-normal text-muted-foreground">(if known)</span></label><Input id="custom-location-town" value={customTown} onChange={(event) => setCustomTown(event.target.value)} placeholder="e.g. Kapsabet" className="h-10 rounded-lg" /></div>}
+                      </div>
+                      <Button type="button" variant="outline" onClick={addCustomLocation} className="mt-3 h-10 w-full rounded-lg border-dashed"><span className="mr-2 text-base">+</span> Add this location</Button>
+                    </div>
+                  </> : <p className="text-sm text-muted-foreground">You've added five locations. Remove one to add another.</p>}
                 </div>
-                <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                  <div><label htmlFor="county-name" className="mb-2 block text-sm font-medium">County <span className="text-primary">*</span></label><Input id="county-name" value={form.countyName} onChange={(event) => update("countyName", event.target.value)} placeholder="e.g. Nairobi" className="h-12 rounded-xl" /></div>
-                  <div><label htmlFor="town-name" className="mb-2 block text-sm font-medium">Town or city <span className="text-muted-foreground">(optional)</span></label><Input id="town-name" value={form.townName} onChange={(event) => update("townName", event.target.value)} placeholder="e.g. Kapsabet" className="h-12 rounded-xl" /></div>
-                </div>
-                {(form.countyName || form.townName || form.preferredAreas.length > 0) && <div className="mt-3 rounded-xl bg-muted/40 p-3">
-                  <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Your location order</p>
-                  <div className="flex flex-col gap-2">
-                    {(form.countyName || form.townName) && <div className="flex items-center gap-2 rounded-lg border border-[#dce4d5] bg-white px-3 py-2 text-xs text-[#4f6348]"><span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#53694b] text-[10px] font-semibold text-white">1</span><span className="min-w-0 flex-1">{[form.townName, form.countyName].filter(Boolean).join(", ")}</span><button type="button" onClick={() => { update("countyName", ""); update("townName", ""); update("preferredAreas", []); }} aria-label="Remove first preferred location" className="rounded-full p-1 hover:bg-muted"><X className="h-3.5 w-3.5" /></button></div>}
-                    {form.preferredAreas.map((area, index) => <div key={area} className="flex items-center gap-2 rounded-lg border border-[#dce4d5] bg-white px-3 py-2 text-xs text-[#4f6348]"><span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#e7ecdf] text-[10px] font-semibold text-[#405638]">{index + 2}</span><span className="min-w-0 flex-1">{area}</span><button type="button" onClick={() => removeLocation(area)} aria-label={"Remove preferred location " + (index + 2)} className="rounded-full p-1 hover:bg-muted"><X className="h-3.5 w-3.5" /></button></div>)}
-                  </div>
-                  <p className="mt-2 text-xs leading-5 text-muted-foreground">Choose another suggestion above to add a second, third or further choice. Each is kept in the order you add it.</p>
-                </div>}
-                <div className="mt-3 rounded-xl bg-muted/50 px-3 py-2.5 text-xs leading-5 text-muted-foreground"><ShieldCheck className="mr-2 inline h-4 w-4 text-primary" />We'll prioritize your selected area first. We'll only show broader suggestions when no close match is available, and we'll label them clearly.</div>
+                <div className="mt-3 rounded-xl bg-muted/50 px-3 py-2.5 text-xs leading-5 text-muted-foreground"><ShieldCheck className="mr-2 inline h-4 w-4 text-primary" />We'll prioritize your locations in the order shown. User-added locations remain usable immediately while being reviewed for the shared location database.</div>
               </section>
             )}
 
