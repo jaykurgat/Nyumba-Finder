@@ -341,7 +341,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: 'You can upload a maximum of 5 images.' }, { status: 400 });
     }
 
-    let pendingLocationSubmission: { countyId: string; parentId: string; name: string; slug: string } | null = null;
     const result = await prisma.$transaction(async (tx) => {
       const requestedCountyId = getOptionalString(rawData.countyId);
       const requestedLocationNodeId = getOptionalString(rawData.locationNodeId);
@@ -370,14 +369,14 @@ export async function POST(request: NextRequest) {
         },
         select: { id: true },
       });
-      if (!existingArea && areaSlug) {
-        pendingLocationSubmission = {
-          countyId: matchedNode.countyId,
-          parentId: matchedNode.id,
-          name: areaName,
-          slug: areaSlug,
-        };
-      }
+      const pendingLocationSubmission = !existingArea && areaSlug
+        ? {
+            countyId: matchedNode.countyId,
+            parentId: matchedNode.id,
+            name: areaName,
+            slug: areaSlug,
+          }
+        : null;
 
       const latitude = getOptionalNumber(rawData.latitude) ?? matchedNode.latitude ?? undefined;
       const longitude = getOptionalNumber(rawData.longitude) ?? matchedNode.longitude ?? undefined;
@@ -419,28 +418,28 @@ export async function POST(request: NextRequest) {
       }
 
       const finalProperty = await tx.property.findUnique({ where: { id: created.id } });
-      return finalProperty;
+      return { property: finalProperty, pendingLocationSubmission };
     });
 
-    if (!result) {
+    if (!result?.property) {
       return NextResponse.json({ message: 'Property could not be created.' }, { status: 500 });
     }
 
-    if (pendingLocationSubmission) {
+    if (result.pendingLocationSubmission) {
       try {
         const slugCollision = await prisma.locationNode.findFirst({
           where: {
-            countyId: pendingLocationSubmission.countyId,
+            countyId: result.pendingLocationSubmission.countyId,
             level: 'AREA',
-            slug: pendingLocationSubmission.slug,
-            parentId: pendingLocationSubmission.parentId,
+            slug: result.pendingLocationSubmission.slug,
+            parentId: result.pendingLocationSubmission.parentId,
           },
           select: { id: true },
         });
         if (!slugCollision) {
           await prisma.locationNode.create({
             data: {
-              ...pendingLocationSubmission,
+              ...result.pendingLocationSubmission,
               level: 'AREA',
               searchable: false,
               source: 'USER_SUBMITTED_PENDING_REVIEW',
@@ -454,8 +453,8 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const property = toProperty(result);
-    return NextResponse.json({ message: 'Property listed successfully', propertyId: result.id, property }, { status: 201 });
+    const property = toProperty(result.property);
+    return NextResponse.json({ message: 'Property listed successfully', propertyId: result.property.id, property }, { status: 201 });
   } catch (error: any) {
     console.error('API_ROUTE_ERROR: [POST /api/properties]', error);
     if (error instanceof SyntaxError) return NextResponse.json({ message: 'Invalid JSON payload' }, { status: 400 });
