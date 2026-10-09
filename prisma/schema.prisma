@@ -399,3 +399,28 @@ model LocationAlias {
   @@unique([normalized])
   @@index([areaId])
 }
+
+model HouseRequest {
+  id                String   @id @default(uuid()) @db.Uuid
+  reference         String   @unique
+  name              String
+  phone             String
+  email             String?
+  contactPreference String   @default("WHATSAPP")
+  propertyType      String
+  bedrooms          Int
+  countyName        String
+  townName          String?
+  preferredAreas    String[] @default([])
+  minRent           Float?
+  maxRent           Float
+  moveIn            String
+  mustHaves         String[] @default([])
+  notes             String?
+  consent           Boolean  @default(false)
+  createdAt         DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([countyName, townName])
+  @@index([maxRent])
+}
