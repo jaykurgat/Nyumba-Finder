@@ -121,11 +121,6 @@ export default function FindAHousePage() {
     };
   }, [locationQuery]);
 
-  const selectedLocations = useMemo(
-    () => [...(form.countyName ? [form.countyName] : []), ...(form.townName ? [form.townName] : []), ...form.preferredAreas],
-    [form.countyName, form.townName, form.preferredAreas],
-  );
-
   function chooseLocation(option: LocationSuggestion) {
     update("countyName", option.countyName);
     if (["TOWN", "CITY"].includes(option.level)) {
@@ -327,7 +322,7 @@ export default function FindAHousePage() {
                 <p className="mt-2 text-sm leading-6 text-muted-foreground">Choose the closest fit. You can keep your options open.</p>
                 <div className="mt-6 grid gap-3 sm:grid-cols-2">
                   {homeTypes.map((type) => (
-                    <button key={type.value} type="button" onClick={() => update("propertyType", type.value)} className={"group rounded-2xl border p-4 text-left transition-all hover:border-[#8c9c82] hover:bg-[#f8f9f5] " + (form.propertyType === type.value ? "border-[#718568] bg-[#f3f6ef] ring-1 ring-[#718568]" : "bg-card")}>
+                    <button key={type.value} type="button" onClick={() => { update("propertyType", type.value); update("bedrooms", ["Bedsitter", "Studio"].includes(type.value) ? 0 : form.bedrooms === 0 ? 1 : form.bedrooms); }} className={"group rounded-2xl border p-4 text-left transition-all hover:border-[#8c9c82] hover:bg-[#f8f9f5] " + (form.propertyType === type.value ? "border-[#718568] bg-[#f3f6ef] ring-1 ring-[#718568]" : "bg-card")}>
                       <span className="flex items-center justify-between gap-3"><span className="font-semibold">{type.label}</span><span className={"flex h-5 w-5 items-center justify-center rounded-full border " + (form.propertyType === type.value ? "border-[#627957] bg-[#627957] text-white" : "border-border text-transparent")}><Check className="h-3 w-3" /></span></span>
                       <span className="mt-1.5 block text-sm leading-5 text-muted-foreground">{type.detail}</span>
                     </button>
