@@ -16,6 +16,7 @@ function formatRent(value: number) {
 }
 function requestSummary(request: HouseRequestNotice) {
   return [
+    "Service: House Hunt assistance (KSh 2,500; up to five WhatsApp video previews subject to availability)",
     "Request: " + request.reference, "Name: " + request.name,
     "Phone: " + request.phone, "Email: " + (request.email || "Not provided"),
     "House: " + request.propertyType + (request.bedrooms > 0 ? " · " + request.bedrooms + " bedroom(s)" : ""),
@@ -86,8 +87,8 @@ export async function notifyHouseRequest(request: HouseRequestNotice) {
     emailTasks.push(sendEmail(
       request.email,
       "We've received your NyumbaFinder house request · " + request.reference,
-      "Hi " + request.name + ",\n\nThank you for telling NyumbaFinder what you're looking for. Your request has been received.\n\n" +
-      details + "\n\nYou can browse your suggested matches on the confirmation page. Our team can follow up using your selected contact method. We cannot guarantee listing availability until it is confirmed.\n\nNyumbaFinder",
+      "Hi " + request.name + ",\n\nThank you for telling NyumbaFinder what you're looking for. Your House Hunt request has been received. The service fee is KSh 2,500 and includes up to five WhatsApp video previews of suitable properties, subject to availability, plus help coordinating viewings. No payment has been taken through the form. A representative will contact you about next steps.\n\n" +
+      details + "\n\nYou can browse your suggested matches on the confirmation page. Property availability must be confirmed before any viewing. Premium viewing assistance and transport, if requested, are discussed separately.\n\nNyumbaFinder",
     ));
   }
 
