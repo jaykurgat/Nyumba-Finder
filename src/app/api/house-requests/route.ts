@@ -104,7 +104,7 @@ export async function POST(request: NextRequest) {
 
     // Resolve user-added locations into the shared location tree as pending, non-searchable nodes.
     // Existing database locations are never duplicated; custom nodes keep their parent county/town.
-    const resolvedLocations = [];
+    const resolvedLocations: Array<{ label: string; name: string; level: string; countyName: string; townName: string; areaName: string; locationNodeId: string | null; parentId: string | null; source: "DATABASE" | "CUSTOM" }> = [];
     for (const location of data.preferredLocations) {
       let nodeId = location.locationNodeId || null;
       if (location.source === "CUSTOM") {
@@ -126,8 +126,9 @@ export async function POST(request: NextRequest) {
           nodeId = node.id;
         }
       }
-      resolvedLocations.push({ ...location, locationNodeId: nodeId });
+      resolvedLocations.push({ ...location, locationNodeId: nodeId, parentId: location.parentId ?? null });
     }
+    await prisma.houseRequest.update({ where: { id: houseRequest.id }, data: { preferredLocations: resolvedLocations } });
     const locationTerms = resolvedLocations.flatMap((location) => [location.name, location.townName, location.countyName, location.areaName, location.label]).filter(Boolean).map(normalize);
     const targetTerms = [...locationTerms, data.countyName, data.townName, ...data.preferredAreas].filter(Boolean).map(normalize);
     const mustHaves = data.mustHaves.map(normalize);
@@ -135,10 +136,20 @@ export async function POST(request: NextRequest) {
       const locationText = normalize([
         property.location, property.county?.name, property.town?.name, property.areaLocation?.name,
       ].filter(Boolean).join(" "));
-      const exactArea = data.preferredAreas.some((area) => locationText.includes(normalize(area)));
-      const townMatch = Boolean(data.townName && locationText.includes(normalize(data.townName)));
-      const countyMatch = Boolean(property.county?.name && normalize(property.county.name) === normalize(data.countyName));
-      const locationMatch = targetTerms.some((term) => term && locationText.includes(term));
+      const matchedPreferenceIndex = resolvedLocations.findIndex((location) =>
+        [location.areaName, location.name, location.townName, location.countyName, location.label]
+          .filter(Boolean).some((term) => locationText.includes(normalize(term)))
+      );
+      const matchedPreference = matchedPreferenceIndex >= 0 ? resolvedLocations[matchedPreferenceIndex] : null;
+      const exactArea = resolvedLocations.some((location) => Boolean(location.areaName) && locationText.includes(normalize(location.areaName))) ||
+        data.preferredAreas.some((area) => locationText.includes(normalize(area)));
+      const preferredTown = matchedPreference?.townName || data.townName;
+      const townMatch = Boolean(preferredTown && locationText.includes(normalize(preferredTown)));
+      const countyMatch = Boolean(property.county?.name && (
+        resolvedLocations.some((location) => normalize(location.countyName) === normalize(property.county!.name)) ||
+        normalize(property.county.name) === normalize(data.countyName)
+      ));
+      const locationMatch = matchedPreferenceIndex >= 0 || targetTerms.some((term) => term && locationText.includes(term));
       const propertyTypeText = normalize(property.propertyType + " " + property.title + " " + property.description);
       const wantedType = normalize(data.propertyType);
       const typeMatch = data.propertyType === "Any type" || propertyTypeText.includes(wantedType) ||
@@ -148,7 +159,9 @@ export async function POST(request: NextRequest) {
         normalize([...property.amenities, property.description, property.title].join(" ")).includes(normalize(need))
       );
       const budgetScore = Math.max(0, 20 - Math.round((property.price / data.maxRent) * 20));
-      const score = (exactArea ? 45 : 0) + (townMatch ? 28 : 0) + (countyMatch ? 18 : 0) +
+      // A match to an earlier preference receives a larger boost than later preferences.
+      const preferenceScore = matchedPreferenceIndex >= 0 ? Math.max(0, 70 - matchedPreferenceIndex * 12) : 0;
+      const score = preferenceScore + (exactArea ? 35 : 0) + (townMatch ? 24 : 0) + (countyMatch ? 12 : 0) +
         (typeMatch ? 12 : 0) + matchedAmenities.length * 4 + budgetScore;
       const image = property.propertyImages[0]
         ? "/api/properties/" + property.id + "?image=" + property.propertyImages[0].id
@@ -190,6 +203,7 @@ export async function POST(request: NextRequest) {
       countyName: data.countyName,
       townName: data.townName || null,
       preferredAreas: data.preferredAreas,
+      preferredLocations: resolvedLocations,
       minRent: data.minRent ?? null,
       maxRent: data.maxRent,
       moveIn: data.moveIn,
