@@ -1,7 +1,7 @@
 type HouseRequestNotice = {
   reference: string; name: string; phone: string; email?: string | null;
   contactPreference: string; propertyType: string; bedrooms: number;
-  countyName: string; townName?: string | null; preferredAreas: string[];
+  countyName: string; townName?: string | null; preferredAreas: string[]; preferredLocations?: Array<{label: string; source?: string}>;
   minRent?: number | null; maxRent: number; moveIn: string;
   mustHaves: string[]; notes?: string | null; matchesCount: number;
 };
@@ -20,7 +20,7 @@ function requestSummary(request: HouseRequestNotice) {
     "Request: " + request.reference, "Name: " + request.name,
     "Phone: " + request.phone, "Email: " + (request.email || "Not provided"),
     "House: " + request.propertyType + (request.bedrooms > 0 ? " · " + request.bedrooms + " bedroom(s)" : ""),
-    "Location: " + [request.countyName, request.townName, request.preferredAreas.join(", ")].filter(Boolean).join(" · "),
+    "Preferred locations: " + (request.preferredLocations?.length ? request.preferredLocations.map((location, index) => (index + 1) + ". " + location.label + (location.source === "CUSTOM" ? " (user-added; pending location review)" : "")).join(" · ") : [request.countyName, request.townName, request.preferredAreas.join(", ")].filter(Boolean).join(" · ")),
     "Budget: " + (request.minRent ? formatRent(request.minRent) + "–" : "Up to ") + formatRent(request.maxRent) + " per month",
     "Move-in: " + request.moveIn, "Must-haves: " + (request.mustHaves.join(", ") || "Not specified"),
     "Notes: " + (request.notes || "None"), "Instant matches: " + request.matchesCount,
@@ -78,7 +78,7 @@ export async function notifyHouseRequest(request: HouseRequestNotice) {
   const language = process.env.WHATSAPP_TEMPLATE_LANGUAGE || "en";
   const adminTemplate = process.env.WHATSAPP_ADMIN_TEMPLATE_NAME;
   const clientTemplate = process.env.WHATSAPP_CLIENT_TEMPLATE_NAME;
-  const location = [request.countyName, request.townName, request.preferredAreas.join(", ")].filter(Boolean).join(", ");
+  const location = request.preferredLocations?.length ? request.preferredLocations.map((item, index) => (index + 1) + ". " + item.label).join(" | ") : [request.countyName, request.townName, request.preferredAreas.join(", ")].filter(Boolean).join(", ");
   const budget = (request.minRent ? formatRent(request.minRent) + "–" : "Up to ") + formatRent(request.maxRent) + " monthly";
 
   const emailTasks: Promise<{ configured: boolean; sent: boolean }>[] = [];

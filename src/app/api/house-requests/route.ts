@@ -15,7 +15,18 @@ const schema = z.object({
   bedrooms: z.coerce.number().int().min(0).max(10),
   countyName: z.string().trim().min(2).max(100),
   townName: z.string().trim().max(100).optional().default(""),
-  preferredAreas: z.array(z.string().trim().min(1).max(100)).max(6).default([]),
+  preferredAreas: z.array(z.string().trim().min(1).max(200)).max(6).default([]),
+  preferredLocations: z.array(z.object({
+    label: z.string().trim().min(2).max(250),
+    name: z.string().trim().min(2).max(100),
+    level: z.enum(["COUNTY", "TOWN", "CITY", "ESTATE", "NEIGHBORHOOD", "AREA", "VILLAGE", "LOCALITY"]),
+    countyName: z.string().trim().min(2).max(100),
+    townName: z.string().trim().max(100).default(""),
+    areaName: z.string().trim().max(100).default(""),
+    locationNodeId: z.string().uuid().nullable().optional(),
+    parentId: z.string().uuid().nullable().optional(),
+    source: z.enum(["DATABASE", "CUSTOM"]),
+  })).max(5).optional().default([]),
   minRent: z.coerce.number().min(0).max(100000000).optional(),
   maxRent: z.coerce.number().positive().max(100000000),
   moveIn: z.enum(["Immediately", "Within 2 weeks", "Within a month", "Flexible", "Later"]),
@@ -61,6 +72,7 @@ export async function POST(request: NextRequest) {
         countyName: data.countyName,
         townName: data.townName || null,
         preferredAreas: data.preferredAreas,
+        preferredLocations: [],
         minRent: data.minRent ?? null,
         maxRent: data.maxRent,
         moveIn: data.moveIn,
@@ -90,16 +102,69 @@ export async function POST(request: NextRequest) {
       take: 250,
     });
 
-    const targetTerms = [data.countyName, data.townName, ...data.preferredAreas].filter(Boolean).map(normalize);
+    // Resolve user-added locations into the shared location tree as pending, non-searchable nodes.
+    // Existing database locations are never duplicated; custom nodes keep their parent county/town.
+    const resolvedLocations: Array<{ label: string; name: string; level: string; countyName: string; townName: string; areaName: string; locationNodeId: string | null; parentId: string | null; source: "DATABASE" | "CUSTOM" }> = [];
+    for (const location of data.preferredLocations) {
+      let nodeId = location.locationNodeId || null;
+      if (location.source === "CUSTOM") {
+        const county = await prisma.county.findFirst({ where: { name: { equals: location.countyName, mode: "insensitive" } } });
+        if (county) {
+          const level = location.level.toUpperCase();
+          let parentId = null;
+          if (location.townName && !["TOWN", "CITY"].includes(level)) {
+            const parentSlug = location.townName.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+            let parent = await prisma.locationNode.findFirst({ where: { countyId: county.id, level: { in: ["TOWN", "CITY"] }, slug: parentSlug } });
+            if (!parent) parent = await prisma.locationNode.create({ data: { countyId: county.id, level: "TOWN", name: location.townName, slug: parentSlug, searchable: false, source: "USER_SUBMITTED_PENDING_REVIEW" } });
+            parentId = parent.id;
+          }
+          const slug = location.name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+          let node = await prisma.locationNode.findFirst({ where: { countyId: county.id, level, slug, parentId } });
+          if (!node) {
+            node = await prisma.locationNode.create({ data: { countyId: county.id, parentId, level, name: location.name, slug, searchable: false, source: "USER_SUBMITTED_PENDING_REVIEW" } });
+          }
+          nodeId = node.id;
+        }
+      }
+      resolvedLocations.push({ ...location, locationNodeId: nodeId, parentId: location.parentId ?? null });
+    }
+    await prisma.houseRequest.update({ where: { id: houseRequest.id }, data: { preferredLocations: resolvedLocations } });
+    const locationTerms = resolvedLocations.flatMap((location) => [location.name, location.townName, location.countyName, location.areaName, location.label]).filter(Boolean).map(normalize);
+    const targetTerms = [...locationTerms, data.countyName, data.townName, ...data.preferredAreas].filter(Boolean).map(normalize);
     const mustHaves = data.mustHaves.map(normalize);
     const ranked = candidates.map((property) => {
       const locationText = normalize([
         property.location, property.county?.name, property.town?.name, property.areaLocation?.name,
       ].filter(Boolean).join(" "));
-      const exactArea = data.preferredAreas.some((area) => locationText.includes(normalize(area)));
-      const townMatch = Boolean(data.townName && locationText.includes(normalize(data.townName)));
-      const countyMatch = Boolean(property.county?.name && normalize(property.county.name) === normalize(data.countyName));
-      const locationMatch = targetTerms.some((term) => term && locationText.includes(term));
+      const preferenceMatch = resolvedLocations.map((location, index) => {
+        const isCounty = location.level.toUpperCase() === "COUNTY";
+        const isTown = ["TOWN", "CITY"].includes(location.level.toUpperCase());
+        const exactTerm = isCounty ? location.countyName : isTown ? location.name : (location.areaName || location.name);
+        const exact = Boolean(exactTerm && locationText.includes(normalize(exactTerm)));
+        const town = Boolean(location.townName && locationText.includes(normalize(location.townName)));
+        const county = Boolean(location.countyName && locationText.includes(normalize(location.countyName)));
+        return { index, exact, town, county, location };
+      }).find((match) => match.exact) || resolvedLocations.map((location, index) => ({
+        index,
+        exact: false,
+        town: Boolean(location.townName && locationText.includes(normalize(location.townName))),
+        county: Boolean(location.countyName && locationText.includes(normalize(location.countyName))),
+        location,
+      })).find((match) => match.town) || null;
+      const matchedPreferenceIndex = preferenceMatch?.index ?? -1;
+      const matchedPreference = preferenceMatch?.location ?? null;
+      const exactArea = resolvedLocations.some((location) =>
+        Boolean(location.areaName) && locationText.includes(normalize(location.areaName))
+      ) || data.preferredAreas.some((area) => locationText.includes(normalize(area)));
+      const preferredTown = matchedPreference?.townName || data.townName;
+      const townMatch = Boolean(preferredTown && locationText.includes(normalize(preferredTown)));
+      const countyMatch = Boolean(property.county?.name && (
+        resolvedLocations.some((location) => normalize(location.countyName) === normalize(property.county!.name)) ||
+        normalize(property.county.name) === normalize(data.countyName)
+      ));
+      const locationMatch = Boolean(preferenceMatch) || (
+        !resolvedLocations.length && targetTerms.some((term) => term && locationText.includes(term))
+      );
       const propertyTypeText = normalize(property.propertyType + " " + property.title + " " + property.description);
       const wantedType = normalize(data.propertyType);
       const typeMatch = data.propertyType === "Any type" || propertyTypeText.includes(wantedType) ||
@@ -109,7 +174,9 @@ export async function POST(request: NextRequest) {
         normalize([...property.amenities, property.description, property.title].join(" ")).includes(normalize(need))
       );
       const budgetScore = Math.max(0, 20 - Math.round((property.price / data.maxRent) * 20));
-      const score = (exactArea ? 45 : 0) + (townMatch ? 28 : 0) + (countyMatch ? 18 : 0) +
+      // A match to an earlier preference receives a larger boost than later preferences.
+      const preferenceScore = preferenceMatch ? (preferenceMatch.exact ? 70 : preferenceMatch.town ? 32 : 0) - matchedPreferenceIndex * 8 : 0;
+      const score = preferenceScore + (exactArea ? 35 : 0) + (townMatch ? 24 : 0) + (countyMatch ? 12 : 0) +
         (typeMatch ? 12 : 0) + matchedAmenities.length * 4 + budgetScore;
       const image = property.propertyImages[0]
         ? "/api/properties/" + property.id + "?image=" + property.propertyImages[0].id
@@ -151,6 +218,7 @@ export async function POST(request: NextRequest) {
       countyName: data.countyName,
       townName: data.townName || null,
       preferredAreas: data.preferredAreas,
+      preferredLocations: resolvedLocations,
       minRent: data.minRent ?? null,
       maxRent: data.maxRent,
       moveIn: data.moveIn,
@@ -164,7 +232,7 @@ export async function POST(request: NextRequest) {
       "Hello NyumbaFinder, I need help finding a rental home.",
       "Request: " + reference,
       "House: " + data.propertyType + (data.bedrooms ? " · " + data.bedrooms + " bedroom(s)" : ""),
-      "Location: " + [data.countyName, data.townName, ...data.preferredAreas].filter(Boolean).join(", "),
+      "Preferred locations (in order): " + (resolvedLocations.length ? resolvedLocations.map((location, index) => (index + 1) + ". " + location.label).join(" | ") : [data.countyName, data.townName, ...data.preferredAreas].filter(Boolean).join(", ")),
       "Budget: " + (data.minRent ? rent(data.minRent) + "–" : "Up to ") + rent(data.maxRent) + " monthly",
       "Move-in: " + data.moveIn,
       "Name: " + data.name,

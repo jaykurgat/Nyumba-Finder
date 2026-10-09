@@ -412,6 +412,7 @@ model HouseRequest {
   countyName        String
   townName          String?
   preferredAreas    String[] @default([])
+  preferredLocations Json     @default("[]")
   minRent           Float?
   maxRent           Float
   moveIn            String
