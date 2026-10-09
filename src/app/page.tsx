@@ -155,13 +155,20 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="border-t py-12">
-        <div className="mx-auto flex max-w-7xl flex-col items-start justify-between gap-5 px-6 md:flex-row md:items-center md:px-10 lg:px-12">
-          <div>
-            <h2 className="text-xl font-semibold">Have a house to rent?</h2>
-            <p className="mt-1 text-sm text-muted-foreground">Reach tenants searching for homes in your area.</p>
+      <section className="border-t py-12 md:py-16">
+        <div className="mx-auto grid max-w-7xl gap-4 px-6 md:grid-cols-2 md:px-10 lg:px-12">
+          <div className="rounded-2xl border border-[#dfe4d8] bg-[#f5f6f0] p-6 sm:p-8">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white text-[#53694b]"><Search className="h-5 w-5" /></div>
+            <h2 className="mt-5 text-xl font-semibold tracking-tight">Need help finding a home?</h2>
+            <p className="mt-2 max-w-md text-sm leading-6 text-muted-foreground">Tell us your budget and preferred area. We'll match you with available rentals and help you explore your options.</p>
+            <Button asChild className="mt-5 rounded-xl bg-[#53694b] hover:bg-[#43563c]"><Link href="/find-a-house">Find me a house <ArrowRight className="ml-2 h-4 w-4" /></Link></Button>
           </div>
-          <Button asChild><Link href="/list-property">List Your House</Link></Button>
+          <div className="rounded-2xl border bg-card p-6 sm:p-8">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-muted text-primary"><Home className="h-5 w-5" /></div>
+            <h2 className="mt-5 text-xl font-semibold tracking-tight">Have a house to rent?</h2>
+            <p className="mt-2 max-w-md text-sm leading-6 text-muted-foreground">Reach tenants searching for homes in your area by listing your property on NyumbaFinder.</p>
+            <Button asChild variant="outline" className="mt-5 rounded-xl"><Link href="/list-property">List your house <ArrowRight className="ml-2 h-4 w-4" /></Link></Button>
+          </div>
         </div>
       </section>
     </div>
