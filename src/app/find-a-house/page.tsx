@@ -122,14 +122,26 @@ export default function FindAHousePage() {
   }, [locationQuery]);
 
   function chooseLocation(option: LocationSuggestion) {
-    update("countyName", option.countyName);
-    if (["TOWN", "CITY"].includes(option.level)) {
-      update("townName", option.name);
-    } else if (option.parentName && !["COUNTY"].includes(option.level)) {
-      update("townName", option.parentName);
-      if (!form.preferredAreas.includes(option.name)) update("preferredAreas", [...form.preferredAreas, option.name].slice(0, 6));
+    const hasPrimaryLocation = Boolean(form.countyName || form.townName || form.preferredAreas.length);
+    const isArea = !["COUNTY", "TOWN", "CITY"].includes(option.level);
+    const selectedLabel = option.label || [option.name, option.parentName, option.countyName].filter(Boolean).join(", ");
+
+    if (!hasPrimaryLocation) {
+      update("countyName", option.countyName);
+      if (["TOWN", "CITY"].includes(option.level)) {
+        update("townName", option.name);
+      } else if (isArea && option.parentName) {
+        update("townName", option.parentName);
+        update("preferredAreas", [selectedLabel].slice(0, 5));
+      }
+    } else {
+      const alreadySelected = [form.countyName, form.townName, ...form.preferredAreas]
+        .some((item) => item && item.toLowerCase() === selectedLabel.toLowerCase());
+      if (!alreadySelected) update("preferredAreas", [...form.preferredAreas, selectedLabel].slice(0, 5));
     }
+
     setLocationQuery("");
+    setLocationResults([]);
     setLocationOpen(false);
   }
 
@@ -347,10 +359,13 @@ export default function FindAHousePage() {
                 <h2 className="mt-1 text-xl font-semibold tracking-tight">Where would you like to live?</h2>
                 <p className="mt-1 text-sm leading-5 text-muted-foreground">Add your preferred locations in order. You can choose different towns or estates, including within the same county.</p>
                 <div className="relative mt-4 rounded-2xl border bg-card p-3 sm:p-4">
-                  <label htmlFor="location-search" className="mb-2 block text-sm font-medium">Find a town, estate or neighbourhood</label>
+                  <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                    <label htmlFor="location-search" className="block text-sm font-medium">Preferred locations <span className="font-normal text-muted-foreground">(up to 5, in priority order)</span></label>
+                    <span className="text-xs text-muted-foreground">{Math.min(5, 1 + form.preferredAreas.length)} of 5 selected</span>
+                  </div>
                   <div className="relative">
                     <MapPin className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                    <Input id="location-search" value={locationQuery} onChange={(event) => { setLocationQuery(event.target.value); setLocationOpen(true); }} onFocus={() => setLocationOpen(true)} placeholder="Try Kilimani, Kapsabet, Eldoret…" className="h-12 rounded-xl pl-11 pr-10" autoComplete="off" />
+                    <Input id="location-search" value={locationQuery} onChange={(event) => { setLocationQuery(event.target.value); setLocationOpen(true); }} onFocus={() => setLocationOpen(true)} placeholder={form.countyName || form.preferredAreas.length ? "Add another location — e.g. Kileleshwa, Kilimani, Kapsabet…" : "Start with a town or estate — e.g. Kapsabet, Kilimani…"} className="h-12 rounded-xl pl-11 pr-10" autoComplete="off" />
                     {locationQuery && <button type="button" onClick={() => { setLocationQuery(""); setLocationResults([]); }} aria-label="Clear location search" className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-1 text-muted-foreground hover:bg-muted"><X className="h-4 w-4" /></button>}
                   </div>
                   {locationOpen && locationQuery.trim().length >= 2 && (
@@ -363,7 +378,14 @@ export default function FindAHousePage() {
                   <div><label htmlFor="county-name" className="mb-2 block text-sm font-medium">County <span className="text-primary">*</span></label><Input id="county-name" value={form.countyName} onChange={(event) => update("countyName", event.target.value)} placeholder="e.g. Nairobi" className="h-12 rounded-xl" /></div>
                   <div><label htmlFor="town-name" className="mb-2 block text-sm font-medium">Town or city <span className="text-muted-foreground">(optional)</span></label><Input id="town-name" value={form.townName} onChange={(event) => update("townName", event.target.value)} placeholder="e.g. Kapsabet" className="h-12 rounded-xl" /></div>
                 </div>
-                {form.preferredAreas.length > 0 && <div className="mt-3 rounded-xl bg-muted/40 p-3"><p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Added areas</p><div className="flex flex-wrap gap-1.5">{form.preferredAreas.map((area) => <button key={area} type="button" onClick={() => removeLocation(area)} className="inline-flex items-center gap-1 rounded-full border border-[#dce4d5] bg-[#f5f7f2] px-2.5 py-1 text-xs font-medium text-[#4f6348]">{area}<X className="h-3 w-3" /></button>)}</div></div>}
+                {(form.countyName || form.townName || form.preferredAreas.length > 0) && <div className="mt-3 rounded-xl bg-muted/40 p-3">
+                  <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Your location order</p>
+                  <div className="flex flex-col gap-2">
+                    {(form.countyName || form.townName) && <div className="flex items-center gap-2 rounded-lg border border-[#dce4d5] bg-white px-3 py-2 text-xs text-[#4f6348]"><span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#53694b] text-[10px] font-semibold text-white">1</span><span className="min-w-0 flex-1">{[form.townName, form.countyName].filter(Boolean).join(", ")}</span><button type="button" onClick={() => { update("countyName", ""); update("townName", ""); update("preferredAreas", []); }} aria-label="Remove first preferred location" className="rounded-full p-1 hover:bg-muted"><X className="h-3.5 w-3.5" /></button></div>}
+                    {form.preferredAreas.map((area, index) => <div key={area} className="flex items-center gap-2 rounded-lg border border-[#dce4d5] bg-white px-3 py-2 text-xs text-[#4f6348]"><span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#e7ecdf] text-[10px] font-semibold text-[#405638]">{index + 2}</span><span className="min-w-0 flex-1">{area}</span><button type="button" onClick={() => removeLocation(area)} aria-label={"Remove preferred location " + (index + 2)} className="rounded-full p-1 hover:bg-muted"><X className="h-3.5 w-3.5" /></button></div>)}
+                  </div>
+                  <p className="mt-2 text-xs leading-5 text-muted-foreground">Choose another suggestion above to add a second, third or further choice. Each is kept in the order you add it.</p>
+                </div>}
                 <div className="mt-3 rounded-xl bg-muted/50 px-3 py-2.5 text-xs leading-5 text-muted-foreground"><ShieldCheck className="mr-2 inline h-4 w-4 text-primary" />We'll prioritize your selected area first. We'll only show broader suggestions when no close match is available, and we'll label them clearly.</div>
               </section>
             )}
