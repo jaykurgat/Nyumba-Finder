@@ -41,6 +41,7 @@ type SubmissionResult = {
     adminEmailSent: boolean;
     clientEmailSent: boolean;
     whatsappAdminSent: boolean;
+    whatsappClientSent: boolean;
     emailConfigured: boolean;
     whatsappConfigured: boolean;
   };
@@ -239,9 +240,11 @@ export default function FindAHousePage() {
             <p className="mt-4 text-sm leading-6 text-[#53634d]">
               {result.notifications.clientEmailSent
                 ? "A confirmation email has been sent to " + form.email + "."
-                : form.email
-                  ? "Your request is saved. Email confirmation is not available right now, so keep your reference number."
-                  : "Add an email address on your next request if you would also like an email confirmation."}
+                : result.notifications.whatsappClientSent
+                  ? "A WhatsApp confirmation has been sent to your phone."
+                  : form.email
+                    ? "Your request is saved. Email confirmation is not available right now, so keep your reference number."
+                    : "Your request is saved. Keep your reference number, and use WhatsApp below to contact our team."}
             </p>
             <p className="mt-2 text-xs leading-5 text-[#6c7569]">Property availability must be confirmed with the listing contact. Your request reference is {result.reference}.</p>
           </div>
