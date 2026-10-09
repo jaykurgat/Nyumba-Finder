@@ -19,14 +19,14 @@ const schema = z.object({
   preferredLocations: z.array(z.object({
     label: z.string().trim().min(2).max(250),
     name: z.string().trim().min(2).max(100),
-    level: z.string().trim().min(2).max(40),
+    level: z.enum(["COUNTY", "TOWN", "CITY", "ESTATE", "NEIGHBORHOOD", "AREA", "VILLAGE", "LOCALITY"]),
     countyName: z.string().trim().min(2).max(100),
     townName: z.string().trim().max(100).default(""),
     areaName: z.string().trim().max(100).default(""),
     locationNodeId: z.string().uuid().nullable().optional(),
     parentId: z.string().uuid().nullable().optional(),
     source: z.enum(["DATABASE", "CUSTOM"]),
-  })).min(1).max(5).optional().default([]),
+  })).max(5).optional().default([]),
   minRent: z.coerce.number().min(0).max(100000000).optional(),
   maxRent: z.coerce.number().positive().max(100000000),
   moveIn: z.enum(["Immediately", "Within 2 weeks", "Within a month", "Flexible", "Later"]),
@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
         countyName: data.countyName,
         townName: data.townName || null,
         preferredAreas: data.preferredAreas,
-        preferredLocations: data.preferredLocations,
+        preferredLocations: [],
         minRent: data.minRent ?? null,
         maxRent: data.maxRent,
         moveIn: data.moveIn,
@@ -113,7 +113,7 @@ export async function POST(request: NextRequest) {
           const level = location.level.toUpperCase();
           let parentId = null;
           if (location.townName && !["TOWN", "CITY"].includes(level)) {
-            const parentSlug = location.townName.normalize("NFD").replace(/[\\u0300-\\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+            const parentSlug = location.townName.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
             let parent = await prisma.locationNode.findFirst({ where: { countyId: county.id, level: { in: ["TOWN", "CITY"] }, slug: parentSlug } });
             if (!parent) parent = await prisma.locationNode.create({ data: { countyId: county.id, level: "TOWN", name: location.townName, slug: parentSlug, searchable: false, source: "USER_SUBMITTED_PENDING_REVIEW" } });
             parentId = parent.id;
@@ -136,20 +136,35 @@ export async function POST(request: NextRequest) {
       const locationText = normalize([
         property.location, property.county?.name, property.town?.name, property.areaLocation?.name,
       ].filter(Boolean).join(" "));
-      const matchedPreferenceIndex = resolvedLocations.findIndex((location) =>
-        [location.areaName, location.name, location.townName, location.countyName, location.label]
-          .filter(Boolean).some((term) => locationText.includes(normalize(term)))
-      );
-      const matchedPreference = matchedPreferenceIndex >= 0 ? resolvedLocations[matchedPreferenceIndex] : null;
-      const exactArea = resolvedLocations.some((location) => Boolean(location.areaName) && locationText.includes(normalize(location.areaName))) ||
-        data.preferredAreas.some((area) => locationText.includes(normalize(area)));
+      const preferenceMatch = resolvedLocations.map((location, index) => {
+        const isCounty = location.level.toUpperCase() === "COUNTY";
+        const isTown = ["TOWN", "CITY"].includes(location.level.toUpperCase());
+        const exactTerm = isCounty ? location.countyName : isTown ? location.name : (location.areaName || location.name);
+        const exact = Boolean(exactTerm && locationText.includes(normalize(exactTerm)));
+        const town = Boolean(location.townName && locationText.includes(normalize(location.townName)));
+        const county = Boolean(location.countyName && locationText.includes(normalize(location.countyName)));
+        return { index, exact, town, county, location };
+      }).find((match) => match.exact) || resolvedLocations.map((location, index) => ({
+        index,
+        exact: false,
+        town: Boolean(location.townName && locationText.includes(normalize(location.townName))),
+        county: Boolean(location.countyName && locationText.includes(normalize(location.countyName))),
+        location,
+      })).find((match) => match.town) || null;
+      const matchedPreferenceIndex = preferenceMatch?.index ?? -1;
+      const matchedPreference = preferenceMatch?.location ?? null;
+      const exactArea = resolvedLocations.some((location) =>
+        Boolean(location.areaName) && locationText.includes(normalize(location.areaName))
+      ) || data.preferredAreas.some((area) => locationText.includes(normalize(area)));
       const preferredTown = matchedPreference?.townName || data.townName;
       const townMatch = Boolean(preferredTown && locationText.includes(normalize(preferredTown)));
       const countyMatch = Boolean(property.county?.name && (
         resolvedLocations.some((location) => normalize(location.countyName) === normalize(property.county!.name)) ||
         normalize(property.county.name) === normalize(data.countyName)
       ));
-      const locationMatch = matchedPreferenceIndex >= 0 || targetTerms.some((term) => term && locationText.includes(term));
+      const locationMatch = Boolean(preferenceMatch) || (
+        !resolvedLocations.length && targetTerms.some((term) => term && locationText.includes(term))
+      );
       const propertyTypeText = normalize(property.propertyType + " " + property.title + " " + property.description);
       const wantedType = normalize(data.propertyType);
       const typeMatch = data.propertyType === "Any type" || propertyTypeText.includes(wantedType) ||
@@ -160,7 +175,7 @@ export async function POST(request: NextRequest) {
       );
       const budgetScore = Math.max(0, 20 - Math.round((property.price / data.maxRent) * 20));
       // A match to an earlier preference receives a larger boost than later preferences.
-      const preferenceScore = matchedPreferenceIndex >= 0 ? Math.max(0, 70 - matchedPreferenceIndex * 12) : 0;
+      const preferenceScore = preferenceMatch ? (preferenceMatch.exact ? 70 : preferenceMatch.town ? 32 : 0) - matchedPreferenceIndex * 8 : 0;
       const score = preferenceScore + (exactArea ? 35 : 0) + (townMatch ? 24 : 0) + (countyMatch ? 12 : 0) +
         (typeMatch ? 12 : 0) + matchedAmenities.length * 4 + budgetScore;
       const image = property.propertyImages[0]
