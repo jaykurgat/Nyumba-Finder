@@ -356,6 +356,28 @@ export async function POST(request: NextRequest) {
       if (requestedCountyId && matchedNode.countyId !== requestedCountyId) {
         throw new Error('The selected location does not belong to the selected county.');
       }
+
+      // Capture an unrecognized area for a best-effort review submission after the
+      // property transaction commits. A location-review problem must never block a listing.
+      const areaName = location.trim();
+      const areaSlug = areaName.toLowerCase().normalize('NFKD').replace(/[\\u0300-\\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+      const existingArea = await tx.locationNode.findFirst({
+        where: {
+          countyId: matchedNode.countyId,
+          parentId: matchedNode.id,
+          name: { equals: areaName, mode: 'insensitive' },
+        },
+        select: { id: true },
+      });
+      const pendingLocationSubmission = !existingArea && areaSlug
+        ? {
+            countyId: matchedNode.countyId,
+            parentId: matchedNode.id,
+            name: areaName,
+            slug: areaSlug,
+          }
+        : null;
+
       const latitude = getOptionalNumber(rawData.latitude) ?? matchedNode.latitude ?? undefined;
       const longitude = getOptionalNumber(rawData.longitude) ?? matchedNode.longitude ?? undefined;
       const countyId = matchedNode.countyId;
@@ -396,15 +418,43 @@ export async function POST(request: NextRequest) {
       }
 
       const finalProperty = await tx.property.findUnique({ where: { id: created.id } });
-      return finalProperty;
+      return { property: finalProperty, pendingLocationSubmission };
     });
 
-    if (!result) {
+    if (!result?.property) {
       return NextResponse.json({ message: 'Property could not be created.' }, { status: 500 });
     }
 
-    const property = toProperty(result);
-    return NextResponse.json({ message: 'Property listed successfully', propertyId: result.id, property }, { status: 201 });
+    if (result.pendingLocationSubmission) {
+      try {
+        const slugCollision = await prisma.locationNode.findFirst({
+          where: {
+            countyId: result.pendingLocationSubmission.countyId,
+            level: 'AREA',
+            slug: result.pendingLocationSubmission.slug,
+            parentId: result.pendingLocationSubmission.parentId,
+          },
+          select: { id: true },
+        });
+        if (!slugCollision) {
+          await prisma.locationNode.create({
+            data: {
+              ...result.pendingLocationSubmission,
+              level: 'AREA',
+              searchable: false,
+              source: 'USER_SUBMITTED_PENDING_REVIEW',
+            },
+          });
+        }
+      } catch (locationReviewError) {
+        // The property is already saved and must remain live even if the review queue
+        // cannot record this location right now. Log it for operational follow-up.
+        console.error('LOCATION_SUBMISSION_CREATE_FAILED:', locationReviewError);
+      }
+    }
+
+    const property = toProperty(result.property);
+    return NextResponse.json({ message: 'Property listed successfully', propertyId: result.property.id, property }, { status: 201 });
   } catch (error: any) {
     console.error('API_ROUTE_ERROR: [POST /api/properties]', error);
     if (error instanceof SyntaxError) return NextResponse.json({ message: 'Invalid JSON payload' }, { status: 400 });

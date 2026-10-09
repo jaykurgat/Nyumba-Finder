@@ -555,7 +555,9 @@ export default function ListPropertyPage() {
                                 {areas.map((area) => <option key={area.id} value={area.name} />)}
                               </datalist>
                             )}
-                            <FormDescription>Enter the local area tenants would normally use when describing the property.</FormDescription>
+                            <FormDescription>
+                              Enter the local area tenants would normally use when describing the property. If it is not in our verified suggestions, it will be flagged for admin verification — your listing can still go live.
+                            </FormDescription>
                             {form.formState.errors.location?.message && (
                               <p className="text-xs text-primary">
                                 {form.formState.errors.location.message}
