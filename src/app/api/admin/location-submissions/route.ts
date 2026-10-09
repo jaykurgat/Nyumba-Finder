@@ -72,7 +72,7 @@ export async function PATCH(request: NextRequest) {
 
     const slug = slugify(name);
     const duplicate = await prisma.locationNode.findFirst({
-      where: { countyId, level, slug, parentId: validatedParentId, id: { not: id }, searchable: true },
+      where: { countyId, level, slug, parentId: validatedParentId, id: { not: id }, source: { not: 'USER_SUBMITTED_REJECTED' } },
       select: { id: true, name: true },
     });
     if (duplicate) return NextResponse.json({ message: 'A verified location with that name already exists under this parent: ' + duplicate.name + '.' }, { status: 409 });
