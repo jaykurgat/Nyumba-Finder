@@ -4,19 +4,22 @@ The guided form saves the request and calculates matches from active rental list
 
 ## Email (Resend)
 
-Add these Vercel environment variables for **Preview and Production**:
+Add these Vercel environment variables for **Production** (and Preview if you intend to test a preview deployment):
 
 - `RESEND_API_KEY`: API key from your Resend account.
-- `RESEND_FROM_EMAIL`: sender address on a domain verified in Resend, for example `NyumbaFinder <homes@your-verified-domain.example>`.
-- `ADMIN_EMAIL`: inbox that should receive new renter requests. This variable already exists in the project, but ensure it is also enabled for Preview if you test this feature on a branch.
+- `RESEND_FROM_EMAIL`: sender identity on a domain verified in Resend, for example `NyumbaFinder <info@nyumba-finder.com>` after the domain is verified.
+- `ADMIN_NOTIFICATION_EMAIL`: inbox that should receive new House Hunt requests, for example `info@nyumba-finder.com`. This is separate from the admin login.
+- `ADMIN_EMAIL`: existing admin login email. Keep it unchanged unless you intentionally want to change the email used to log in.
 
-The renter receives an email confirmation when they provide an email address, including the KSh 2,500 service scope and next steps. The admin inbox receives the request summary, including the service fee and video-preview scope. If Resend is not configured or rejects the sender, the request is still saved and the page displays that email confirmation was not sent. Use a verified sender such as `NyumbaFinder <info@nyumba-finder.com>` only after `nyumba-finder.com` is verified in Resend and the mailbox can receive replies.
+The code uses `ADMIN_NOTIFICATION_EMAIL` first. For backward compatibility, it falls back to `ADMIN_EMAIL` only when `ADMIN_NOTIFICATION_EMAIL` is unset or empty. Therefore, set `ADMIN_NOTIFICATION_EMAIL` if the notification inbox should differ from the admin login email.
+
+The renter receives an email confirmation when they provide an email address. The admin inbox receives the request summary. The sender domain must be verified in Resend; otherwise delivery can fail. Notification failure does not undo a saved request. Adding or changing Vercel environment variables requires a new deployment for the changes to take effect.
 
 ## WhatsApp Business Cloud API (optional)
 
-For actual automated WhatsApp notifications, use a WhatsApp Business Cloud API number and approved message templates. A normal WhatsApp link is not sufficient to send unsolicited automated messages outside WhatsApp's customer-service window.
+For actual automated WhatsApp notifications, use a WhatsApp Business Cloud API number and approved message templates. A normal WhatsApp link is not sufficient to send automated template messages.
 
-Set these variables for Preview and Production when ready:
+Set these variables for Production (and Preview if needed):
 
 - `WHATSAPP_ACCESS_TOKEN`: server-side Cloud API access token.
 - `WHATSAPP_PHONE_NUMBER_ID`: Cloud API phone-number ID (not the displayed phone number).
@@ -31,21 +34,11 @@ Suggested admin template body (five placeholders):
 Suggested client template body (three placeholders):
 `Hi {{1}}, we received your NyumbaFinder House Hunt request {{2}} and found {{3}} suggested listing(s). The service fee is KSh 2,500 and includes up to five WhatsApp video previews of suitable homes, subject to availability. A representative will contact you about next steps. No payment was taken on the form.`
 
-Because WhatsApp template text is managed in Meta WhatsApp Manager, update and get the client template approved there before relying on the revised wording. Keep the same three body placeholders in the same order.
-
-Create and get both templates approved in WhatsApp Manager before setting their names in Vercel. Only send the client template to renters who selected WhatsApp and agreed to be contacted. The form also provides a WhatsApp click-to-chat link with a prefilled request summary so the renter can start a conversation with the team.
+Because WhatsApp template text is managed in Meta WhatsApp Manager, update and get the client template approved there before relying on revised wording. Keep the same three body placeholders in the same order. Create and get both templates approved before setting their names in Vercel. Only send the client template to renters who selected WhatsApp and agreed to be contacted.
 
 ## Security and behaviour
 
 - Never expose provider tokens to client-side environment variables.
 - Do not put API keys in source control.
 - Notification failures are logged server-side; they do not undo a saved request.
-- The confirmation page does not claim that a message was sent unless the provider accepted it.
-
-
-## Delivery checks before launch
-
-1. In Vercel, set `RESEND_API_KEY`, `RESEND_FROM_EMAIL` (for example `NyumbaFinder <info@nyumba-finder.com>` after domain verification), and `ADMIN_EMAIL`. Apply them to Production and Preview as needed.
-2. For automatic WhatsApp delivery, set `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_ADMIN_PHONE`, `WHATSAPP_ADMIN_TEMPLATE_NAME`, `WHATSAPP_CLIENT_TEMPLATE_NAME`, and `WHATSAPP_TEMPLATE_LANGUAGE`. Both WhatsApp templates must be approved and match the placeholder counts and order above.
-3. Client email is sent when an email address is provided. Client WhatsApp confirmation is sent only when the client selected WhatsApp as their contact preference. Admin notifications are attempted by email and WhatsApp when their respective settings are configured.
-4. Submit a real test request with an inbox and WhatsApp number you control. Verify both the Resend activity log and Meta message logs; a successful website build alone does not prove delivery. Never place API credentials in GitHub.
+- Submit a real test request with an inbox you control. Verify delivery in the Resend activity log; a successful website build alone does not prove delivery.
