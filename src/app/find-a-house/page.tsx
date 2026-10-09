@@ -186,7 +186,6 @@ export default function FindAHousePage() {
     setLocationQuery("");
     setLocationResults([]);
     setLocationOpen(false);
-    setAddingLocation(false);
     setCustomTown("");
   }
 
