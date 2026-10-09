@@ -72,6 +72,7 @@ export default function FindAHousePage() {
   const [locationResults, setLocationResults] = useState<LocationSuggestion[]>([]);
   const [locationBusy, setLocationBusy] = useState(false);
   const [locationOpen, setLocationOpen] = useState(false);
+  const [addingLocation, setAddingLocation] = useState(true);
   const [form, setForm] = useState({
     propertyType: "Apartment",
     bedrooms: 1,
@@ -143,6 +144,7 @@ export default function FindAHousePage() {
     setLocationQuery("");
     setLocationResults([]);
     setLocationOpen(false);
+    setAddingLocation(false);
   }
 
   function removeLocation(value: string) {
@@ -363,7 +365,9 @@ export default function FindAHousePage() {
                     <label htmlFor="location-search" className="block text-sm font-medium">Preferred locations <span className="font-normal text-muted-foreground">(up to 5, in priority order)</span></label>
                     <span className="text-xs text-muted-foreground">{Math.min(5, 1 + form.preferredAreas.length)} of 5 selected</span>
                   </div>
-                  <div className="relative">
+                  {addingLocation && <div className="relative">
+                    <label htmlFor="location-search" className="mb-2 block text-xs text-muted-foreground">Search and select a town, city, estate or neighbourhood</label>
+                    <div className="relative">
                     <MapPin className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                     <Input id="location-search" value={locationQuery} onChange={(event) => { setLocationQuery(event.target.value); setLocationOpen(true); }} onFocus={() => setLocationOpen(true)} placeholder={form.countyName || form.preferredAreas.length ? "Add another location — e.g. Kileleshwa, Kilimani, Kapsabet…" : "Start with a town or estate — e.g. Kapsabet, Kilimani…"} className="h-12 rounded-xl pl-11 pr-10" autoComplete="off" />
                     {locationQuery && <button type="button" onClick={() => { setLocationQuery(""); setLocationResults([]); }} aria-label="Clear location search" className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-1 text-muted-foreground hover:bg-muted"><X className="h-4 w-4" /></button>}
@@ -373,6 +377,8 @@ export default function FindAHousePage() {
                       {locationBusy ? <p className="px-3 py-4 text-sm text-muted-foreground">Finding locations…</p> : locationResults.length ? locationResults.map((option) => <button key={option.id} type="button" onClick={() => chooseLocation(option)} className="flex w-full items-start gap-3 rounded-lg px-3 py-3 text-left transition-colors hover:bg-muted"><MapPin className="mt-0.5 h-4 w-4 shrink-0 text-primary" /><span className="min-w-0 flex-1"><span className="block text-sm font-medium">{option.name}</span><span className="mt-0.5 block text-xs text-muted-foreground">{option.label}</span></span><span className="text-[10px] uppercase tracking-wide text-muted-foreground">{option.level.replace(/_/g, " ").toLowerCase()}</span></button>) : <p className="px-3 py-4 text-sm text-muted-foreground">No suggestions yet. You can enter your county and town below.</p>}
                     </div>
                   )}
+                    </div>}
+                  {!addingLocation && (form.countyName || form.townName || form.preferredAreas.length > 0) && (form.preferredAreas.length + 1) < 5 && <Button type="button" variant="outline" onClick={() => { setAddingLocation(true); setLocationQuery(""); setLocationResults([]); setLocationOpen(false); }} className="mt-3 h-10 w-full rounded-xl border-dashed"><span className="mr-2 text-base">+</span> Add another location</Button>}
                 </div>
                 <div className="mt-3 grid gap-3 sm:grid-cols-2">
                   <div><label htmlFor="county-name" className="mb-2 block text-sm font-medium">County <span className="text-primary">*</span></label><Input id="county-name" value={form.countyName} onChange={(event) => update("countyName", event.target.value)} placeholder="e.g. Nairobi" className="h-12 rounded-xl" /></div>
