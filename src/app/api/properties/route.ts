@@ -356,6 +356,35 @@ export async function POST(request: NextRequest) {
       if (requestedCountyId && matchedNode.countyId !== requestedCountyId) {
         throw new Error('The selected location does not belong to the selected county.');
       }
+
+      // Keep property publication independent from location verification. The listing form
+      // selects a verified town/city, while the free-text area may be new to our directory.
+      // Record a missing area as a non-searchable submission for admin review, but keep the
+      // property itself ACTIVE and searchable by its entered location text.
+      const areaName = location.trim();
+      const areaSlug = areaName.toLowerCase().normalize('NFKD').replace(/[\\u0300-\\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+      const existingArea = await tx.locationNode.findFirst({
+        where: {
+          countyId: matchedNode.countyId,
+          parentId: matchedNode.id,
+          name: { equals: areaName, mode: 'insensitive' },
+        },
+        select: { id: true, searchable: true, source: true },
+      });
+      if (!existingArea && areaSlug) {
+        await tx.locationNode.create({
+          data: {
+            countyId: matchedNode.countyId,
+            parentId: matchedNode.id,
+            level: 'AREA',
+            name: areaName,
+            slug: areaSlug,
+            searchable: false,
+            source: 'USER_SUBMITTED_PENDING_REVIEW',
+          },
+        });
+      }
+
       const latitude = getOptionalNumber(rawData.latitude) ?? matchedNode.latitude ?? undefined;
       const longitude = getOptionalNumber(rawData.longitude) ?? matchedNode.longitude ?? undefined;
       const countyId = matchedNode.countyId;
