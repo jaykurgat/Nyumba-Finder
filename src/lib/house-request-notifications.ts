@@ -73,7 +73,9 @@ async function sendWhatsAppTemplate(to: string, templateName: string, language: 
 
 export async function notifyHouseRequest(request: HouseRequestNotice) {
   const details = requestSummary(request);
-  const adminEmail = process.env.ADMIN_EMAIL;
+  // Keep notification delivery separate from the email used for admin authentication.
+  // ADMIN_EMAIL remains a backward-compatible fallback for existing deployments.
+  const adminEmail = process.env.ADMIN_NOTIFICATION_EMAIL?.trim() || process.env.ADMIN_EMAIL?.trim();
   const adminWhatsApp = process.env.WHATSAPP_ADMIN_PHONE;
   const language = process.env.WHATSAPP_TEMPLATE_LANGUAGE || "en";
   const adminTemplate = process.env.WHATSAPP_ADMIN_TEMPLATE_NAME;
