@@ -73,7 +73,6 @@ export default function FindAHousePage() {
   const [locationResults, setLocationResults] = useState<LocationSuggestion[]>([]);
   const [locationBusy, setLocationBusy] = useState(false);
   const [locationOpen, setLocationOpen] = useState(false);
-  const [addingLocation, setAddingLocation] = useState(true);
   const [customCounty, setCustomCounty] = useState("");
   const [customTown, setCustomTown] = useState("");
   const [customLevel, setCustomLevel] = useState("NEIGHBORHOOD");
@@ -162,7 +161,6 @@ export default function FindAHousePage() {
     setLocationQuery("");
     setLocationResults([]);
     setLocationOpen(false);
-    setAddingLocation(false);
   }
 
   function addCustomLocation() {
@@ -171,10 +169,6 @@ export default function FindAHousePage() {
     const townName = customTown.trim();
     if (name.length < 2) { setError("Enter the name of the location you want to add."); return; }
     if (countyName.length < 2) { setError("Enter the parent county for this location."); return; }
-    if (["ESTATE", "NEIGHBORHOOD", "AREA", "VILLAGE", "LOCALITY"].includes(customLevel) && !townName) {
-      setError("Add the town or nearest known city for this estate, area or neighbourhood where possible.");
-      return;
-    }
     const areaName = ["ESTATE", "NEIGHBORHOOD", "AREA", "VILLAGE", "LOCALITY"].includes(customLevel) ? name : "";
     const resolvedTown = ["TOWN", "CITY"].includes(customLevel) ? name : townName;
     const label = [name, resolvedTown && resolvedTown !== name ? resolvedTown : "", countyName].filter(Boolean).join(", ");
