@@ -6,7 +6,7 @@ import { getCurrentUser } from '@/lib/user-auth';
 export async function Header() {
   const user = await getCurrentUser();
   const accountLabel = user
-    ? user.profile?.displayName || user.profile?.firstName || user.email
+    ? user.profile?.firstName?.trim() || user.profile?.displayName?.trim().split(/\s+/)[0] || user.email || 'Account'
     : 'Account';
 
   return (

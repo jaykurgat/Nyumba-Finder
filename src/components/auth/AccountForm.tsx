@@ -13,7 +13,8 @@ export function AccountForm({ mode }: { mode: Mode }) {
   const router = useRouter();
   const search = useSearchParams();
   const [email, setEmail] = useState('');
-  const [name, setName] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [message, setMessage] = useState('');
@@ -27,7 +28,7 @@ export function AccountForm({ mode }: { mode: Mode }) {
     try {
       const endpoint = mode === 'login' ? 'login' : mode === 'register' ? 'register' : mode === 'forgot' ? 'forgot-password' : 'reset-password';
       const body = mode === 'login' || mode === 'forgot' ? { email, ...(mode === 'login' ? { password } : {}) } :
-        mode === 'register' ? { email, password, name } : { token: search.get('token') || '', password };
+        mode === 'register' ? { email, password, firstName: firstName.trim(), lastName: lastName.trim() } : { token: search.get('token') || '', password };
       const response = await fetch('/api/auth/' + endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.message || 'Something went wrong. Please try again.');
@@ -60,7 +61,10 @@ export function AccountForm({ mode }: { mode: Mode }) {
         <div className="my-5 flex items-center gap-3 text-xs text-muted-foreground"><span className="h-px flex-1 bg-border" />OR CONTINUE WITH EMAIL<span className="h-px flex-1 bg-border" /></div>
       </>}
       <form onSubmit={submit} className="space-y-4">
-        {mode === 'register' && <label className="block text-sm font-medium">Full name<input className={inputClass} value={name} onChange={e => setName(e.target.value)} autoComplete="name" maxLength={100} /></label>}
+        {mode === 'register' && <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <label className="block text-sm font-medium">First name<input className={inputClass} value={firstName} onChange={e => setFirstName(e.target.value)} autoComplete="given-name" maxLength={80} required /></label>
+          <label className="block text-sm font-medium">Last name<input className={inputClass} value={lastName} onChange={e => setLastName(e.target.value)} autoComplete="family-name" maxLength={80} required /></label>
+        </div>}
         {mode !== 'reset' && <label className="block text-sm font-medium">Email address<div className="relative"><Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" /><input className={inputClass + ' pl-9'} type="email" value={email} onChange={e => setEmail(e.target.value)} autoComplete="email" required /></div></label>}
         {(mode === 'login' || mode === 'register' || mode === 'reset') && <label className="block text-sm font-medium">{mode === 'reset' ? 'New password' : 'Password'}<div className="relative"><LockKeyhole className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" /><input className={inputClass + ' pl-9 pr-10'} type={showPassword ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)} autoComplete={mode === 'login' ? 'current-password' : 'new-password'} minLength={10} maxLength={128} required /><button type="button" className="absolute right-3 top-2.5 text-muted-foreground hover:text-foreground" aria-label={showPassword ? 'Hide password' : 'Show password'} onClick={() => setShowPassword(v => !v)}>{showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</button></div>{(mode === 'register' || mode === 'reset') && <span className="mt-1 block text-xs font-normal text-muted-foreground">Use at least 10 characters.</span>}</label>}
         {error && <p role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p>}

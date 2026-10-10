@@ -40,12 +40,15 @@ export async function POST(request: NextRequest, context: Context) {
   if (action === 'register') {
     const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : '';
     const password = typeof body.password === 'string' ? body.password : '';
-    const name = typeof body.name === 'string' ? body.name.trim().slice(0, 100) : '';
+    const firstName = typeof body.firstName === 'string' ? body.firstName.trim().slice(0, 80) : '';
+    const lastName = typeof body.lastName === 'string' ? body.lastName.trim().slice(0, 80) : '';
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return json('Enter a valid email address.', 400);
+    if (!firstName || !lastName) return json('Enter both your first name and last name.', 400);
     if (password.length < 10 || password.length > 128) return json('Use a password between 10 and 128 characters.', 400);
     try {
+      const displayName = [firstName, lastName].filter(Boolean).join(' ');
       const user = await prisma.user.create({
-        data: { email, passwordHash: await hashPassword(password), profile: { create: { displayName: name || email.split('@')[0], firstName: name || null } } },
+        data: { email, passwordHash: await hashPassword(password), profile: { create: { displayName, firstName, lastName } } },
         select: { id: true },
       });
       const emailSent = await sendAuthEmail({
