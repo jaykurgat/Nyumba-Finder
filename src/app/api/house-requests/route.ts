@@ -33,6 +33,7 @@ const schema = z.object({
   mustHaves: z.array(z.string().max(60)).max(12).default([]),
   notes: z.string().trim().max(1000).optional().default(""),
   consent: z.literal(true),
+  agentSharingConsent: z.literal(true),
   website: z.string().max(0).optional().default(""),
 }).refine((value) => value.minRent === undefined || value.minRent <= value.maxRent, {
   message: "Minimum budget cannot exceed maximum budget.",
@@ -79,6 +80,7 @@ export async function POST(request: NextRequest) {
         mustHaves: data.mustHaves,
         notes: data.notes || null,
         consent: data.consent,
+        agentSharingConsent: data.agentSharingConsent,
       },
     });
 

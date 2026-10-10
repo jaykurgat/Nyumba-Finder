@@ -190,6 +190,15 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      <section className="border-t py-10">
+        <div className="mx-auto max-w-7xl px-6 md:px-10 lg:px-12">
+          <div className="flex flex-col gap-5 rounded-2xl border border-[#e0e6da] bg-[#f5f7f1] p-6 sm:flex-row sm:items-center sm:justify-between sm:p-8">
+            <div><p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#718366]">For local housing professionals</p><h2 className="mt-2 text-xl font-semibold tracking-tight">Help renters find real homes closer to them.</h2><p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">Join the NyumbaFinder Agent Network to receive House Hunt enquiries matched to your coverage areas and rent range.</p></div>
+            <Button asChild className="shrink-0 rounded-xl bg-[#53694b] hover:bg-[#43563c]"><Link href="/agents/join">Join the agent network <ArrowRight className="ml-2 h-4 w-4" /></Link></Button>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }

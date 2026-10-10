@@ -270,6 +270,7 @@ export default function FindAHousePage() {
           maxRent: Number(form.maxRent),
           preferredAreas: form.preferredAreas,
           preferredLocations: form.preferredLocations,
+          agentSharingConsent: form.consent,
         }),
       });
       const data = await response.json();
@@ -500,7 +501,7 @@ export default function FindAHousePage() {
                 </div>
                 <div className="mt-4"><label htmlFor="renter-email" className="mb-2 block text-sm font-medium">Email address <span className="text-muted-foreground">(recommended for confirmation)</span></label><Input id="renter-email" type="email" autoComplete="email" value={form.email} onChange={(event) => update("email", event.target.value)} placeholder="you@example.com" className="h-12 rounded-xl" /></div>
                 <div className="mt-6"><p className="text-sm font-medium">How would you prefer us to contact you?</p><div className="mt-3 grid gap-2 sm:grid-cols-3">{[{value:"WHATSAPP",label:"WhatsApp",icon:MessageCircle},{value:"PHONE",label:"Phone call",icon:Clock3},{value:"EMAIL",label:"Email",icon:Mail}].map((item) => { const Icon = item.icon; return <button key={item.value} type="button" onClick={() => update("contactPreference", item.value)} className={"flex items-center justify-center gap-2 rounded-xl border px-3 py-3 text-sm transition-colors " + (form.contactPreference === item.value ? "border-[#627957] bg-[#edf2e8] font-medium text-[#405638]" : "hover:bg-muted")}><Icon className="h-4 w-4" />{item.label}</button>; })}</div></div>
-                <label className="mt-6 flex cursor-pointer items-start gap-3 rounded-xl border p-4 text-sm leading-6"><input type="checkbox" checked={form.consent} onChange={(event) => update("consent", event.target.checked)} className="mt-1 h-4 w-4 accent-[#627957]" /><span>I agree that NyumbaFinder may use these details to respond to my house search and contact me about suitable listings. My contact details won't be displayed publicly.</span></label>
+                <label className="mt-6 flex cursor-pointer items-start gap-3 rounded-xl border p-4 text-sm leading-6"><input type="checkbox" checked={form.consent} onChange={(event) => update("consent", event.target.checked)} className="mt-1 h-4 w-4 accent-[#627957]" /><span>I agree that NyumbaFinder may use these details to respond to my house search and contact me about suitable listings. I also consent to sharing my contact details with approved, matching local agents so they can respond to my request. My details won't be displayed publicly on the website.</span></label>
                 <div className="hidden" aria-hidden="true"><label htmlFor="website">Website</label><input id="website" tabIndex={-1} autoComplete="off" value={form.website} onChange={(event) => update("website", event.target.value)} /></div>
               </section>
             )}

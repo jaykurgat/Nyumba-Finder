@@ -45,6 +45,19 @@ enum ReportStatus {
   DISMISSED
 }
 
+enum AgentStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  SUSPENDED
+}
+
+enum AgentRequestStatus {
+  NOTIFIED
+  RESPONDED
+  UNAVAILABLE
+}
+
 model User {
   id              String          @id @default(uuid()) @db.Uuid
   email           String?         @unique
@@ -423,6 +436,8 @@ model HouseRequest {
   mustHaves         String[] @default([])
   notes             String?
   consent           Boolean  @default(false)
+  agentSharingConsent Boolean @default(false)
+  agentNotifications AgentRequestNotification[]
   createdAt         DateTime @default(now())
 
   @@index([createdAt])
@@ -430,6 +445,48 @@ model HouseRequest {
   @@index([maxRent])
 }
 
+
+
+model Agent {
+  id               String      @id @default(uuid()) @db.Uuid
+  name             String
+  businessName     String?
+  email            String      @unique
+  phone            String
+  whatsapp         String?
+  agentType        String
+  coverageCounties String[]    @default([])
+  coverageTowns    String[]    @default([])
+  coverageAreas    String[]    @default([])
+  propertyTypes    String[]    @default([])
+  minRent          Float?
+  maxRent          Float?
+  canVideoPreview  Boolean     @default(false)
+  notes            String?
+  consent          Boolean     @default(false)
+  status           AgentStatus @default(PENDING)
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+  notifications    AgentRequestNotification[]
+
+  @@index([status, createdAt])
+}
+
+model AgentRequestNotification {
+  id            String             @id @default(uuid()) @db.Uuid
+  agentId       String             @db.Uuid
+  houseRequestId String            @db.Uuid
+  status        AgentRequestStatus @default(NOTIFIED)
+  sentAt        DateTime           @default(now())
+  respondedAt   DateTime?
+  responseNote  String?
+  agent         Agent              @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  houseRequest  HouseRequest       @relation(fields: [houseRequestId], references: [id], onDelete: Cascade)
+
+  @@unique([agentId, houseRequestId])
+  @@index([houseRequestId, sentAt])
+  @@index([agentId, status])
+}
 
 model AuthIdentity {
   id                String   @id @default(uuid()) @db.Uuid

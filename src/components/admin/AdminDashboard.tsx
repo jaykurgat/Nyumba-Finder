@@ -40,6 +40,8 @@ export default function AdminDashboard() {
           <Link href="/admin" className="font-semibold">NyumbaFinder Admin</Link>
           <nav className="flex gap-4 text-sm text-muted-foreground">
             <Link href="/admin/properties">Properties</Link>
+            <Link href="/admin/agents">Agents</Link>
+            <Link href="/admin/house-requests">House Hunt</Link>
             <Link href="/admin/promotions">Sponsored listings</Link>
             <Link href="/admin/reports">Reports</Link>
             <Link href="/admin/users">Users</Link>
