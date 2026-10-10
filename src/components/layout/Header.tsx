@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Heart, Search, PlusCircle } from 'lucide-react';
+import { Heart, Search, PlusCircle, UserRound } from 'lucide-react';
 
 export function Header() {
   return (
@@ -14,7 +14,7 @@ export function Header() {
           <Button variant="ghost" asChild><Link href="/properties?view=locations">Locations</Link></Button>
           <Button variant="ghost" asChild><Link href="/properties?view=saved"><Heart className="mr-2 h-4 w-4" />Saved</Link></Button>
         </nav>
-        <div className="ml-auto"><Button variant="outline" asChild><Link href="/list-property"><PlusCircle className="mr-2 h-4 w-4" />List Your House</Link></Button></div>
+        <div className="ml-auto flex items-center gap-2"><Button variant="ghost" asChild><Link href="/account?mode=login"><UserRound className="mr-2 h-4 w-4" />Account</Link></Button><Button variant="outline" asChild><Link href="/list-property"><PlusCircle className="mr-2 h-4 w-4" />List Your House</Link></Button></div>
       </div>
     </header>
   );
