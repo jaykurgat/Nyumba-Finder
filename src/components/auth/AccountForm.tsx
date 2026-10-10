@@ -32,7 +32,8 @@ export function AccountForm({ mode }: { mode: Mode }) {
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.message || 'Something went wrong. Please try again.');
       setMessage(data.message || 'Signed in successfully.');
-      if (mode === 'login' || mode === 'register') { router.push('/'); router.refresh(); }
+      if (mode === 'login') { router.push('/'); router.refresh(); }
+      if (mode === 'register') { router.push(data.emailSent === false ? '/account?welcome=failed' : '/account?welcome=sent'); router.refresh(); }
       if (mode === 'reset') window.setTimeout(() => router.push('/account?mode=login&reset=success'), 900);
     } catch (e) { setError(e instanceof Error ? e.message : 'Something went wrong. Please try again.'); }
     finally { setBusy(false); }

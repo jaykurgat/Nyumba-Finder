@@ -3,6 +3,7 @@ import { createHash, randomBytes, scrypt as scryptCallback, timingSafeEqual } fr
 import { promisify } from 'node:util';
 import { prisma } from '@/lib/prisma';
 import { createUserSessionToken, randomToken, USER_COOKIE, USER_SESSION_TTL } from '@/lib/user-auth';
+import { sendAuthEmail } from '@/lib/auth-email';
 
 const scrypt = promisify(scryptCallback);
 type Context = { params: Promise<{ action: string[] }> };
@@ -47,7 +48,16 @@ export async function POST(request: NextRequest, context: Context) {
         data: { email, passwordHash: await hashPassword(password), profile: { create: { displayName: name || email.split('@')[0], firstName: name || null } } },
         select: { id: true },
       });
-      return setSession(NextResponse.json({ authenticated: true, message: 'Account created successfully.' }, { status: 201 }), user.id);
+      const emailSent = await sendAuthEmail({
+        to: email,
+        subject: 'Welcome to NyumbaFinder',
+        html: '<div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;color:#24332b"><h2>Welcome to NyumbaFinder</h2><p>Your account has been created successfully.</p><p>You can now sign in to manage your NyumbaFinder account and continue your house search.</p><p><a href="' + baseUrl(request) + '/account" style="display:inline-block;padding:12px 18px;background:#287b46;color:#fff;text-decoration:none;border-radius:8px">Open your account</a></p><p>If you did not create this account, please contact NyumbaFinder support.</p></div>',
+        text: 'Welcome to NyumbaFinder. Your account has been created successfully. Open your account: ' + baseUrl(request) + '/account. If you did not create this account, please contact NyumbaFinder support.',
+      }).then(() => true).catch((error) => { console.error('ACCOUNT_WELCOME_EMAIL_FAILED', error); return false; });
+      const message = emailSent
+        ? 'Account created successfully. A welcome email has been sent.'
+        : 'Account created successfully, but we could not send the welcome email. You can continue using your account.';
+      return setSession(NextResponse.json({ authenticated: true, message, emailSent }, { status: 201 }), user.id);
     } catch (error: any) {
       if (error?.code === 'P2002') return json('An account with that email already exists. Sign in or reset your password.', 409);
       console.error('ACCOUNT_REGISTER_FAILED', error);
@@ -72,29 +82,36 @@ export async function POST(request: NextRequest, context: Context) {
     const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : '';
     const message = 'If an account exists for that email, a password reset link will be sent shortly.';
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return json(message);
+    if (!process.env.RESEND_API_KEY || !process.env.RESEND_FROM_EMAIL) {
+      console.error('PASSWORD_RESET_EMAIL_NOT_CONFIGURED: set RESEND_API_KEY and RESEND_FROM_EMAIL');
+      return json('Password recovery email is temporarily unavailable. Please try again later or contact support.', 503);
+    }
     try {
       const user = await prisma.user.findUnique({ where: { email }, select: { id: true, email: true } });
-      if (user?.email) {
-        await prisma.passwordResetToken.deleteMany({ where: { userId: user.id } });
-        const token = randomToken();
-        await prisma.passwordResetToken.create({
-          data: { userId: user.id, tokenHash: createHash('sha256').update(token).digest('hex'), expiresAt: new Date(Date.now() + 30 * 60 * 1000) },
+      if (!user?.email) return json(message);
+      await prisma.passwordResetToken.deleteMany({ where: { userId: user.id } });
+      const token = randomToken();
+      const record = await prisma.passwordResetToken.create({
+        data: { userId: user.id, tokenHash: createHash('sha256').update(token).digest('hex'), expiresAt: new Date(Date.now() + 30 * 60 * 1000) },
+        select: { id: true },
+      });
+      const url = baseUrl(request) + '/account?mode=reset&token=' + encodeURIComponent(token);
+      try {
+        await sendAuthEmail({
+          to: user.email,
+          subject: 'Reset your NyumbaFinder password',
+          html: '<div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;color:#24332b"><h2>Reset your password</h2><p>We received a request to reset your NyumbaFinder password.</p><p><a href="' + url + '" style="display:inline-block;padding:12px 18px;background:#287b46;color:#fff;text-decoration:none;border-radius:8px">Reset password</a></p><p>This link expires in 30 minutes and can only be used once. If you did not request this, ignore this email.</p></div>',
+          text: 'We received a request to reset your NyumbaFinder password. Use this link within 30 minutes: ' + url + '. The link can only be used once. If you did not request this, ignore this email.',
         });
-        const apiKey = process.env.RESEND_API_KEY;
-        const from = process.env.RESEND_FROM_EMAIL;
-        if (apiKey && from) {
-          const url = baseUrl(request) + '/account?mode=reset&token=' + encodeURIComponent(token);
-          const sent = await fetch('https://api.resend.com/emails', {
-            method: 'POST', headers: { Authorization: 'Bearer ' + apiKey, 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              from, to: [user.email], subject: 'Reset your NyumbaFinder password',
-              html: '<div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;color:#24332b"><h2>Reset your password</h2><p>We received a request to reset your NyumbaFinder password.</p><p><a href="' + url + '" style="display:inline-block;padding:12px 18px;background:#287b46;color:#fff;text-decoration:none;border-radius:8px">Reset password</a></p><p>This link expires in 30 minutes and can only be used once. If you did not request this, ignore this email.</p></div>',
-            }),
-          });
-          if (!sent.ok) console.error('PASSWORD_RESET_EMAIL_FAILED', sent.status, await sent.text());
-        } else console.error('PASSWORD_RESET_EMAIL_NOT_CONFIGURED: set RESEND_API_KEY and RESEND_FROM_EMAIL');
+      } catch (error) {
+        await prisma.passwordResetToken.delete({ where: { id: record.id } }).catch(() => undefined);
+        console.error('PASSWORD_RESET_EMAIL_FAILED', error);
+        return json('We could not send the password recovery email. Please try again later.', 503);
       }
-    } catch (error) { console.error('PASSWORD_RESET_REQUEST_FAILED', error); }
+    } catch (error) {
+      console.error('PASSWORD_RESET_REQUEST_FAILED', error);
+      return json('Password recovery could not be started. Please try again later.', 500);
+    }
     return json(message);
   }
   if (action === 'reset-password') {
@@ -102,14 +119,28 @@ export async function POST(request: NextRequest, context: Context) {
     const password = typeof body.password === 'string' ? body.password : '';
     if (!token || password.length < 10 || password.length > 128) return json('Use a valid reset link and a password between 10 and 128 characters.', 400);
     const tokenHash = createHash('sha256').update(token).digest('hex');
-    const record = await prisma.passwordResetToken.findUnique({ where: { tokenHash } });
+    const record = await prisma.passwordResetToken.findUnique({
+      where: { tokenHash },
+      include: { user: { select: { email: true } } },
+    });
     if (!record || record.usedAt || record.expiresAt <= new Date()) return json('This reset link is invalid or expired. Request a new one.', 400);
     await prisma.$transaction([
       prisma.user.update({ where: { id: record.userId }, data: { passwordHash: await hashPassword(password) } }),
       prisma.passwordResetToken.update({ where: { id: record.id }, data: { usedAt: new Date() } }),
       prisma.passwordResetToken.deleteMany({ where: { userId: record.userId, id: { not: record.id } } }),
     ]);
-    return json('Password updated. You can now sign in.');
+    let notificationSent = true;
+    if (record.user.email) {
+      notificationSent = await sendAuthEmail({
+        to: record.user.email,
+        subject: 'Your NyumbaFinder password was changed',
+        html: '<div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;color:#24332b"><h2>Password changed</h2><p>Your NyumbaFinder password has been changed successfully.</p><p>If you did not make this change, contact NyumbaFinder support immediately.</p><p><a href="' + baseUrl(request) + '/account" style="color:#287b46">Go to NyumbaFinder</a></p></div>',
+        text: 'Your NyumbaFinder password has been changed successfully. If you did not make this change, contact NyumbaFinder support immediately. Sign in: ' + baseUrl(request) + '/account',
+      }).then(() => true).catch((error) => { console.error('PASSWORD_CHANGED_EMAIL_FAILED', error); return false; });
+    }
+    return json(notificationSent
+      ? 'Password updated successfully. A confirmation email has been sent. You can now sign in.'
+      : 'Password updated successfully, but we could not send the confirmation email. You can now sign in.');
   }
   return json('Unknown authentication action.', 404);
 }
