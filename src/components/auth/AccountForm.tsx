@@ -73,6 +73,5 @@ export function AccountForm({ mode }: { mode: Mode }) {
         {(mode === 'forgot' || mode === 'reset') && <Link className="text-muted-foreground hover:text-foreground" href="/account?mode=login">Back to sign in</Link>}
       </div>
     </div>
-    <p className="mt-5 text-center text-xs leading-5 text-muted-foreground">Your account is separate from NyumbaFinder administrator access.</p>
   </section>;
 }
