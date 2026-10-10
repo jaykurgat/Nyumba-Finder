@@ -70,7 +70,7 @@ export async function getMatchingAgents(requestId: string) {
     const townMatch = agent.coverageTowns.some((item) => towns.includes(normalizeAgentMatch(item)));
     const areaMatch = agent.coverageAreas.some((item) => areas.some((term) => term.includes(normalizeAgentMatch(item)) || normalizeAgentMatch(item).includes(term)));
     const locationMatch = countyMatch || townMatch || areaMatch;
-    const typeMatch = agent.propertyTypes.length === 0 || agent.propertyTypes.includes("Any type") || agent.propertyTypes.includes(request.propertyType);
+    const typeMatch = agent.propertyTypes.length === 0 || agent.propertyTypes.includes("Any type") || request.propertyType === "Any type" || agent.propertyTypes.includes(request.propertyType);
     const rentMatch = (agent.minRent == null || agent.minRent <= request.maxRent) && (agent.maxRent == null || agent.maxRent >= (request.minRent ?? 0));
     return locationMatch && typeMatch && rentMatch;
   });
