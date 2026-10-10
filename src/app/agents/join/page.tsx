@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import { ArrowRight, BadgeCheck, Building2, CheckCircle2, MapPin, Plus, ShieldCheck, Trash2, Video } from "lucide-react";
+import { ArrowRight, BadgeCheck, Building2, CheckCircle2, MapPin, ShieldCheck, Trash2, Video } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -141,12 +141,14 @@ export default function AgentJoinPage() {
     return () => { cancelled = true; };
   }, [activeTown?.id]);
 
-  function addCounty() {
-    if (selectedCounties.length >= 20) { setError("You can select up to 20 counties."); return; }
-    const county = counties.find((item) => item.id === countyToAdd);
-    if (!county || selectedCounties.some((item) => item.id === county.id)) return;
+  function selectCounty(countyId: string) {
+    if (!countyId) return;
+    if (selectedCounties.length >= 20) { setError("You can select up to 20 counties."); setCountyToAdd(""); return; }
+    const county = counties.find((item) => item.id === countyId);
+    if (!county || selectedCounties.some((item) => item.id === county.id)) { setCountyToAdd(""); return; }
     setSelectedCounties((current) => [...current, county]);
     setCountyToAdd("");
+    setError("");
   }
   function removeCounty(county: CountyOption) {
     setSelectedCounties((current) => current.filter((item) => item.id !== county.id));
@@ -154,13 +156,17 @@ export default function AgentJoinPage() {
     setSelectedAreas((current) => current.filter((item) => item.countyId !== county.id));
     if (activeTown?.countyId === county.id) setActiveTownKey("");
   }
-  function addTown() {
-    if (selectedTowns.length >= 30) { setError("You can add up to 30 towns or cities."); return; }
-    const town = townOptions.find((item) => item.id === townToAdd);
-    if (!town || selectedTowns.some((item) => locationKey(item) === locationKey(town))) return;
-    setSelectedTowns((current) => [...current, town]);
+  function selectTown(townId: string) {
+    if (!townId) return;
+    if (selectedTowns.length >= 30) { setError("You can add up to 30 towns or cities."); setTownToAdd(""); return; }
+    const town = townOptions.find((item) => item.id === townId);
+    if (!town) return;
     setActiveTownKey(locationKey(town));
+    if (!selectedTowns.some((item) => locationKey(item) === locationKey(town))) {
+      setSelectedTowns((current) => [...current, town]);
+    }
     setTownToAdd("");
+    setError("");
   }
   function addManualTown() {
     if (selectedTowns.length >= 30) { setError("You can add up to 30 towns or cities."); return; }
@@ -180,12 +186,16 @@ export default function AgentJoinPage() {
     setSelectedAreas((current) => current.filter((item) => !(item.countyName === town.countyName && item.parentName === town.name)));
     if (activeTownKey === locationKey(town)) setActiveTownKey("");
   }
-  function addArea() {
-    if (selectedAreas.length >= 50) { setError("You can add up to 50 estates or areas."); return; }
-    const area = areaOptions.find((item) => item.id === areaToAdd);
-    if (!area || selectedAreas.some((item) => locationKey(item) === locationKey(area))) return;
-    setSelectedAreas((current) => [...current, { ...area, parentName: area.parentName || activeTown?.name }]);
+  function selectArea(areaId: string) {
+    if (!areaId) return;
+    if (selectedAreas.length >= 50) { setError("You can add up to 50 estates or areas."); setAreaToAdd(""); return; }
+    const area = areaOptions.find((item) => item.id === areaId);
+    if (!area) return;
+    if (!selectedAreas.some((item) => locationKey(item) === locationKey(area))) {
+      setSelectedAreas((current) => [...current, { ...area, parentName: area.parentName || activeTown?.name }]);
+    }
     setAreaToAdd("");
+    setError("");
   }
   function addManualArea() {
     if (selectedAreas.length >= 50) { setError("You can add up to 50 estates or areas."); return; }
@@ -281,11 +291,10 @@ export default function AgentJoinPage() {
                   <div className="mt-4 rounded-2xl border border-[#e5e9e1] bg-[#fbfcf9] p-4 sm:p-5">
                     <label className="mb-1.5 block text-sm font-medium">Counties served *</label>
                     <div className="flex gap-2">
-                      <select value={countyToAdd} onChange={(event) => setCountyToAdd(event.target.value)} disabled={countiesLoading || Boolean(countiesError)} className="h-11 min-w-0 flex-1 rounded-xl border border-[#dfe5da] bg-white px-3 text-sm outline-none focus:border-[#91a386]">
+                      <select value={countyToAdd} onChange={(event) => selectCounty(event.target.value)} disabled={countiesLoading || Boolean(countiesError)} className="h-11 w-full rounded-xl border border-[#dfe5da] bg-white px-3 text-sm outline-none focus:border-[#91a386]">
                         <option value="">{countiesLoading ? "Loading counties…" : "Select a county to add"}</option>
                         {counties.filter((county) => !selectedCounties.some((item) => item.id === county.id)).map((county) => <option key={county.id} value={county.id}>{county.name}</option>)}
                       </select>
-                      <Button type="button" variant="outline" onClick={addCounty} disabled={!countyToAdd} className="h-11 rounded-xl border-[#dfe5da]"><Plus className="mr-1.5 h-4 w-4" />Add</Button>
                     </div>
                     {countiesError && <p role="alert" className="mt-2 text-xs text-red-700">{countiesError}</p>}
                     {selectedCounties.length > 0 && <div className="mt-3 flex flex-wrap gap-2">{selectedCounties.map((county) => <span key={county.id} className="inline-flex items-center gap-2 rounded-full border border-[#dce5d5] bg-[#edf2e8] px-3 py-1.5 text-sm text-[#43583b]">{county.name}<button type="button" onClick={() => removeCounty(county)} aria-label={"Remove " + county.name} className="rounded-full p-0.5 hover:bg-white"><Trash2 className="h-3.5 w-3.5" /></button></span>)}</div>}
@@ -295,11 +304,10 @@ export default function AgentJoinPage() {
                   <div className="mt-4 rounded-2xl border border-[#e5e9e1] p-4 sm:p-5">
                     <div className="flex flex-wrap items-center justify-between gap-2"><label className="text-sm font-medium">Towns / cities served</label><span className="text-xs text-[#788174]">Optional, recommended</span></div>
                     <div className="mt-3 flex gap-2">
-                      <select value={townToAdd} onChange={(event) => setTownToAdd(event.target.value)} disabled={!selectedCounties.length || townsLoading || !townOptions.length} className="h-11 min-w-0 flex-1 rounded-xl border border-[#dfe5da] bg-white px-3 text-sm outline-none focus:border-[#91a386]">
+                      <select value={townToAdd} onChange={(event) => selectTown(event.target.value)} disabled={!selectedCounties.length || townsLoading || !townOptions.length} className="h-11 w-full rounded-xl border border-[#dfe5da] bg-white px-3 text-sm outline-none focus:border-[#91a386]">
                         <option value="">{!selectedCounties.length ? "Select counties first" : townsLoading ? "Loading towns and cities…" : townOptions.length ? "Select a town or city" : "No towns listed for these counties"}</option>
                         {townOptions.filter((town) => !selectedTowns.some((item) => locationKey(item) === locationKey(town))).map((town) => <option key={town.id || locationKey(town)} value={town.id || ""}>{town.name} · {town.countyName}</option>)}
                       </select>
-                      <Button type="button" variant="outline" onClick={addTown} disabled={!townToAdd} className="h-11 rounded-xl border-[#dfe5da]"><Plus className="mr-1.5 h-4 w-4" />Add</Button>
                     </div>
                     <button type="button" onClick={() => { setManualTownOpen((open) => !open); setManualTownCounty(selectedCounties[0]?.id || ""); }} disabled={!selectedCounties.length} className="mt-3 text-xs font-medium text-[#53694b] underline underline-offset-4">Town/city not listed? Add it manually</button>
                     {manualTownOpen && <div className="mt-3 grid gap-2 rounded-xl bg-[#f7f8f4] p-3 sm:grid-cols-[1fr_1fr_auto]">
@@ -315,8 +323,7 @@ export default function AgentJoinPage() {
                     <p className="mt-1 text-xs leading-5 text-[#788174]">Choose a town to see its saved area suggestions, or add a local name if it is missing.</p>
                     <div className="mt-3"><label className="mb-1.5 block text-xs font-medium">Town / city for these areas</label><select value={activeTownKey} onChange={(event) => setActiveTownKey(event.target.value)} disabled={!selectedTowns.length} className="h-11 w-full rounded-xl border border-[#dfe5da] bg-white px-3 text-sm outline-none focus:border-[#91a386]"><option value="">Select a town or city</option>{selectedTowns.map((town) => <option key={locationKey(town)} value={locationKey(town)}>{town.name} · {town.countyName}</option>)}</select></div>
                     <div className="mt-3 flex gap-2">
-                      <select value={areaToAdd} onChange={(event) => setAreaToAdd(event.target.value)} disabled={!activeTown || areasLoading || !areaOptions.length} className="h-11 min-w-0 flex-1 rounded-xl border border-[#dfe5da] bg-white px-3 text-sm outline-none focus:border-[#91a386]"><option value="">{!activeTown ? "Select a town first" : areasLoading ? "Loading area suggestions…" : areaOptions.length ? "Select an estate or area" : "No saved areas for this town"}</option>{areaOptions.filter((area) => !selectedAreas.some((item) => locationKey(item) === locationKey(area))).map((area) => <option key={area.id || locationKey(area)} value={area.id || ""}>{area.name} · {area.level.toLowerCase().replace(/_/g, " ")}{area.parentName ? " · " + area.parentName : ""}</option>)}</select>
-                      <Button type="button" variant="outline" onClick={addArea} disabled={!areaToAdd} className="h-11 rounded-xl border-[#dfe5da]"><Plus className="mr-1.5 h-4 w-4" />Add</Button>
+                      <select value={areaToAdd} onChange={(event) => selectArea(event.target.value)} disabled={!activeTown || areasLoading || !areaOptions.length} className="h-11 w-full rounded-xl border border-[#dfe5da] bg-white px-3 text-sm outline-none focus:border-[#91a386]"><option value="">{!activeTown ? "Select a town first" : areasLoading ? "Loading area suggestions…" : areaOptions.length ? "Select an estate or area" : "No saved areas for this town"}</option>{areaOptions.filter((area) => !selectedAreas.some((item) => locationKey(item) === locationKey(area))).map((area) => <option key={area.id || locationKey(area)} value={area.id || ""}>{area.name} · {area.level.toLowerCase().replace(/_/g, " ")}{area.parentName ? " · " + area.parentName : ""}</option>)}</select>
                     </div>
                     <button type="button" onClick={() => { setManualAreaOpen((open) => !open); setManualAreaTown(activeTown ? locationKey(activeTown) : selectedTowns[0] ? locationKey(selectedTowns[0]) : ""); }} disabled={!selectedTowns.length} className="mt-3 text-xs font-medium text-[#53694b] underline underline-offset-4">Estate or area not listed? Add it manually</button>
                     {manualAreaOpen && <div className="mt-3 grid gap-2 rounded-xl bg-[#f7f8f4] p-3 sm:grid-cols-2">
