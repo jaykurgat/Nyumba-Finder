@@ -75,6 +75,9 @@ export default function FindAHousePage() {
   const [locationOpen, setLocationOpen] = useState(false);
   const [customCounty, setCustomCounty] = useState("");
   const [customTown, setCustomTown] = useState("");
+  const [counties, setCounties] = useState<Array<{ id: string; name: string }>>([]);
+  const [customTowns, setCustomTowns] = useState<LocationSuggestion[]>([]);
+  const [customTownManual, setCustomTownManual] = useState(false);
   const [customLevel, setCustomLevel] = useState("NEIGHBORHOOD");
   const [form, setForm] = useState({
     propertyType: "Apartment",
@@ -99,6 +102,16 @@ export default function FindAHousePage() {
   const update = (key: keyof typeof form, value: string | number | boolean | string[]) => {
     setForm((current) => ({ ...current, [key]: value }));
   };
+
+  useEffect(() => {
+    let cancelled = false;
+    Promise.all([fetch("/api/locations?kind=counties", { cache: "no-store" }).then((response) => response.json()), fetch("/api/locations?level=TOWN", { cache: "no-store" }).then((response) => response.json()), fetch("/api/locations?level=CITY", { cache: "no-store" }).then((response) => response.json())]).then(([countyData, townData, cityData]) => {
+      if (cancelled) return;
+      setCounties(Array.isArray(countyData.counties) ? countyData.counties : []);
+      setCustomTowns([...(Array.isArray(townData.locations) ? townData.locations : []), ...(Array.isArray(cityData.locations) ? cityData.locations : [])]);
+    }).catch(() => { if (!cancelled) { setCounties([]); setCustomTowns([]); } });
+    return () => { cancelled = true; };
+  }, []);
 
   useEffect(() => {
     const query = locationQuery.trim();
@@ -441,8 +454,8 @@ export default function FindAHousePage() {
                       <div className="mt-3 grid gap-3 sm:grid-cols-2">
                         <div><label htmlFor="custom-location-name" className="mb-1.5 block text-xs font-medium">Location name *</label><Input id="custom-location-name" value={locationQuery} onChange={(event) => setLocationQuery(event.target.value)} placeholder="Estate, village or town name" className="h-10 rounded-lg" /></div>
                         <div><label htmlFor="custom-location-level" className="mb-1.5 block text-xs font-medium">Type of location *</label><select id="custom-location-level" value={customLevel} onChange={(event) => setCustomLevel(event.target.value)} className="h-10 w-full rounded-lg border bg-background px-3 text-sm"><option value="TOWN">Town</option><option value="CITY">City</option><option value="ESTATE">Estate</option><option value="NEIGHBORHOOD">Neighbourhood</option><option value="AREA">Area</option><option value="VILLAGE">Village</option><option value="LOCALITY">Local centre / locality</option></select></div>
-                        <div><label htmlFor="custom-location-county" className="mb-1.5 block text-xs font-medium">Parent county *</label><Input id="custom-location-county" value={customCounty} onChange={(event) => setCustomCounty(event.target.value)} placeholder="e.g. Nandi" className="h-10 rounded-lg" /></div>
-                        {!["TOWN", "CITY"].includes(customLevel) && <div><label htmlFor="custom-location-town" className="mb-1.5 block text-xs font-medium">Parent town / city <span className="font-normal text-muted-foreground">(if known)</span></label><Input id="custom-location-town" value={customTown} onChange={(event) => setCustomTown(event.target.value)} placeholder="e.g. Kapsabet" className="h-10 rounded-lg" /></div>}
+                        <div><label htmlFor="custom-location-county" className="mb-1.5 block text-xs font-medium">Parent county *</label><select id="custom-location-county" value={customCounty} onChange={(event) => { setCustomCounty(event.target.value); setCustomTown(""); setCustomTownManual(false); }} required className="h-10 w-full rounded-lg border bg-background px-3 text-sm"><option value="">Select a county</option>{counties.map((county) => <option key={county.id} value={county.name}>{county.name}</option>)}</select></div>
+                        {!["TOWN", "CITY"].includes(customLevel) && <div><label htmlFor="custom-location-town" className="mb-1.5 block text-xs font-medium">Parent town / city <span className="font-normal text-muted-foreground">(if known)</span></label><select id="custom-location-town" value={customTownManual ? "__manual__" : customTown} onChange={(event) => { if (event.target.value === "__manual__") { setCustomTown(""); setCustomTownManual(true); } else { setCustomTown(event.target.value); setCustomTownManual(false); } }} className="h-10 w-full rounded-lg border bg-background px-3 text-sm"><option value="">Select a town/city (optional)</option>{customTowns.filter((town) => town.countyName === customCounty).map((town) => <option key={town.id} value={town.name}>{town.name}</option>)}<option value="__manual__">Town/city not listed — enter manually</option></select>{customTownManual && <Input value={customTown} onChange={(event) => setCustomTown(event.target.value)} placeholder="Enter town/city name" className="mt-2 h-10 rounded-lg" />}</div>}
                       </div>
                       <Button type="button" variant="outline" onClick={addCustomLocation} className="mt-3 h-10 w-full rounded-lg border-dashed"><span className="mr-2 text-base">+</span> Add this location</Button>
                     </div>

@@ -125,7 +125,32 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-7xl px-6 py-16 md:px-10 md:py-20 lg:px-12">
+      <section className="bg-white px-6 py-7 md:px-10 lg:px-12">
+        <div className="mx-auto max-w-7xl">
+          <div className="group relative overflow-hidden rounded-2xl border border-[#dfe4d8] bg-[#f5f6f0] shadow-[0_12px_36px_-28px_rgba(35,48,31,0.35)] transition-shadow hover:shadow-[0_18px_42px_-28px_rgba(35,48,31,0.42)]">
+            <div aria-hidden="true" className="absolute inset-y-0 left-0 w-1 bg-[#718365]" />
+            <div className="flex flex-col gap-6 p-5 sm:p-7 md:flex-row md:items-center md:justify-between md:gap-10 md:px-8">
+              <div className="flex min-w-0 items-start gap-4 sm:gap-5">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-white bg-white text-[#53694b] shadow-sm sm:h-14 sm:w-14">
+                  <HomeIcon className="h-6 w-6" />
+                </div>
+                <div className="max-w-2xl">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#64765a]">Personalised rental support</p>
+                  <h2 className="mt-1.5 text-xl font-semibold tracking-tight text-[#263124] sm:text-2xl">Need help finding a home?</h2>
+                  <p className="mt-2 max-w-xl text-sm leading-6 text-[#626b5e] sm:text-[15px]">Tell us your budget and preferred area. We’ll help you find rentals that fit your needs, without having to search every listing yourself.</p>
+                </div>
+              </div>
+              <div className="shrink-0 md:pl-4">
+                <Button asChild className="h-11 w-full rounded-xl bg-[#53694b] px-5 text-white shadow-sm transition-colors hover:bg-[#43563c] sm:w-auto">
+                  <Link href="/find-a-house">Find me a house <ArrowRight className="ml-2 h-4 w-4" /></Link>
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-7xl px-6 py-12 md:px-10 md:py-16 lg:px-12">
         <div className="flex items-end justify-between gap-4">
           <div>
             <p className="text-sm font-medium text-primary">A simpler way to search</p>
@@ -156,13 +181,7 @@ export default function Home() {
       </section>
 
       <section className="border-t py-12 md:py-16">
-        <div className="mx-auto grid max-w-7xl gap-4 px-6 md:grid-cols-2 md:px-10 lg:px-12">
-          <div className="rounded-2xl border border-[#dfe4d8] bg-[#f5f6f0] p-6 sm:p-8">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white text-[#53694b]"><Search className="h-5 w-5" /></div>
-            <h2 className="mt-5 text-xl font-semibold tracking-tight">Need help finding a home?</h2>
-            <p className="mt-2 max-w-md text-sm leading-6 text-muted-foreground">Tell us your budget and preferred area. We'll match you with available rentals and help you explore your options.</p>
-            <Button asChild className="mt-5 rounded-xl bg-[#53694b] hover:bg-[#43563c]"><Link href="/find-a-house">Find me a house <ArrowRight className="ml-2 h-4 w-4" /></Link></Button>
-          </div>
+        <div className="mx-auto max-w-7xl px-6 md:px-10 lg:px-12">
           <div className="rounded-2xl border bg-card p-6 sm:p-8">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-muted text-primary"><HomeIcon className="h-5 w-5" /></div>
             <h2 className="mt-5 text-xl font-semibold tracking-tight">Have a house to rent?</h2>

@@ -13,6 +13,12 @@ export async function GET(request: NextRequest) {
     const parentId = params.get('parentId')?.trim() || '';
     const level = params.get('level')?.trim() || '';
     const excludeLevel = params.get('excludeLevel')?.trim() || '';
+    const kind = params.get('kind')?.trim() || '';
+
+    if (kind === 'counties') {
+      const counties = await prisma.county.findMany({ select: { id: true, name: true }, orderBy: { name: 'asc' } });
+      return NextResponse.json({ counties });
+    }
 
     if (!query && !countyId && !parentId && !level) return NextResponse.json({ locations: [] });
 
