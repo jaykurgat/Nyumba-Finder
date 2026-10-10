@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 
 export function normalizeAgentMatch(value: string) {
-  return value.normalize("NFD").replace(/[\\u0300-\\u036f]/g, "").trim().toLowerCase();
+  return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toLowerCase();
 }
 
 export function escapeAgentHtml(value: string) {
