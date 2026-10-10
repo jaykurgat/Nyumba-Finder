@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { LogOut, UserRound, Mail, ShieldCheck } from "lucide-react";
 
 type AccountUser = {
-  email: string;
+  email: string | null;
   profile: { displayName: string | null; firstName: string | null; lastName: string | null; avatarUrl: string | null } | null;
 };
 
@@ -14,7 +14,8 @@ export function AccountDashboard({ user }: { user: AccountUser }) {
   const search = useSearchParams();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const name = user.profile?.displayName || [user.profile?.firstName, user.profile?.lastName].filter(Boolean).join(" ") || user.email.split("@")[0];
+  const email = user.email || "No email address on file";
+  const name = user.profile?.displayName || [user.profile?.firstName, user.profile?.lastName].filter(Boolean).join(" ") || user.email?.split("@")[0] || "there";
 
   async function signOut() {
     setBusy(true);
@@ -38,7 +39,7 @@ export function AccountDashboard({ user }: { user: AccountUser }) {
         <h1 className="mt-2 text-3xl font-semibold tracking-tight">Welcome, {name}</h1>
         <p className="mt-2 text-sm leading-6 text-muted-foreground">You are signed in to NyumbaFinder.</p>
       </div>
-      {search.get("welcome") === "sent" && <p role="status" className="mb-4 rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-800">Your account is ready. A welcome email has been sent to {user.email}.</p>}
+      {search.get("welcome") === "sent" && <p role="status" className="mb-4 rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-800">Your account is ready. A welcome email has been sent to {email}.</p>}
       {search.get("welcome") === "failed" && <p role="status" className="mb-4 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">Your account is ready, but the welcome email could not be sent. You can continue using NyumbaFinder; please try again later if you need the email.</p>}
       <div className="rounded-2xl border bg-card p-5 shadow-sm sm:p-7">
         <div className="flex items-center gap-4">
@@ -49,7 +50,7 @@ export function AccountDashboard({ user }: { user: AccountUser }) {
           )}
           <div className="min-w-0">
             <h2 className="truncate text-lg font-semibold">{name}</h2>
-            <p className="mt-1 flex items-center gap-2 break-all text-sm text-muted-foreground"><Mail className="h-4 w-4 shrink-0" />{user.email}</p>
+            <p className="mt-1 flex items-center gap-2 break-all text-sm text-muted-foreground"><Mail className="h-4 w-4 shrink-0" />{email}</p>
           </div>
         </div>
         <div className="mt-6 flex items-start gap-3 rounded-xl bg-muted/50 p-4 text-sm">
