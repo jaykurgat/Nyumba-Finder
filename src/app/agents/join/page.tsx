@@ -92,17 +92,20 @@ export default function AgentJoinPage() {
       return;
     }
     setTownsLoading(true);
-    const selectedIds = selectedCountyKey.split(",").filter(Boolean);
-    Promise.all(selectedIds.flatMap((countyId) => ["TOWN", "CITY"].map((level) =>
-      fetch("/api/locations?" + new URLSearchParams({ countyId, level }), { cache: "no-store" })
+    Promise.all(["TOWN", "CITY"].map((level) =>
+      fetch("/api/locations?" + new URLSearchParams({ level }), { cache: "no-store" })
         .then(async (response) => {
           const data = await response.json();
           if (!response.ok) throw new Error(data.message || "Could not load towns and cities.");
           return Array.isArray(data.locations) ? data.locations as LocationOption[] : [];
         })
-    ))).then((groups) => {
+    )).then((groups) => {
       if (cancelled) return;
-      const available = groups.flat().filter((item, index, all) => all.findIndex((other) => other.id === item.id) === index);
+      const selectedIds = new Set(selectedCountyKey.split(",").filter(Boolean));
+      const available = groups.flat()
+        .filter((item) => item.countyId && selectedIds.has(item.countyId))
+        .filter((item, index, all) => all.findIndex((other) => other.id === item.id) === index)
+        .sort((a, b) => a.name.localeCompare(b.name));
       setTownOptions(available);
       setSelectedTowns((current) => current.filter((town) => town.custom || available.some((item) => item.id === town.id)));
     }).catch((caught) => {
@@ -121,16 +124,20 @@ export default function AgentJoinPage() {
     setAreasLoading(true);
     const levels = ["ESTATE", "NEIGHBORHOOD", "AREA", "VILLAGE", "LOCALITY"];
     Promise.all(levels.map((level) =>
-      fetch("/api/locations?" + new URLSearchParams({ parentId: activeTown.id as string, level }), { cache: "no-store" })
+      fetch("/api/locations?" + new URLSearchParams({ countyId: activeTown.countyId || "", level }), { cache: "no-store" })
         .then(async (response) => {
           const data = await response.json();
           if (!response.ok) throw new Error(data.message || "Could not load area suggestions.");
           return Array.isArray(data.locations) ? data.locations as LocationOption[] : [];
         })
     )).then((groups) => {
-      if (!cancelled) setAreaOptions(groups.flat().filter((item, index, all) => all.findIndex((other) => other.id === item.id) === index));
-    }).catch(() => { if (!cancelled) setAreaOptions([]); })
-      .finally(() => { if (!cancelled) setAreasLoading(false); });
+      if (!cancelled) setAreaOptions(groups.flat()
+        .filter((item) => item.countyId === activeTown.countyId)
+        .filter((item, index, all) => all.findIndex((other) => other.id === item.id) === index)
+        .sort((a, b) => a.name.localeCompare(b.name)));
+    }).catch((caught) => {
+      if (!cancelled) { setAreaOptions([]); setError(caught instanceof Error ? caught.message : "Could not load area suggestions."); }
+    }).finally(() => { if (!cancelled) setAreasLoading(false); });
     return () => { cancelled = true; };
   }, [activeTown?.id]);
 
@@ -177,7 +184,7 @@ export default function AgentJoinPage() {
     if (selectedAreas.length >= 50) { setError("You can add up to 50 estates or areas."); return; }
     const area = areaOptions.find((item) => item.id === areaToAdd);
     if (!area || selectedAreas.some((item) => locationKey(item) === locationKey(area))) return;
-    setSelectedAreas((current) => [...current, { ...area, parentName: activeTown?.name || area.parentName }]);
+    setSelectedAreas((current) => [...current, { ...area, parentName: area.parentName || activeTown?.name }]);
     setAreaToAdd("");
   }
   function addManualArea() {
@@ -308,7 +315,7 @@ export default function AgentJoinPage() {
                     <p className="mt-1 text-xs leading-5 text-[#788174]">Choose a town to see its saved area suggestions, or add a local name if it is missing.</p>
                     <div className="mt-3"><label className="mb-1.5 block text-xs font-medium">Town / city for these areas</label><select value={activeTownKey} onChange={(event) => setActiveTownKey(event.target.value)} disabled={!selectedTowns.length} className="h-11 w-full rounded-xl border border-[#dfe5da] bg-white px-3 text-sm outline-none focus:border-[#91a386]"><option value="">Select a town or city</option>{selectedTowns.map((town) => <option key={locationKey(town)} value={locationKey(town)}>{town.name} · {town.countyName}</option>)}</select></div>
                     <div className="mt-3 flex gap-2">
-                      <select value={areaToAdd} onChange={(event) => setAreaToAdd(event.target.value)} disabled={!activeTown || areasLoading || !areaOptions.length} className="h-11 min-w-0 flex-1 rounded-xl border border-[#dfe5da] bg-white px-3 text-sm outline-none focus:border-[#91a386]"><option value="">{!activeTown ? "Select a town first" : areasLoading ? "Loading area suggestions…" : areaOptions.length ? "Select an estate or area" : "No saved areas for this town"}</option>{areaOptions.filter((area) => !selectedAreas.some((item) => locationKey(item) === locationKey(area))).map((area) => <option key={area.id || locationKey(area)} value={area.id || ""}>{area.name} · {area.level.toLowerCase().replace(/_/g, " ")}</option>)}</select>
+                      <select value={areaToAdd} onChange={(event) => setAreaToAdd(event.target.value)} disabled={!activeTown || areasLoading || !areaOptions.length} className="h-11 min-w-0 flex-1 rounded-xl border border-[#dfe5da] bg-white px-3 text-sm outline-none focus:border-[#91a386]"><option value="">{!activeTown ? "Select a town first" : areasLoading ? "Loading area suggestions…" : areaOptions.length ? "Select an estate or area" : "No saved areas for this town"}</option>{areaOptions.filter((area) => !selectedAreas.some((item) => locationKey(item) === locationKey(area))).map((area) => <option key={area.id || locationKey(area)} value={area.id || ""}>{area.name} · {area.level.toLowerCase().replace(/_/g, " ")}{area.parentName ? " · " + area.parentName : ""}</option>)}</select>
                       <Button type="button" variant="outline" onClick={addArea} disabled={!areaToAdd} className="h-11 rounded-xl border-[#dfe5da]"><Plus className="mr-1.5 h-4 w-4" />Add</Button>
                     </div>
                     <button type="button" onClick={() => { setManualAreaOpen((open) => !open); setManualAreaTown(activeTown ? locationKey(activeTown) : selectedTowns[0] ? locationKey(selectedTowns[0]) : ""); }} disabled={!selectedTowns.length} className="mt-3 text-xs font-medium text-[#53694b] underline underline-offset-4">Estate or area not listed? Add it manually</button>
