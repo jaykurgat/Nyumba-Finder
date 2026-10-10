@@ -162,6 +162,15 @@ export default function PropertyDetailPage({ params: paramsProp }: { params: Pro
   const [reportType, setReportType] = useState('Incorrect information');
   const [reportDescription, setReportDescription] = useState('');
   const [reportSent, setReportSent] = useState(false);
+  const [canPromoteListing, setCanPromoteListing] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    fetch('/api/admin/dashboard', { cache: 'no-store' })
+      .then((response) => { if (active) setCanPromoteListing(response.ok); })
+      .catch(() => { if (active) setCanPromoteListing(false); });
+    return () => { active = false; };
+  }, []);
 
   useEffect(() => {
     if (!params?.id) {
@@ -296,6 +305,7 @@ export default function PropertyDetailPage({ params: paramsProp }: { params: Pro
               </div>
             </section>
 
+{canPromoteListing && (
             <section className="overflow-hidden rounded-2xl border border-primary/15 bg-gradient-to-br from-primary/[0.06] via-background to-accent/[0.08] shadow-sm">
               <div className="p-5 md:p-7">
                 <div className="flex items-start gap-4">
@@ -305,6 +315,7 @@ export default function PropertyDetailPage({ params: paramsProp }: { params: Pro
                 <Button asChild className="mt-5 w-full rounded-xl sm:w-auto"><Link href={'/promote?property=' + property.id}>Explore sponsored placement</Link></Button>
               </div>
             </section>
+            )}
 
             <section className="rounded-2xl border bg-background shadow-sm">
               <div className="border-b px-5 py-5 md:px-7">
