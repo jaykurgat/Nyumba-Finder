@@ -1,3 +1,4 @@
+import { timingSafeEqual } from 'node:crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminToken, adminCookie, adminTtlSeconds } from '@/lib/admin-auth';
 import { allowRateLimitedRequest, hasValidRequestOrigin } from '@/lib/security';
@@ -18,7 +19,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ message: 'Admin credentials are not configured.' }, { status: 503 });
   }
 
-  if (email !== configuredEmail || password !== configuredPassword) {
+  const suppliedPassword = Buffer.from(password);
+  const expectedPassword = Buffer.from(configuredPassword);
+  const passwordMatches = suppliedPassword.length === expectedPassword.length
+    && timingSafeEqual(suppliedPassword, expectedPassword);
+  if (email !== configuredEmail || !passwordMatches) {
     return NextResponse.json({ message: 'Invalid admin credentials.' }, { status: 401 });
   }
 

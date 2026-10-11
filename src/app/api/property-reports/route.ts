@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { allowRateLimitedRequest, hasValidRequestOrigin } from '@/lib/security';
 
-const ALLOWED_REPORT_TYPES = new Set(['Possible scam', 'Inappropriate content', 'Fake listing', 'Wrong price', 'Duplicate listing', 'Other']);
+const ALLOWED_REPORT_TYPES = new Set(['Incorrect information', 'No longer available', 'Duplicate listing', 'Wrong location', 'Possible scam', 'Inappropriate content']);
 const SERIOUS_REPORT_TYPES = new Set(['Possible scam', 'Inappropriate content']);
 
 function getReporterHash(request: NextRequest) {

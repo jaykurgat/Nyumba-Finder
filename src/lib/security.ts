@@ -8,8 +8,11 @@ const buckets = new Map<string, Bucket>();
  * use a shared Redis/Upstash limiter for a hard distributed limit across serverless instances.
  */
 export function allowRateLimitedRequest(request: NextRequest, scope: string, limit: number, windowMs: number) {
-  const forwarded = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim();
-  const address = forwarded || request.headers.get('x-real-ip') || 'unknown';
+  // Prefer the reverse-proxy supplied single client IP; X-Forwarded-For may contain
+  // client-provided values before trusted proxy values.
+  const address = request.headers.get('x-real-ip')?.trim()
+    || request.headers.get('x-forwarded-for')?.split(',').pop()?.trim()
+    || 'unknown';
   const key = scope + ':' + address.slice(0, 100);
   const now = Date.now();
   const current = buckets.get(key);
