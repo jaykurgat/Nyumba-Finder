@@ -1,4 +1,4 @@
-import { createHmac, timingSafeEqual } from 'node:crypto';
+import { createHash, createHmac, timingSafeEqual } from 'node:crypto';
 import { cookies } from 'next/headers';
 
 const COOKIE = 'nyumbafinder_admin_session';
@@ -14,8 +14,14 @@ function sign(payload: string) {
   return createHmac('sha256', secret()).update(payload).digest('hex');
 }
 
+function credentialFingerprint() {
+  const password = process.env.ADMIN_PASSWORD;
+  if (!password) throw new Error('ADMIN_PASSWORD must be configured.');
+  return createHash('sha256').update(password).digest('hex');
+}
+
 export function createAdminToken() {
-  const payload = 'admin:' + (Date.now() + TTL_SECONDS * 1000);
+  const payload = 'admin:' + (Date.now() + TTL_SECONDS * 1000) + ':' + credentialFingerprint();
   return payload + '.' + sign(payload);
 }
 
@@ -27,8 +33,17 @@ export function isValidAdminToken(token?: string | null) {
   const a = Buffer.from(signature);
   const b = Buffer.from(expected);
   if (a.length !== b.length || !timingSafeEqual(a, b)) return false;
-  const expiry = Number(payload.split(':')[1]);
-  return payload.startsWith('admin:') && Number.isFinite(expiry) && expiry > Date.now();
+  const parts = payload.split(':');
+  const expiry = Number(parts[1]);
+  const fingerprint = parts[2];
+  if (!payload.startsWith('admin:') || !Number.isFinite(expiry) || expiry <= Date.now() || !fingerprint) return false;
+  try {
+    const expectedFingerprint = Buffer.from(credentialFingerprint(), 'hex');
+    const suppliedFingerprint = Buffer.from(fingerprint, 'hex');
+    return expectedFingerprint.length === suppliedFingerprint.length && timingSafeEqual(expectedFingerprint, suppliedFingerprint);
+  } catch {
+    return false;
+  }
 }
 
 export async function isAdminSession() {

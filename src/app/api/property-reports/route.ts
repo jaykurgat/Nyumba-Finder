@@ -1,7 +1,9 @@
 import { createHash, randomUUID } from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { allowRateLimitedRequest, hasValidRequestOrigin } from '@/lib/security';
 
+const ALLOWED_REPORT_TYPES = new Set(['Possible scam', 'Inappropriate content', 'Fake listing', 'Wrong price', 'Duplicate listing', 'Other']);
 const SERIOUS_REPORT_TYPES = new Set(['Possible scam', 'Inappropriate content']);
 
 function getReporterHash(request: NextRequest) {
@@ -18,11 +20,17 @@ function getReporterHash(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    if (!hasValidRequestOrigin(request)) return NextResponse.json({ message: 'Invalid request origin.' }, { status: 403 });
+    if (!allowRateLimitedRequest(request, 'property-report', 10, 60 * 60 * 1000)) {
+      return NextResponse.json({ message: 'Too many reports from this connection. Please try again later.' }, { status: 429, headers: { 'Retry-After': '3600' } });
+    }
     const body = await request.json();
     const propertyId = typeof body.propertyId === 'string' ? body.propertyId : '';
     const type = typeof body.type === 'string' ? body.type.trim() : '';
     const description = typeof body.description === 'string' ? body.description.trim() : null;
-    if (!propertyId || !type) return NextResponse.json({ message: 'Property and report type are required.' }, { status: 400 });
+    if (!propertyId || !type || !ALLOWED_REPORT_TYPES.has(type) || (description !== null && description.length > 1000)) {
+      return NextResponse.json({ message: 'Choose a valid report type and keep the description under 1,000 characters.' }, { status: 400 });
+    }
 
     const property = await prisma.property.findUnique({ where: { id: propertyId }, select: { id: true, status: true } });
     if (!property) return NextResponse.json({ message: 'Property not found.' }, { status: 404 });

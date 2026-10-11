@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminToken, adminCookie, adminTtlSeconds } from '@/lib/admin-auth';
+import { allowRateLimitedRequest, hasValidRequestOrigin } from '@/lib/security';
 
 export async function POST(request: NextRequest) {
+  if (!hasValidRequestOrigin(request)) return NextResponse.json({ message: 'Invalid request origin.' }, { status: 403 });
+  if (!allowRateLimitedRequest(request, 'admin-login', 5, 15 * 60 * 1000)) {
+    return NextResponse.json({ message: 'Too many sign-in attempts. Please wait 15 minutes and try again.' }, { status: 429, headers: { 'Retry-After': '900' } });
+  }
   const body = await request.json().catch(() => ({}));
   const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : '';
   const password = typeof body.password === 'string' ? body.password : '';

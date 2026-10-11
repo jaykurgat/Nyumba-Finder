@@ -4,6 +4,7 @@ import { promisify } from 'node:util';
 import { prisma } from '@/lib/prisma';
 import { createUserSessionToken, randomToken, USER_COOKIE, USER_SESSION_TTL } from '@/lib/user-auth';
 import { sendAuthEmail } from '@/lib/auth-email';
+import { allowRateLimitedRequest, hasValidRequestOrigin } from '@/lib/security';
 
 const scrypt = promisify(scryptCallback);
 type Context = { params: Promise<{ action: string[] }> };
@@ -36,6 +37,17 @@ function clearGoogleState(response: NextResponse) {
 }
 export async function POST(request: NextRequest, context: Context) {
   const action = (await context.params).action.join('/');
+  if (!hasValidRequestOrigin(request)) return json('Invalid request origin.', 403);
+  const limits: Record<string, { count: number; windowMs: number }> = {
+    register: { count: 5, windowMs: 15 * 60 * 1000 },
+    login: { count: 10, windowMs: 15 * 60 * 1000 },
+    'forgot-password': { count: 3, windowMs: 60 * 60 * 1000 },
+    'reset-password': { count: 8, windowMs: 15 * 60 * 1000 },
+  };
+  const limit = limits[action];
+  if (limit && !allowRateLimitedRequest(request, 'auth-' + action, limit.count, limit.windowMs)) {
+    return NextResponse.json({ message: 'Too many attempts. Please wait before trying again.' }, { status: 429, headers: { 'Retry-After': String(Math.ceil(limit.windowMs / 1000)) } });
+  }
   const body = await request.json().catch(() => ({}));
   if (action === 'register') {
     const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : '';
@@ -160,9 +172,11 @@ export async function GET(request: NextRequest, context: Context) {
     if (!session) return NextResponse.json({ user: null });
     const user = await prisma.user.findUnique({
       where: { id: session.userId },
-      select: { id: true, email: true, status: true, profile: { select: { displayName: true, firstName: true, lastName: true, avatarUrl: true } } },
+      select: { id: true, email: true, status: true, updatedAt: true, profile: { select: { displayName: true, firstName: true, lastName: true, avatarUrl: true } } },
     });
-    return NextResponse.json({ user: user?.status === 'ACTIVE' ? user : null });
+    return NextResponse.json({ user: user?.status === 'ACTIVE' && user.updatedAt.getTime() <= session.issuedAt * 1000 ? {
+      id: user.id, email: user.email, status: user.status, profile: user.profile,
+    } : null });
   }
   if (action === 'google/start') {
     const clientId = process.env.GOOGLE_CLIENT_ID;

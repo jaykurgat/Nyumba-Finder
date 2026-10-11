@@ -14,10 +14,10 @@ function sign(payload: string) {
   return createHmac('sha256', secret()).update(payload).digest('hex');
 }
 export function createUserSessionToken(userId: string) {
-  const payload = Buffer.from(JSON.stringify({ sub: userId, exp: Math.floor(Date.now() / 1000) + USER_SESSION_TTL })).toString('base64url');
+  const payload = Buffer.from(JSON.stringify({ sub: userId, iat: Math.floor(Date.now() / 1000), exp: Math.floor(Date.now() / 1000) + USER_SESSION_TTL })).toString('base64url');
   return payload + '.' + sign(payload);
 }
-export function verifyUserSessionToken(token?: string | null): { userId: string } | null {
+export function verifyUserSessionToken(token?: string | null): { userId: string; issuedAt: number } | null {
   if (!token) return null;
   const [payload, supplied] = token.split('.');
   if (!payload || !supplied) return null;
@@ -26,9 +26,9 @@ export function verifyUserSessionToken(token?: string | null): { userId: string 
     const a = Buffer.from(supplied);
     const b = Buffer.from(expected);
     if (a.length !== b.length || !timingSafeEqual(a, b)) return null;
-    const data = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8')) as { sub?: string; exp?: number };
-    if (!data.sub || !Number.isFinite(data.exp) || Number(data.exp) <= Math.floor(Date.now() / 1000)) return null;
-    return { userId: data.sub };
+    const data = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8')) as { sub?: string; iat?: number; exp?: number };
+    if (!data.sub || !Number.isFinite(data.iat) || !Number.isFinite(data.exp) || Number(data.exp) <= Math.floor(Date.now() / 1000)) return null;
+    return { userId: data.sub, issuedAt: Number(data.iat) };
   } catch { return null; }
 }
 export async function getCurrentUser() {
@@ -37,8 +37,9 @@ export async function getCurrentUser() {
   if (!parsed) return null;
   const user = await prisma.user.findUnique({
     where: { id: parsed.userId },
-    select: { id: true, email: true, status: true, profile: { select: { displayName: true, firstName: true, lastName: true, avatarUrl: true } } },
+    select: { id: true, email: true, status: true, updatedAt: true, profile: { select: { displayName: true, firstName: true, lastName: true, avatarUrl: true } } },
   });
-  return user?.status === 'ACTIVE' ? user : null;
+  // Any User-row change (including suspension or password reset) invalidates sessions issued before it.
+  return user?.status === 'ACTIVE' && user.updatedAt.getTime() <= parsed.issuedAt * 1000 ? user : null;
 }
 export function randomToken() { return randomBytes(32).toString('hex'); }

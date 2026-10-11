@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { notifyHouseRequest } from "@/lib/house-request-notifications";
+import { allowRateLimitedRequest, hasValidRequestOrigin } from "@/lib/security";
 
 export const runtime = "nodejs";
 
@@ -50,6 +51,10 @@ function rent(value: number) {
 
 export async function POST(request: NextRequest) {
   try {
+    if (!hasValidRequestOrigin(request)) return NextResponse.json({ message: "Invalid request origin." }, { status: 403 });
+    if (!allowRateLimitedRequest(request, "house-hunt-submit", 4, 60 * 60 * 1000)) {
+      return NextResponse.json({ message: "Too many House Hunt submissions from this connection. Please try again later." }, { status: 429, headers: { "Retry-After": "3600" } });
+    }
     const body = schema.safeParse(await request.json());
     if (!body.success) {
       return NextResponse.json({ message: body.error.issues[0]?.message || "Please check your answers." }, { status: 400 });
