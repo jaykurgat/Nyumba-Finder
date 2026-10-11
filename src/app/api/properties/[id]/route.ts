@@ -298,6 +298,15 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       });
     });
 
+    await prisma.auditLog.create({
+      data: {
+        action: 'PROPERTY_UPDATED',
+        entityType: 'Property',
+        entityId: id,
+        details: { actorUserId: user?.id ?? null, actorEmail: user?.email ?? 'admin' },
+      },
+    }).catch((error) => console.error('PROPERTY_UPDATE_AUDIT_FAILED', error));
+
     const finalProperty = await prisma.property.findUnique({ where: { id } });
 
     return NextResponse.json({
@@ -328,6 +337,14 @@ export async function DELETE(_request: NextRequest, { params }: { params: Promis
       return NextResponse.json({ message: 'You can only delete properties listed from your own account.' }, { status: 403 });
     }
     await prisma.property.delete({ where: { id } });
+    await prisma.auditLog.create({
+      data: {
+        action: 'PROPERTY_DELETED',
+        entityType: 'Property',
+        entityId: id,
+        details: { actorUserId: user?.id ?? null, actorEmail: user?.email ?? 'admin' },
+      },
+    }).catch((error) => console.error('PROPERTY_DELETE_AUDIT_FAILED', error));
     return NextResponse.json({ message: 'Property deleted successfully', propertyId: id });
   } catch (error: any) {
     console.error('API_ROUTE_ERROR: [DELETE /api/properties/:id]', error);
