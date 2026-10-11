@@ -2,7 +2,7 @@ import { createHash, createHmac, timingSafeEqual } from 'node:crypto';
 import { cookies } from 'next/headers';
 
 const COOKIE = 'nyumbafinder_admin_session';
-const TTL_SECONDS = 60 * 60 * 12;
+const TTL_SECONDS = 60 * 60 * 4;
 
 function secret() {
   const value = process.env.ADMIN_SESSION_SECRET;

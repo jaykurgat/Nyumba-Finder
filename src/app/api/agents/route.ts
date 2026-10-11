@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { notifyAgentApplication } from "@/lib/agent-network";
+import { allowRateLimitedRequest } from "@/lib/security";
 
 export const runtime = "nodejs";
 
@@ -29,6 +30,9 @@ const schema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
+    if (!allowRateLimitedRequest(request, "agent-application", 4, 60 * 60 * 1000)) {
+      return NextResponse.json({ message: "Too many applications from this connection. Please try again later." }, { status: 429, headers: { "Retry-After": "3600" } });
+    }
     const parsed = schema.safeParse(await request.json());
     if (!parsed.success) return NextResponse.json({ message: parsed.error.issues[0]?.message || "Please check your details." }, { status: 400 });
     const data = parsed.data;

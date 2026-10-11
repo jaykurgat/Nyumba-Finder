@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createHash, randomBytes, scrypt as scryptCallback, timingSafeEqual } from 'node:crypto';
 import { promisify } from 'node:util';
 import { prisma } from '@/lib/prisma';
-import { createUserSessionToken, randomToken, USER_COOKIE, USER_SESSION_TTL } from '@/lib/user-auth';
+import { createUserSessionToken, randomToken, verifyUserSessionToken, USER_COOKIE, USER_SESSION_TTL } from '@/lib/user-auth';
 import { sendAuthEmail } from '@/lib/auth-email';
 import { allowRateLimitedRequest, hasValidRequestOrigin } from '@/lib/security';
 
@@ -92,6 +92,14 @@ export async function POST(request: NextRequest, context: Context) {
     return setSession(NextResponse.json({ authenticated: true }), user.id);
   }
   if (action === 'logout') {
+    // Stateless cookies cannot be individually revoked. Updating the user row invalidates
+    // all older sessions for this account, including any copied token.
+    const session = verifyUserSessionToken(request.cookies.get(USER_COOKIE)?.value);
+    if (session) {
+      await prisma.user.update({ where: { id: session.userId }, data: { updatedAt: new Date() } }).catch((error) => {
+        console.error('USER_SESSION_REVOCATION_FAILED', error);
+      });
+    }
     const response = NextResponse.json({ authenticated: false });
     response.cookies.set(USER_COOKIE, '', { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax', path: '/', maxAge: 0 });
     return response;
@@ -142,11 +150,19 @@ export async function POST(request: NextRequest, context: Context) {
       include: { user: { select: { email: true } } },
     });
     if (!record || record.usedAt || record.expiresAt <= new Date()) return json('This reset link is invalid or expired. Request a new one.', 400);
-    await prisma.$transaction([
-      prisma.user.update({ where: { id: record.userId }, data: { passwordHash: await hashPassword(password) } }),
-      prisma.passwordResetToken.update({ where: { id: record.id }, data: { usedAt: new Date() } }),
-      prisma.passwordResetToken.deleteMany({ where: { userId: record.userId, id: { not: record.id } } }),
-    ]);
+    const newPasswordHash = await hashPassword(password);
+    const resetSucceeded = await prisma.$transaction(async (tx) => {
+      // Claim the token atomically so two concurrent requests cannot both use it.
+      const claimed = await tx.passwordResetToken.updateMany({
+        where: { id: record.id, usedAt: null, expiresAt: { gt: new Date() } },
+        data: { usedAt: new Date() },
+      });
+      if (claimed.count !== 1) return false;
+      await tx.user.update({ where: { id: record.userId }, data: { passwordHash: newPasswordHash } });
+      await tx.passwordResetToken.deleteMany({ where: { userId: record.userId, id: { not: record.id } } });
+      return true;
+    });
+    if (!resetSucceeded) return json('This reset link is invalid or expired. Request a new one.', 400);
     let notificationSent = true;
     if (record.user.email) {
       notificationSent = await sendAuthEmail({

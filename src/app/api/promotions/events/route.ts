@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { allowRateLimitedRequest } from '@/lib/security';
 
 export async function POST(request: NextRequest) {
   try {
+    if (!allowRateLimitedRequest(request, 'promotion-event', 120, 60 * 1000)) {
+      return NextResponse.json({ message: 'Too many promotion events.' }, { status: 429, headers: { 'Retry-After': '60' } });
+    }
     const body = await request.json();
     const promotionId = typeof body.promotionId === 'string' ? body.promotionId : '';
     const type = body.type === 'CLICK' ? 'CLICK' : body.type === 'IMPRESSION' ? 'IMPRESSION' : '';
