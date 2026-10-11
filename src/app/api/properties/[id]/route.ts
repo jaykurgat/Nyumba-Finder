@@ -49,7 +49,9 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
     const user = await getCurrentUser();
     const admin = await isAdminSession();
-    const canManage = admin || (!!user && accessRecord.ownerId === user.id);
+    const isLegacyManager = user?.email?.trim().toLowerCase() === 'info@nyumba-finder.com';
+    // Legacy rows have no trustworthy historical owner. Keep them manageable by admin and the reserved management account only.
+    const canManage = admin || (!!user && accessRecord.ownerId === user.id) || (accessRecord.ownerId === null && isLegacyManager);
     if (accessRecord.status !== 'ACTIVE' && !canManage) {
       return NextResponse.json({ message: 'Property not found' }, { status: 404 });
     }
@@ -112,7 +114,8 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     if (!user && !admin) return NextResponse.json({ message: 'Please sign in to edit a property.' }, { status: 401 });
     const accessRecord = await prisma.property.findUnique({ where: { id }, select: { id: true, ownerId: true } });
     if (!accessRecord) return NextResponse.json({ message: 'Property not found.' }, { status: 404 });
-    if (!admin && accessRecord.ownerId !== user?.id) {
+    const isLegacyManager = user?.email?.trim().toLowerCase() === 'info@nyumba-finder.com';
+    if (!admin && accessRecord.ownerId !== user?.id && !(accessRecord.ownerId === null && isLegacyManager)) {
       return NextResponse.json({ message: 'You can only edit properties listed from your own account.' }, { status: 403 });
     }
 
@@ -318,7 +321,8 @@ export async function DELETE(_request: NextRequest, { params }: { params: Promis
     if (!user && !admin) return NextResponse.json({ message: 'Please sign in to delete a property.' }, { status: 401 });
     const accessRecord = await prisma.property.findUnique({ where: { id }, select: { id: true, ownerId: true } });
     if (!accessRecord) return NextResponse.json({ message: 'Property not found.' }, { status: 404 });
-    if (!admin && accessRecord.ownerId !== user?.id) {
+    const isLegacyManager = user?.email?.trim().toLowerCase() === 'info@nyumba-finder.com';
+    if (!admin && accessRecord.ownerId !== user?.id && !(accessRecord.ownerId === null && isLegacyManager)) {
       return NextResponse.json({ message: 'You can only delete properties listed from your own account.' }, { status: 403 });
     }
     await prisma.property.delete({ where: { id } });
