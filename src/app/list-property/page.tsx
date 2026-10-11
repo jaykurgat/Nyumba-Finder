@@ -224,6 +224,9 @@ export default function ListPropertyPage() {
             throw new Error("Failed to fetch property data for editing.");
           }
           const data: Property = await response.json();
+          if (!data.canEdit) {
+            throw new Error("You can only edit a property listed from your own account. If this is your listing and you cannot access it, contact NyumbaFinder support.");
+          }
           form.reset({
             ...data,
             countyId: data.countyId || "",

@@ -3,6 +3,8 @@ import { prisma } from '@/lib/prisma';
 import type { Property } from '@/types/property';
 import type { Prisma } from '@prisma/client';
 import { distanceKm, locationRelevanceScore, resolveLocationContext } from '@/lib/location-relevance';
+import { getCurrentUser } from '@/lib/user-auth';
+import { isAdminSession } from '@/lib/admin-auth';
 
 const getString = (value: unknown, defaultValue = '') =>
   typeof value === 'string' ? value : defaultValue;
@@ -259,6 +261,10 @@ export async function GET(request: NextRequest) {
 }
 export async function POST(request: NextRequest) {
   try {
+    const user = await getCurrentUser();
+    const admin = await isAdminSession();
+    if (!user && !admin) return NextResponse.json({ message: 'Please sign in before listing a property.' }, { status: 401 });
+
     const contentType = request.headers.get('content-type') || '';
     const rawData: Record<string, unknown> = {};
     const uploadedImages: { data: Uint8Array<ArrayBuffer>; mimeType: string }[] = [];
@@ -383,6 +389,7 @@ export async function POST(request: NextRequest) {
       const countyId = matchedNode.countyId;
       const created = await tx.property.create({
         data: {
+          ownerId: user?.id ?? null,
           title, description, location, price, listingType, pricePeriod, shortStayMinNights, shortStayMaxNights, cleaningFee, securityDeposit, maxGuests, bedrooms, bathrooms, sizeSqm, amenities, images: [], phoneNumber, propertyType, status: 'ACTIVE',
           latitude,
           longitude,

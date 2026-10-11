@@ -73,6 +73,7 @@ model User {
   landlordProfile LandlordProfile?
   authIdentities   AuthIdentity[]
   passwordResetTokens PasswordResetToken[]
+  properties          Property[]
 
   @@index([status])
   @@index([createdAt])
@@ -127,6 +128,8 @@ model PropertyImage {
 
 model Property {
   id           String   @id @default(uuid()) @db.Uuid
+  ownerId      String?  @db.Uuid
+  owner        User?    @relation(fields: [ownerId], references: [id], onDelete: SetNull)
   title        String
   description  String   @default("")
   location     String
@@ -165,6 +168,7 @@ model Property {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
+  @@index([ownerId])
   @@index([location])
   @@index([countyId])
   @@index([townId])

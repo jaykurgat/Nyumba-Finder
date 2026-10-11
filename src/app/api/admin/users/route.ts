@@ -6,7 +6,18 @@ export async function GET() {
   try {
     await requireAdmin();
     const users = await prisma.user.findMany({
-      include: { profile: true, landlordProfile: true, tenantProfile: true },
+      select: {
+        id: true,
+        email: true,
+        phone: true,
+        status: true,
+        emailVerifiedAt: true,
+        createdAt: true,
+        updatedAt: true,
+        profile: true,
+        landlordProfile: true,
+        tenantProfile: true,
+      },
       orderBy: { createdAt: 'desc' },
       take: 500,
     });

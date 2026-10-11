@@ -220,12 +220,12 @@ export default function PropertyDetailPage({ params: paramsProp }: { params: Pro
           <Link href="/properties" className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
             ← Back to properties
           </Link>
-          <Button variant="outline" size="sm" asChild className="rounded-full">
+          {property.canEdit && <Button variant="outline" size="sm" asChild className="rounded-full">
             <Link href={'/list-property?edit=' + property.id}>
               <Edit3 className="mr-2 h-3.5 w-3.5" />
               Edit Property
             </Link>
-          </Button>
+          </Button>}
         </div>
 
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start">

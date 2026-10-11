@@ -1,6 +1,8 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import type { Property } from '@/types/property';
+import { getCurrentUser } from '@/lib/user-auth';
+import { isAdminSession } from '@/lib/admin-auth';
 
 const getString = (value: unknown, defaultValue = '') => typeof value === 'string' ? value : defaultValue;
 const getOptionalString = (value: unknown) => typeof value === 'string' && value.trim() !== '' ? value : undefined;
@@ -39,6 +41,19 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     const id = await getId(params);
     if (!id) return NextResponse.json({ message: 'Property ID is required' }, { status: 400 });
 
+    const accessRecord = await prisma.property.findUnique({
+      where: { id },
+      select: { id: true, ownerId: true, status: true },
+    });
+    if (!accessRecord) return NextResponse.json({ message: 'Property not found' }, { status: 404 });
+
+    const user = await getCurrentUser();
+    const admin = await isAdminSession();
+    const canManage = admin || (!!user && accessRecord.ownerId === user.id);
+    if (accessRecord.status !== 'ACTIVE' && !canManage) {
+      return NextResponse.json({ message: 'Property not found' }, { status: 404 });
+    }
+
     const imageId = new URL(request.url).searchParams.get('image');
     if (imageId) {
       const image = await prisma.propertyImage.findFirst({ where: { id: imageId, propertyId: id } });
@@ -48,7 +63,8 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         status: 200,
         headers: {
           'Content-Type': image.mimeType,
-          'Cache-Control': 'public, max-age=31536000, immutable',
+          'X-Content-Type-Options': 'nosniff',
+          'Cache-Control': accessRecord.status === 'ACTIVE' ? 'public, max-age=300' : 'private, no-store',
         },
       });
     }
@@ -69,14 +85,17 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       orderBy: { createdAt: 'asc' },
     });
 
-    return NextResponse.json(toProperty({
+    return NextResponse.json({
+      ...toProperty({
       ...property,
       // PropertyImage is the source of truth for uploaded images.
       // Do not append property.images here or every edit would return duplicates.
       images: images.length
         ? images.map((image) => '/api/properties/' + id + '?image=' + image.id)
         : (property.externalListings[0]?.imageUrls ?? []),
-    }));
+      }),
+      canEdit: canManage,
+    });
   } catch (error) {
     console.error('API_ROUTE_ERROR: [GET /api/properties/:id]', error);
     return NextResponse.json({ message: 'Error fetching property details.' }, { status: 500 });
@@ -87,6 +106,15 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   try {
     const id = await getId(params);
     if (!id) return NextResponse.json({ message: 'Property ID is required' }, { status: 400 });
+
+    const user = await getCurrentUser();
+    const admin = await isAdminSession();
+    if (!user && !admin) return NextResponse.json({ message: 'Please sign in to edit a property.' }, { status: 401 });
+    const accessRecord = await prisma.property.findUnique({ where: { id }, select: { id: true, ownerId: true } });
+    if (!accessRecord) return NextResponse.json({ message: 'Property not found.' }, { status: 404 });
+    if (!admin && accessRecord.ownerId !== user?.id) {
+      return NextResponse.json({ message: 'You can only edit properties listed from your own account.' }, { status: 403 });
+    }
 
     const contentType = request.headers.get('content-type') || '';
     const rawData: Record<string, unknown> = {};
@@ -285,6 +313,14 @@ export async function DELETE(_request: NextRequest, { params }: { params: Promis
   try {
     const id = await getId(params);
     if (!id) return NextResponse.json({ message: 'Property ID is required' }, { status: 400 });
+    const user = await getCurrentUser();
+    const admin = await isAdminSession();
+    if (!user && !admin) return NextResponse.json({ message: 'Please sign in to delete a property.' }, { status: 401 });
+    const accessRecord = await prisma.property.findUnique({ where: { id }, select: { id: true, ownerId: true } });
+    if (!accessRecord) return NextResponse.json({ message: 'Property not found.' }, { status: 404 });
+    if (!admin && accessRecord.ownerId !== user?.id) {
+      return NextResponse.json({ message: 'You can only delete properties listed from your own account.' }, { status: 403 });
+    }
     await prisma.property.delete({ where: { id } });
     return NextResponse.json({ message: 'Property deleted successfully', propertyId: id });
   } catch (error: any) {

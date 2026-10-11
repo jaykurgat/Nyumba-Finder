@@ -24,6 +24,7 @@ export interface Property {
   phoneNumber?: string;
   propertyType?: string;
   status?: string;
+  canEdit?: boolean;
   isSponsored?: boolean;
   promotionId?: string;
   promotionLabel?: string;
