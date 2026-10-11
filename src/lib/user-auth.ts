@@ -14,7 +14,7 @@ function sign(payload: string) {
   return createHmac('sha256', secret()).update(payload).digest('hex');
 }
 export function createUserSessionToken(userId: string) {
-  const payload = Buffer.from(JSON.stringify({ sub: userId, iat: Math.floor(Date.now() / 1000), exp: Math.floor(Date.now() / 1000) + USER_SESSION_TTL })).toString('base64url');
+  const payload = Buffer.from(JSON.stringify({ sub: userId, iat: Date.now(), exp: Math.floor(Date.now() / 1000) + USER_SESSION_TTL })).toString('base64url');
   return payload + '.' + sign(payload);
 }
 export function verifyUserSessionToken(token?: string | null): { userId: string; issuedAt: number } | null {
@@ -40,6 +40,6 @@ export async function getCurrentUser() {
     select: { id: true, email: true, status: true, updatedAt: true, profile: { select: { displayName: true, firstName: true, lastName: true, avatarUrl: true } } },
   });
   // Any User-row change (including suspension or password reset) invalidates sessions issued before it.
-  return user?.status === 'ACTIVE' && user.updatedAt.getTime() <= parsed.issuedAt * 1000 ? user : null;
+  return user?.status === 'ACTIVE' && user.updatedAt.getTime() <= parsed.issuedAt ? user : null;
 }
 export function randomToken() { return randomBytes(32).toString('hex'); }

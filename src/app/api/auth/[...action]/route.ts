@@ -174,7 +174,7 @@ export async function GET(request: NextRequest, context: Context) {
       where: { id: session.userId },
       select: { id: true, email: true, status: true, updatedAt: true, profile: { select: { displayName: true, firstName: true, lastName: true, avatarUrl: true } } },
     });
-    return NextResponse.json({ user: user?.status === 'ACTIVE' && user.updatedAt.getTime() <= session.issuedAt * 1000 ? {
+    return NextResponse.json({ user: user?.status === 'ACTIVE' && user.updatedAt.getTime() <= session.issuedAt ? {
       id: user.id, email: user.email, status: user.status, profile: user.profile,
     } : null });
   }

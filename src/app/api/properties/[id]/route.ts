@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import type { Property } from '@/types/property';
 import { getCurrentUser } from '@/lib/user-auth';
 import { isAdminSession } from '@/lib/admin-auth';
+import { isSupportedImage } from '@/lib/security';
 
 const getString = (value: unknown, defaultValue = '') => typeof value === 'string' ? value : defaultValue;
 const getOptionalString = (value: unknown) => typeof value === 'string' && value.trim() !== '' ? value : undefined;
@@ -140,11 +141,12 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
           if (bytes.byteLength > 5 * 1024 * 1024) {
             return NextResponse.json({ message: 'Each image must be 5 MB or smaller.' }, { status: 400 });
           }
+          const imageBytes = new Uint8Array(bytes);
+          if (!isSupportedImage(imageBytes, mimeType)) {
+            return NextResponse.json({ message: 'Upload a valid JPEG, PNG, GIF, or WebP image.' }, { status: 400 });
+          }
 
-          uploadedImages.push({
-            data: new Uint8Array(bytes) as Uint8Array<ArrayBuffer>,
-            mimeType,
-          });
+          uploadedImages.push({ data: imageBytes as Uint8Array<ArrayBuffer>, mimeType: mimeType.toLowerCase() });
         } else if (typeof value === 'string') {
           rawData[key] = value;
         }
