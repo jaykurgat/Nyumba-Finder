@@ -43,6 +43,9 @@ export async function POST(request: NextRequest, context: Context) {
     const firstName = typeof body.firstName === 'string' ? body.firstName.trim().slice(0, 80) : '';
     const lastName = typeof body.lastName === 'string' ? body.lastName.trim().slice(0, 80) : '';
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return json('Enter a valid email address.', 400);
+    // Reserve the legacy-listing manager address so nobody can claim it with public password registration.
+    // The address can still be created through Google sign-in, which requires Google's verified-email claim.
+    if (email === 'info@nyumba-finder.com') return json('This email is reserved for NyumbaFinder management. Sign in with Google using that verified address or contact support.', 403);
     if (!firstName || !lastName) return json('Enter both your first name and last name.', 400);
     if (password.length < 10 || password.length > 128) return json('Use a password between 10 and 128 characters.', 400);
     try {
