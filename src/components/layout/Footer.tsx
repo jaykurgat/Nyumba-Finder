@@ -43,7 +43,7 @@ export function Footer() {
 
   return (
     <footer className="border-t bg-secondary/30">
-      <div className="container mx-auto px-4 py-9 md:px-8">
+      <div className="container mx-auto px-3 pt-8 pb-[calc(6rem+env(safe-area-inset-bottom))] sm:px-4 md:px-8 md:py-9">
         <div className="grid gap-7 sm:grid-cols-2 lg:grid-cols-4">
           {groups.map((group) => (
             <div key={group.title}>

@@ -50,7 +50,7 @@ export function PropertyCard({ property }: PropertyCardProps) {
 
 
   return (
-    <Card className="w-full overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300 flex flex-col">
+    <Card className="w-full min-w-0 overflow-hidden shadow-sm transition-shadow duration-300 hover:shadow-lg flex flex-col">
       <CardHeader className="p-0 relative">
         <Link href={`/properties/${property.id}`} className="block" onClick={trackClick}>
           <PropertyImage
@@ -61,7 +61,7 @@ export function PropertyCard({ property }: PropertyCardProps) {
             maxHeightClassName="max-h-[300px]"
           />
         </Link>
-        <Badge variant="secondary" className="absolute top-2 right-2 bg-background/80 text-foreground font-semibold">
+        <Badge variant="secondary" className="absolute right-2 top-2 max-w-[calc(100%-1rem)] truncate bg-background/95 text-xs font-semibold text-foreground sm:text-sm">
           Ksh {property.price.toLocaleString()}{priceLabel}
         </Badge>
         {property.isSponsored && (
@@ -74,9 +74,9 @@ export function PropertyCard({ property }: PropertyCardProps) {
         <Link href={`/properties/${property.id}`} className="block" onClick={trackClick}>
           <CardTitle className="text-lg font-semibold mb-2 hover:text-primary transition-colors truncate">{property.title}</CardTitle>
         </Link>
-        <div className="flex items-center text-sm text-muted-foreground mb-3">
-          <MapPin className="w-4 h-4 mr-1 flex-shrink-0" />
-          <span>{property.location}</span>
+        <div className="mb-3 flex min-w-0 items-start text-sm text-muted-foreground">
+          <MapPin className="mr-1 mt-0.5 h-4 w-4 flex-shrink-0" />
+          <span className="min-w-0 break-words [overflow-wrap:anywhere]">{property.location}</span>
         </div>
         <p className="text-sm text-muted-foreground mb-4 line-clamp-2">{property.description}</p>
          <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm text-muted-foreground mb-2">

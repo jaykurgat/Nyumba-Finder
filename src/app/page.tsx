@@ -51,10 +51,10 @@ export default function Home() {
           </div>
         </div>
 
-        <div className="mx-auto max-w-7xl px-6 pb-12 pt-16 md:px-10 md:pb-16 md:pt-20 lg:px-12 lg:pt-24">
+        <div className="mx-auto max-w-7xl px-4 pb-10 pt-10 sm:px-6 sm:pb-12 sm:pt-16 md:px-10 md:pb-16 md:pt-20 lg:px-12 lg:pt-24">
           <div className="max-w-3xl">
             <p className="text-xs font-semibold uppercase tracking-[0.24em] text-primary">NyumbaFinder · Kenya</p>
-            <h1 className="mt-5 max-w-3xl text-5xl font-semibold leading-[1.02] tracking-[-0.045em] text-foreground md:text-6xl lg:text-[5.25rem]">
+            <h1 className="mt-5 max-w-3xl text-4xl font-semibold leading-[1.04] tracking-[-0.045em] text-foreground sm:text-5xl md:text-6xl lg:text-[5.25rem]">
               Find your next home in Kenya.
             </h1>
             <p className="mt-6 max-w-2xl text-base leading-7 text-muted-foreground md:text-lg">
