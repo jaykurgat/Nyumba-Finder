@@ -4,6 +4,7 @@ import type { Property } from '@/types/property';
 import { getCurrentUser } from '@/lib/user-auth';
 import { isAdminSession } from '@/lib/admin-auth';
 import { isSupportedImage } from '@/lib/security';
+import { deletePropertyImages, storePropertyImage } from '@/lib/property-image-storage';
 
 const getString = (value: unknown, defaultValue = '') => typeof value === 'string' ? value : defaultValue;
 const getOptionalString = (value: unknown) => typeof value === 'string' && value.trim() !== '' ? value : undefined;
@@ -62,6 +63,10 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       const image = await prisma.propertyImage.findFirst({ where: { id: imageId, propertyId: id } });
       if (!image) return new NextResponse('Image not found', { status: 404 });
 
+      if (image.url) {
+        return NextResponse.redirect(image.url, 302);
+      }
+      if (!image.data) return new NextResponse('Image data unavailable', { status: 404 });
       return new NextResponse(image.data, {
         status: 200,
         headers: {
@@ -84,7 +89,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
     const images = await prisma.propertyImage.findMany({
       where: { propertyId: id },
-      select: { id: true },
+      select: { id: true, url: true },
       orderBy: { createdAt: 'asc' },
     });
 
@@ -94,7 +99,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       // PropertyImage is the source of truth for uploaded images.
       // Do not append property.images here or every edit would return duplicates.
       images: images.length
-        ? images.map((image) => '/api/properties/' + id + '?image=' + image.id)
+        ? images.map((image) => image.url ?? ('/api/properties/' + id + '?image=' + image.id))
         : (property.externalListings[0]?.imageUrls ?? []),
       }),
       canEdit: canManage,
