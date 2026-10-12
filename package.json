@@ -15,7 +15,8 @@
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio",
-    "db:seed": "node prisma/seed.cjs"
+    "db:seed": "node prisma/seed.cjs",
+    "migrate:property-images": "node scripts/migrate-property-images-to-blob.cjs"
   },
   "dependencies": {
     "@genkit-ai/googleai": "^1.0.4",
@@ -58,7 +59,8 @@
     "tailwind-merge": "^3.0.1",
     "tailwindcss-animate": "^1.0.7",
     "zod": "^3.24.2",
-    "@prisma/client": "^6.19.3"
+    "@prisma/client": "^6.19.3",
+    "@vercel/blob": "^2.0.0"
   },
   "devDependencies": {
     "@types/node": "^20",

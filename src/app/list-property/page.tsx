@@ -289,18 +289,48 @@ export default function ListPropertyPage() {
       reader.onload = () => {
         const image = new Image();
         image.onload = () => {
-          const maxDimension = 1400;
+          // Resize without cropping: the complete property photo remains visible.
+          const maxDimension = 2000;
           const scale = Math.min(1, maxDimension / Math.max(image.width, image.height));
-          const canvas = document.createElement('canvas');
-          canvas.width = Math.max(1, Math.round(image.width * scale));
-          canvas.height = Math.max(1, Math.round(image.height * scale));
-          const context = canvas.getContext('2d');
-          if (!context) {
-            reject(new Error('Could not process image.'));
-            return;
+          let width = Math.max(1, Math.round(image.width * scale));
+          let height = Math.max(1, Math.round(image.height * scale));
+          const targetBytes = 600 * 1024;
+          const qualityLevels = [0.84, 0.78, 0.72, 0.66, 0.60];
+
+          for (let resizePass = 0; resizePass < 4; resizePass += 1) {
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            const context = canvas.getContext('2d');
+            if (!context) {
+              reject(new Error('Could not process image.'));
+              return;
+            }
+            context.imageSmoothingEnabled = true;
+            context.imageSmoothingQuality = 'high';
+            context.drawImage(image, 0, 0, width, height);
+
+            let bestResult = '';
+            for (const quality of qualityLevels) {
+              const result = canvas.toDataURL('image/jpeg', quality);
+              const headerEnd = result.indexOf(',') + 1;
+              const estimatedBytes = Math.ceil((result.length - headerEnd) * 0.75);
+              bestResult = result;
+              if (estimatedBytes <= targetBytes) {
+                resolve(result);
+                return;
+              }
+            }
+
+            if (Math.max(width, height) <= 1000 || resizePass === 3) {
+              resolve(bestResult);
+              return;
+            }
+
+            // If quality reduction alone is insufficient, scale down proportionally.
+            width = Math.max(1, Math.round(width * 0.85));
+            height = Math.max(1, Math.round(height * 0.85));
           }
-          context.drawImage(image, 0, 0, canvas.width, canvas.height);
-          resolve(canvas.toDataURL('image/jpeg', 0.72));
         };
         image.onerror = () => reject(new Error('Could not load image.'));
         image.src = reader.result as string;
@@ -831,7 +861,7 @@ export default function ListPropertyPage() {
                               />
                             </FormControl>
                              <FormDescription>
-                              Upload up to 5 images. Images are compressed before being saved with the property.
+                              Upload up to 5 photos. NyumbaFinder automatically resizes and compresses them without cropping, so you don't need to edit them first.
                               {watchedImages && watchedImages.length >= 5 && " Maximum images reached."}
                             </FormDescription>
                             <FormMessage />
