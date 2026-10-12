@@ -9,17 +9,17 @@ const items = [
   { label: "Home", href: "/", icon: Home, key: "home" },
   { label: "Properties", href: "/properties", icon: Search, key: "explore" },
   { label: "House Hunt", href: "/find-a-house", icon: Sparkles, key: "hunt" },
-  { label: "Saved", href: "/properties?view=saved", icon: Heart, key: "saved" },
+  { label: "Saved", href: "/saved", icon: Heart, key: "saved" },
 ];
 
 function MobileBottomNavContent() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const savedView = pathname === "/properties" && searchParams.get("view") === "saved";
+  const savedView = pathname === "/saved";
 
   function isActive(key: string) {
     if (key === "home") return pathname === "/";
-    if (key === "explore") return pathname === "/properties" && !savedView;
+    if (key === "explore") return pathname === "/properties";
     if (key === "hunt") return pathname === "/find-a-house";
     if (key === "saved") return savedView;
     return false;
