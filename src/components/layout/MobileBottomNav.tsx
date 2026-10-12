@@ -7,7 +7,7 @@ import { Heart, Home, Search, Sparkles } from "lucide-react";
 
 const items = [
   { label: "Home", href: "/", icon: Home, key: "home" },
-  { label: "Explore", href: "/properties", icon: Search, key: "explore" },
+  { label: "Properties", href: "/properties", icon: Search, key: "explore" },
   { label: "House Hunt", href: "/find-a-house", icon: Sparkles, key: "hunt" },
   { label: "Saved", href: "/properties?view=saved", icon: Heart, key: "saved" },
 ];
