@@ -6,6 +6,7 @@ import { distanceKm, locationRelevanceScore, resolveLocationContext } from '@/li
 import { getCurrentUser } from '@/lib/user-auth';
 import { isAdminSession } from '@/lib/admin-auth';
 import { isSupportedImage } from '@/lib/security';
+import { storePropertyImage } from '@/lib/property-image-storage';
 
 const getString = (value: unknown, defaultValue = '') =>
   typeof value === 'string' ? value : defaultValue;
@@ -123,7 +124,7 @@ export async function GET(request: NextRequest) {
         take: 500,
         include: {
           county: { select: { name: true } },
-          propertyImages: { select: { id: true }, orderBy: { createdAt: 'asc' } },
+          propertyImages: { select: { id: true, url: true }, orderBy: { createdAt: 'asc' } },
           externalListings: { where: { status: 'ACTIVE' }, select: { imageUrls: true }, orderBy: { createdAt: 'asc' }, take: 1 },
           promotions: {
             where: {
@@ -184,7 +185,7 @@ export async function GET(request: NextRequest) {
         ...toProperty({
           ...row,
           images: row.propertyImages.length
-          ? row.propertyImages.map((image) => '/api/properties/' + row.id + '?image=' + image.id)
+          ? row.propertyImages.map((image) => image.url ?? ('/api/properties/' + row.id + '?image=' + image.id))
           : (row.externalListings[0]?.imageUrls ?? []),
         }),
         propertyType: row.propertyType,
@@ -405,13 +406,15 @@ export async function POST(request: NextRequest) {
       if (uploadedImages.length) {
         const storedImages: { id: string }[] = [];
         for (const image of uploadedImages) {
+          const imageUrl = await storePropertyImage(created.id, image.data, image.mimeType);
           const stored = await tx.propertyImage.create({
             data: {
               propertyId: created.id,
-              data: image.data,
+              data: null,
+              url: imageUrl,
               mimeType: image.mimeType,
             },
-            select: { id: true },
+            select: { id: true, url: true },
           });
           storedImages.push(stored);
         }
@@ -420,7 +423,7 @@ export async function POST(request: NextRequest) {
           where: { id: created.id },
           data: {
             images: storedImages.map(
-              (image) => '/api/properties/' + created.id + '?image=' + image.id
+              (image) => image.url ?? ('/api/properties/' + created.id + '?image=' + image.id)
             ),
           },
         });
