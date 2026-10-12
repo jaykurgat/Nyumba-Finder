@@ -11,8 +11,8 @@ export async function Header() {
     : 'Account';
 
   return (
-    <header className="sticky top-0 z-50 w-full min-w-0 border-b border-border/70 bg-background/90 shadow-[0_4px_24px_-22px_rgba(20,30,20,0.5)] backdrop-blur-xl supports-[backdrop-filter]:bg-background/80">
-      <div className="container mx-auto flex h-[68px] min-w-0 items-center gap-3 px-3 sm:px-5 lg:h-[76px] lg:px-6">
+    <header className="sticky top-0 z-50 w-full min-w-0 border-b border-border/80 bg-white shadow-sm">
+      <div className="container mx-auto flex h-[72px] min-w-0 items-center gap-3 px-3 sm:px-5 lg:h-[82px] lg:px-6">
         <Link href="/" className="flex shrink-0 items-center rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" aria-label="NyumbaFinder home">
           <img src="/nyumbafinder-logo.svg" alt="NyumbaFinder" className="h-8 w-auto max-w-[142px] sm:h-9 sm:max-w-[160px] lg:h-10" />
         </Link>
@@ -28,7 +28,7 @@ export async function Header() {
               <span className="hidden max-w-28 truncate text-sm sm:inline">{accountLabel}</span>
             </Link>
           </Button>
-          <Button className="h-9 rounded-full px-3 text-xs font-semibold shadow-sm transition-transform hover:-translate-y-0.5 sm:h-10 sm:px-4 sm:text-sm" asChild>
+          <Button className="h-10 rounded-full bg-[#F28C28] px-3 text-xs font-semibold text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-[#dc7718] sm:px-4 sm:text-sm" asChild>
             <Link href="/list-property" aria-label="List your property">
               <PlusCircle className="mr-1.5 h-4 w-4 sm:mr-2" />
               <span className="sm:hidden">List</span>
