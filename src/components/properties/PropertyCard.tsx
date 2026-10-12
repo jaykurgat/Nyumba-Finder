@@ -4,11 +4,12 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { Property } from '@/types/property';
-import { MapPin, BedDouble, Bath, Ruler } from 'lucide-react';
-import { useEffect } from 'react';
+import { MapPin, BedDouble, Bath, Ruler, Heart } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
 interface PropertyCardProps {
   property: Property;
+  initiallySaved?: boolean;
 }
 
 function trackAnalyticsEvent(eventName: string, params: Record<string, string | number>) {
@@ -19,7 +20,53 @@ function trackAnalyticsEvent(eventName: string, params: Record<string, string | 
   analyticsWindow.gtag?.('event', eventName, params);
 }
 
-export function PropertyCard({ property }: PropertyCardProps) {
+export function PropertyCard({ property, initiallySaved = false }: PropertyCardProps) {
+  const [isSaved, setIsSaved] = useState(initiallySaved);
+  const [saveBusy, setSaveBusy] = useState(false);
+
+  useEffect(() => {
+    if (initiallySaved) return;
+    let active = true;
+    fetch('/api/saved-properties?propertyId=' + encodeURIComponent(property.id), { cache: 'no-store' })
+      .then(async (response) => {
+        if (response.ok) {
+          const data = await response.json();
+          if (active) setIsSaved(Boolean(data.saved));
+        }
+      })
+      .catch(() => {});
+    return () => { active = false; };
+  }, [property.id, initiallySaved]);
+
+  const toggleSaved = async (event: React.MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (saveBusy) return;
+    setSaveBusy(true);
+    try {
+      const response = await fetch('/api/saved-properties', {
+        method: isSaved ? 'DELETE' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ propertyId: property.id }),
+      });
+      if (response.status === 401) {
+        window.location.href = '/account?mode=login';
+        return;
+      }
+      const data = await response.json();
+      if (!response.ok) {
+        window.alert(data.message || 'Unable to update your saved listings.');
+        return;
+      }
+      setIsSaved(Boolean(data.saved));
+      if (isSaved && window.location.pathname === '/saved') window.location.reload();
+    } catch {
+      window.alert('Connection issue. Please try saving this property again.');
+    } finally {
+      setSaveBusy(false);
+    }
+  };
+
   useEffect(() => {
     if (!property.isSponsored || !property.promotionId) return;
     void fetch('/api/promotions/events', {
@@ -76,7 +123,18 @@ export function PropertyCard({ property }: PropertyCardProps) {
             maxHeightClassName="max-h-[300px]"
           />
         </Link>
-        <Badge variant="secondary" className="absolute right-2 top-2 max-w-[calc(100%-1rem)] truncate bg-background/95 text-xs font-semibold text-foreground sm:text-sm">
+        <button
+          type="button"
+          onClick={toggleSaved}
+          disabled={saveBusy}
+          aria-label={isSaved ? "Remove from saved properties" : "Save property"}
+          aria-pressed={isSaved}
+          title={isSaved ? "Remove from saved" : "Save property"}
+          className="absolute right-2 top-2 z-10 flex h-10 w-10 items-center justify-center rounded-full border bg-background/95 text-foreground shadow-sm transition hover:scale-105 hover:text-primary disabled:opacity-60"
+        >
+          <Heart className={"h-5 w-5 " + (isSaved ? "fill-current text-primary" : "")} />
+        </button>
+        <Badge variant="secondary" className="absolute bottom-2 right-2 max-w-[calc(100%-1rem)] truncate bg-background/95 text-xs font-semibold text-foreground sm:text-sm">
           Ksh {property.price.toLocaleString()}{priceLabel}
         </Badge>
         {property.isSponsored && (
