@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { Suspense } from "react";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { Heart, Home, Search, Sparkles } from "lucide-react";
 
 const items = [
@@ -14,7 +14,6 @@ const items = [
 
 function MobileBottomNavContent() {
   const pathname = usePathname();
-  const searchParams = useSearchParams();
   const savedView = pathname === "/saved";
 
   function isActive(key: string) {
