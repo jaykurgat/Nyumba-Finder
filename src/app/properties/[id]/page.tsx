@@ -12,6 +12,7 @@ import {
   Check,
   Edit3,
   Home,
+  Heart,
   MapPin,
   Phone,
   Ruler,
@@ -163,6 +164,47 @@ export default function PropertyDetailPage({ params: paramsProp }: { params: Pro
   const [reportDescription, setReportDescription] = useState('');
   const [reportSent, setReportSent] = useState(false);
   const [canPromoteListing, setCanPromoteListing] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
+  const [saveBusy, setSaveBusy] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    fetch('/api/saved-properties?propertyId=' + encodeURIComponent(params.id), { cache: 'no-store' })
+      .then(async (response) => {
+        if (response.ok) {
+          const data = await response.json();
+          if (active) setIsSaved(Boolean(data.saved));
+        }
+      })
+      .catch(() => {});
+    return () => { active = false; };
+  }, [params.id]);
+
+  const toggleSaved = async () => {
+    if (saveBusy) return;
+    setSaveBusy(true);
+    try {
+      const response = await fetch('/api/saved-properties', {
+        method: isSaved ? 'DELETE' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ propertyId: params.id }),
+      });
+      if (response.status === 401) {
+        window.location.href = '/account?mode=login';
+        return;
+      }
+      const data = await response.json();
+      if (!response.ok) {
+        window.alert(data.message || 'Unable to update your saved listings.');
+        return;
+      }
+      setIsSaved(Boolean(data.saved));
+    } catch {
+      window.alert('Connection issue. Please try saving this property again.');
+    } finally {
+      setSaveBusy(false);
+    }
+  };
 
   const trackContactEvent = (action: 'show_phone' | 'click_to_call') => {
     if (typeof window === 'undefined') return;
@@ -233,12 +275,18 @@ export default function PropertyDetailPage({ params: paramsProp }: { params: Pro
           <Link href="/properties" className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
             ← Back to properties
           </Link>
+          <div className="flex items-center gap-2">
+          <Button type="button" variant="outline" size="sm" className="rounded-full" onClick={toggleSaved} disabled={saveBusy} aria-pressed={isSaved}>
+            <Heart className={"mr-2 h-4 w-4 " + (isSaved ? "fill-current text-primary" : "")} />
+            {isSaved ? "Saved" : "Save"}
+          </Button>
           {property.canEdit && <Button variant="outline" size="sm" asChild className="rounded-full">
             <Link href={'/list-property?edit=' + property.id}>
               <Edit3 className="mr-2 h-3.5 w-3.5" />
               Edit Property
             </Link>
           </Button>}
+          </div>
         </div>
 
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start">
