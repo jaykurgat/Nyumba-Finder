@@ -404,7 +404,7 @@ export async function POST(request: NextRequest) {
       });
 
       if (uploadedImages.length) {
-        const storedImages: { id: string }[] = [];
+        const storedImages: { id: string; url: string | null }[] = [];
         for (const image of uploadedImages) {
           const imageUrl = await storePropertyImage(created.id, image.data, image.mimeType);
           const stored = await tx.propertyImage.create({
