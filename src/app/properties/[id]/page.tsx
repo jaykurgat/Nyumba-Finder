@@ -164,6 +164,19 @@ export default function PropertyDetailPage({ params: paramsProp }: { params: Pro
   const [reportSent, setReportSent] = useState(false);
   const [canPromoteListing, setCanPromoteListing] = useState(false);
 
+  const trackContactEvent = (action: 'show_phone' | 'click_to_call') => {
+    if (typeof window === 'undefined') return;
+    const analyticsWindow = window as Window & {
+      gtag?: (command: string, eventName: string, eventParams: Record<string, string>) => void;
+    };
+    analyticsWindow.gtag?.('event', 'property_contact_action', {
+      action,
+      property_id: property?.id ?? params.id,
+      property_location: property?.location ?? 'unknown',
+      listing_type: property?.listingType ?? 'unknown',
+    });
+  };
+
   useEffect(() => {
     let active = true;
     fetch('/api/admin/dashboard', { cache: 'no-store' })
@@ -430,6 +443,7 @@ export default function PropertyDetailPage({ params: paramsProp }: { params: Pro
                     showPhoneNumber ? (
                       <a
                         href={'tel:' + property.phoneNumber}
+                        onClick={() => trackContactEvent('click_to_call')}
                         className="mt-4 flex h-11 items-center justify-center rounded-xl bg-accent px-4 text-sm font-semibold text-accent-foreground transition-colors hover:bg-accent/90"
                       >
                         <Phone className="mr-2 h-4 w-4" />
@@ -438,7 +452,7 @@ export default function PropertyDetailPage({ params: paramsProp }: { params: Pro
                     ) : (
                       <Button
                         className="mt-4 h-11 w-full rounded-xl bg-accent text-accent-foreground hover:bg-accent/90"
-                        onClick={() => setShowPhoneNumber(true)}
+                        onClick={() => { trackContactEvent('show_phone'); setShowPhoneNumber(true); }}
                       >
                         <Phone className="mr-2 h-4 w-4" />
                         Show phone number
