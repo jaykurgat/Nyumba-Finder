@@ -14,7 +14,7 @@ export async function storePropertyImage(
   const extension = contentType === 'image/webp' ? 'webp' : 'jpg';
   const blob = await put(
     `properties/${propertyId}/${crypto.randomUUID()}.${extension}`,
-    bytes,
+    Buffer.from(bytes),
     {
       access: 'public',
       contentType,
