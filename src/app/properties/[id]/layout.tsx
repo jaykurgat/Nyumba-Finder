@@ -75,7 +75,7 @@ export async function generateMetadata({
     .filter(Boolean)
     .join(' in ');
 
-  const description = `${summary}. ${property.description.replace(/\\s+/g, ' ').trim()}`.slice(0, 155);
+  const description = `${summary}. ${property.description.replace(/\s+/g, ' ').trim()}`.slice(0, 155);
   const url = `${SITE_URL}/properties/${encodeURIComponent(id)}`;
 
   return {
@@ -113,7 +113,7 @@ export default async function PropertyLayout({
   }
 
   const url = `${SITE_URL}/properties/${encodeURIComponent(id)}`;
-  const description = property.description.replace(/\\s+/g, ' ').trim();
+  const description = property.description.replace(/\s+/g, ' ').trim();
   const propertyType = property.propertyType || 'Rental property';
   const pageData = {
     '@context': 'https://schema.org',
