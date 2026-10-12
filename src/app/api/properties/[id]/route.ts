@@ -99,7 +99,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       // PropertyImage is the source of truth for uploaded images.
       // Do not append property.images here or every edit would return duplicates.
       images: images.length
-        ? images.map((image) => image.url ?? ('/api/properties/' + id + '?image=' + image.id))
+        ? images.map((image) => '/api/properties/' + id + '?image=' + image.id)
         : (property.externalListings[0]?.imageUrls ?? []),
       }),
       canEdit: canManage,
@@ -242,7 +242,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
     const currentImages = await prisma.propertyImage.findMany({
       where: { propertyId: id },
-      select: { id: true },
+      select: { id: true, url: true },
       orderBy: { createdAt: 'asc' },
     });
 
@@ -263,6 +263,13 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       return NextResponse.json({ message: 'A property can have a maximum of 5 images.' }, { status: 400 });
     }
 
+    const removedImageUrls = retainedImageUrls
+      ? currentImages
+          .filter((image) => !retainedImageIds.has(image.id))
+          .map((image) => image.url)
+          .filter((url): url is string => Boolean(url))
+      : [];
+
     await prisma.$transaction(async (tx) => {
       await tx.property.update({ where: { id }, data });
 
@@ -276,17 +283,17 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       }
 
       if (uploadedImages.length) {
-        await Promise.all(
-          uploadedImages.map((image) =>
-            tx.propertyImage.create({
-              data: {
-                propertyId: id,
-                data: image.data,
-                mimeType: image.mimeType,
-              },
-            })
-          )
-        );
+        for (const image of uploadedImages) {
+          const blobUrl = await storePropertyImage(id, image.data, image.mimeType);
+          await tx.propertyImage.create({
+            data: {
+              propertyId: id,
+              data: null,
+              url: blobUrl,
+              mimeType: image.mimeType,
+            },
+          });
+        }
       }
 
       const storedImages = await tx.propertyImage.findMany({
@@ -302,6 +309,8 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         },
       });
     });
+
+    await deletePropertyImages(removedImageUrls);
 
     await prisma.auditLog.create({
       data: {
@@ -341,7 +350,12 @@ export async function DELETE(_request: NextRequest, { params }: { params: Promis
     if (!admin && accessRecord.ownerId !== user?.id && !(accessRecord.ownerId === null && isLegacyManager)) {
       return NextResponse.json({ message: 'You can only delete properties listed from your own account.' }, { status: 403 });
     }
+    const propertyImages = await prisma.propertyImage.findMany({
+      where: { propertyId: id },
+      select: { url: true },
+    });
     await prisma.property.delete({ where: { id } });
+    await deletePropertyImages(propertyImages.map((image) => image.url).filter((url): url is string => Boolean(url)));
     await prisma.auditLog.create({
       data: {
         action: 'PROPERTY_DELETED',
