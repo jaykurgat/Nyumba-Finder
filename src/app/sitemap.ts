@@ -40,6 +40,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         changeFrequency: 'daily',
         priority: 0.95,
       },
+      {
+        url: `${SITE_URL}/find-a-house`,
+        lastModified: new Date(),
+        changeFrequency: 'weekly',
+        priority: 0.9,
+      },
       { url: `${SITE_URL}/promote`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.65 },
       ...infoPages.map((slug) => ({
         url: `${SITE_URL}/info/${slug}`,

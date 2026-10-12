@@ -16,7 +16,7 @@ export async function Header() {
           <img src="/nyumbafinder-logo.svg" alt="NyumbaFinder" className="h-8 w-auto max-w-[145px] sm:h-9 md:h-10" />
         </Link>
         <nav className="hidden md:flex items-center gap-1">
-          <Button variant="ghost" asChild><Link href="/properties"><Search className="mr-2 h-4 w-4" />Find a House</Link></Button>
+          <Button variant="ghost" asChild><Link href="/find-a-house"><Search className="mr-2 h-4 w-4" />Find a House</Link></Button>
           <Button variant="ghost" asChild><Link href="/properties?view=locations">Locations</Link></Button>
           <Button variant="ghost" asChild><Link href="/properties?view=saved"><Heart className="mr-2 h-4 w-4" />Saved</Link></Button>
         </nav>
