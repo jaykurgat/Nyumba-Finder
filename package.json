@@ -15,7 +15,8 @@
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio",
-    "db:seed": "node prisma/seed.cjs"
+    "db:seed": "node prisma/seed.cjs",
+    "migrate:property-images": "node scripts/migrate-property-images-to-blob.cjs"
   },
   "dependencies": {
     "@genkit-ai/googleai": "^1.0.4",
