@@ -861,7 +861,7 @@ export default function ListPropertyPage() {
                               />
                             </FormControl>
                              <FormDescription>
-                              Upload up to 5 images. Images are compressed before being saved with the property.
+                              Upload up to 5 photos. NyumbaFinder automatically resizes and compresses them without cropping, so you don't need to edit them first.
                               {watchedImages && watchedImages.length >= 5 && " Maximum images reached."}
                             </FormDescription>
                             <FormMessage />
