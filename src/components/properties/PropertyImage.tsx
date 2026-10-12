@@ -44,6 +44,9 @@ export function PropertyImage({
         className={cn("object-contain", imageClassName)}
         sizes={sizes}
         priority={priority}
+        // Uploaded photos are already compressed and served by Blob's CDN; bypass
+        // another image transformation pass to avoid unnecessary processing costs.
+        unoptimized={src.includes('.public.blob.vercel-storage.com') || src.startsWith('/api/properties/')}
         onLoad={(event) => {
           const image = event.currentTarget;
           if (image.naturalWidth > 0 && image.naturalHeight > 0) {
