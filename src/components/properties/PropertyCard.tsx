@@ -11,6 +11,14 @@ interface PropertyCardProps {
   property: Property;
 }
 
+function trackAnalyticsEvent(eventName: string, params: Record<string, string | number>) {
+  if (typeof window === 'undefined') return;
+  const analyticsWindow = window as Window & {
+    gtag?: (command: string, eventName: string, eventParams: Record<string, string | number>) => void;
+  };
+  analyticsWindow.gtag?.('event', eventName, params);
+}
+
 export function PropertyCard({ property }: PropertyCardProps) {
   useEffect(() => {
     if (!property.isSponsored || !property.promotionId) return;
@@ -23,6 +31,13 @@ export function PropertyCard({ property }: PropertyCardProps) {
   }, [property.isSponsored, property.promotionId]);
 
   const trackClick = () => {
+    trackAnalyticsEvent('property_listing_click', {
+      property_id: property.id,
+      property_type: property.listingType,
+      property_location: property.location,
+      property_price: property.price,
+      sponsored: property.isSponsored ? 'yes' : 'no',
+    });
     if (!property.isSponsored || !property.promotionId) return;
     void fetch('/api/promotions/events', {
       method: 'POST',

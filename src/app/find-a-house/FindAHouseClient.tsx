@@ -275,6 +275,15 @@ export default function FindAHousePage() {
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.message || "We couldn't submit your request.");
+      const analyticsWindow = window as Window & {
+        gtag?: (command: string, eventName: string, eventParams: Record<string, string | number>) => void;
+      };
+      analyticsWindow.gtag?.('event', 'house_hunt_request_submitted', {
+        property_type: form.propertyType,
+        preferred_location_count: form.preferredLocations.length,
+        has_budget: form.minRent || form.maxRent ? 'yes' : 'no',
+        contact_preference: form.contactPreference,
+      });
       setResult(data);
       window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (caught) {
