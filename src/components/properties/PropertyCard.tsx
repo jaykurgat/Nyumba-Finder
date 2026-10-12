@@ -33,7 +33,7 @@ export function PropertyCard({ property }: PropertyCardProps) {
   const trackClick = () => {
     trackAnalyticsEvent('property_listing_click', {
       property_id: property.id,
-      property_type: property.listingType,
+      property_type: property.listingType ?? 'UNSPECIFIED',
       property_location: property.location,
       property_price: property.price,
       sponsored: property.isSponsored ? 'yes' : 'no',
