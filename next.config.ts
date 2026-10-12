@@ -27,6 +27,12 @@ const nextConfig: NextConfig = {
         port: '',
         pathname: '/**',
       },
+      {
+        protocol: 'https',
+        hostname: '**.public.blob.vercel-storage.com',
+        port: '',
+        pathname: '/**',
+      },
       // If you use Firebase Storage for image uploads in the future, add its hostname here.
       // e.g., firebasestorage.googleapis.com
     ],
