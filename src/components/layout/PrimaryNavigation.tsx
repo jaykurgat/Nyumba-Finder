@@ -7,7 +7,7 @@ import { Heart, Search, Sparkles } from "lucide-react";
 const links = [
   { label: "Find a House", href: "/find-a-house", icon: Sparkles, match: (path: string) => path === "/find-a-house" },
   { label: "Properties", href: "/properties", icon: Search, match: (path: string) => path === "/properties" || path.startsWith("/properties/") },
-  { label: "Saved", href: "/properties?view=saved", icon: Heart, match: () => false },
+  { label: "Saved", href: "/saved", icon: Heart, match: (path: string) => path === "/saved" },
 ];
 
 export function PrimaryNavigation() {
