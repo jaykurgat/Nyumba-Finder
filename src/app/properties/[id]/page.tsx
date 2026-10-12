@@ -125,10 +125,10 @@ function DetailStat({
 
 function PropertyDetailSkeleton() {
   return (
-    <div className="container mx-auto max-w-6xl px-4 py-8 md:py-10">
-      <Skeleton className="mb-6 h-4 w-40" />
-      <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_340px]">
-        <div className="space-y-6">
+    <div className="container mx-auto max-w-6xl px-3 py-5 sm:px-4 md:py-6">
+      <Skeleton className="mb-4 h-4 w-40" />
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
+        <div className="space-y-4">
           <AspectRatio ratio={16 / 10} className="overflow-hidden rounded-2xl bg-muted">
             <Skeleton className="h-full w-full" />
           </AspectRatio>
@@ -136,7 +136,7 @@ function PropertyDetailSkeleton() {
             <CardContent className="space-y-5 p-6">
               <Skeleton className="h-9 w-3/4" />
               <Skeleton className="h-5 w-1/2" />
-              <div className="grid gap-3 sm:grid-cols-3">
+              <div className="grid gap-2 sm:grid-cols-3">
                 <Skeleton className="h-16" />
                 <Skeleton className="h-16" />
                 <Skeleton className="h-16" />
@@ -145,8 +145,8 @@ function PropertyDetailSkeleton() {
             </CardContent>
           </Card>
         </div>
-        <div className="space-y-5">
-          <Card><CardContent className="space-y-4 p-6"><Skeleton className="h-10 w-3/4" /><Skeleton className="h-11 w-full" /></CardContent></Card>
+        <div className="space-y-4">
+          <Card><CardContent className="space-y-4 p-4"><Skeleton className="h-10 w-3/4" /><Skeleton className="h-11 w-full" /></CardContent></Card>
           <Card><CardContent className="h-64 p-0"><Skeleton className="h-full w-full rounded-xl" /></CardContent></Card>
         </div>
       </div>
@@ -270,12 +270,12 @@ export default function PropertyDetailPage({ params: paramsProp }: { params: Pro
 
   return (
     <main className="min-h-screen bg-muted/20">
-      <div className="container mx-auto max-w-6xl px-4 py-6 md:py-10">
-        <div className="mb-5 flex items-center justify-between gap-4">
+      <div className="container mx-auto max-w-6xl px-3 py-4 sm:px-4 md:py-6">
+        <div className="mb-4 flex items-center justify-between gap-3">
           <Link href="/properties" className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
             ← Back to properties
           </Link>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
           <Button type="button" variant="outline" size="sm" className="rounded-full" onClick={toggleSaved} disabled={saveBusy} aria-pressed={isSaved}>
             <Heart className={"mr-2 h-4 w-4 " + (isSaved ? "fill-current text-primary" : "")} />
             {isSaved ? "Saved" : "Save"}
@@ -289,19 +289,19 @@ export default function PropertyDetailPage({ params: paramsProp }: { params: Pro
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start">
-          <div className="space-y-7">
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start">
+          <div className="space-y-4">
             <ImageCarousel images={property.images || []} title={property.title} />
 
-            <section className="rounded-2xl border bg-background shadow-sm">
-              <div className="border-b px-5 py-6 md:px-7">
+            <section className="rounded-xl border bg-background shadow-sm">
+              <div className="border-b px-4 py-4 md:px-5">
                 <div className="flex items-start gap-3">
-                  <div className="mt-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                    <Home className="h-5 w-5" />
+                  <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                    <Home className="h-4 w-4" />
                   </div>
                   <div className="min-w-0">
-                    <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">{property.title}</h1>
-                    <div className="mt-2 flex items-center gap-2 text-sm text-muted-foreground">
+                    <h1 className="text-xl font-semibold leading-tight tracking-tight md:text-2xl">{property.title}</h1>
+                    <div className="mt-1.5 flex items-center gap-1.5 text-sm text-muted-foreground">
                       <MapPin className="h-4 w-4 shrink-0 text-primary" />
                       <span>{property.location}</span>
                     </div>
@@ -309,8 +309,8 @@ export default function PropertyDetailPage({ params: paramsProp }: { params: Pro
                 </div>
               </div>
 
-              <div className="space-y-7 px-5 py-6 md:px-7">
-                <div className="grid gap-3 sm:grid-cols-3">
+              <div className="space-y-5 px-4 py-4 md:px-5">
+                <div className="grid gap-2 sm:grid-cols-3">
                   <DetailStat
                     icon={BedDouble}
                     label="Bedrooms"
@@ -329,7 +329,7 @@ export default function PropertyDetailPage({ params: paramsProp }: { params: Pro
                 </div>
 
                 {property.listingType === 'SHORT_STAY' && (
-                  <div className="rounded-xl border bg-muted/20 p-4">
+                  <div className="rounded-lg border bg-muted/20 p-3">
                     <p className="text-sm font-semibold">Short-stay details</p>
                     <div className="mt-3 grid gap-3 sm:grid-cols-2 md:grid-cols-3 text-sm">
                       {property.shortStayMinNights != null && <div><span className="text-muted-foreground">Minimum stay</span><p className="font-medium">{property.shortStayMinNights} night{property.shortStayMinNights === 1 ? '' : 's'}</p></div>}
@@ -342,16 +342,16 @@ export default function PropertyDetailPage({ params: paramsProp }: { params: Pro
                 )}
 
                 <div>
-                  <h2 className="mb-3 text-lg font-semibold">About this property</h2>
-                  <p className="whitespace-pre-line text-sm leading-7 text-muted-foreground md:text-base">
+                  <h2 className="mb-2 text-base font-semibold">About this property</h2>
+                  <p className="whitespace-pre-line text-sm leading-6 text-muted-foreground">
                     {property.description}
                   </p>
                 </div>
 
                 {property.amenities && property.amenities.length > 0 && (
-                  <div className="border-t pt-6">
-                    <h2 className="mb-4 text-lg font-semibold">Amenities & features</h2>
-                    <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
+                  <div className="border-t pt-4">
+                    <h2 className="mb-3 text-base font-semibold">Amenities & features</h2>
+                    <div className="grid gap-2 sm:grid-cols-2 md:grid-cols-3">
                       {property.amenities.map((amenity, index) => (
                         <div key={index} className="flex items-center gap-2.5 text-sm">
                           <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
@@ -367,30 +367,30 @@ export default function PropertyDetailPage({ params: paramsProp }: { params: Pro
             </section>
 
 {canPromoteListing && (
-            <section className="overflow-hidden rounded-2xl border border-primary/15 bg-gradient-to-br from-primary/[0.06] via-background to-accent/[0.08] shadow-sm">
-              <div className="p-5 md:p-7">
+            <section className="overflow-hidden rounded-xl border border-primary/15 bg-gradient-to-br from-primary/[0.06] via-background to-accent/[0.08] shadow-sm">
+              <div className="p-3 md:p-4">
                 <div className="flex items-start gap-4">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary"><Sparkles className="h-5 w-5" /></div>
-                  <div><p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">More visibility</p><h2 className="mt-1 text-lg font-semibold tracking-tight">Promote this listing</h2><p className="mt-2 text-sm leading-6 text-muted-foreground">Give this property a premium sponsored placement so it can stand out more prominently in relevant searches. Sponsored listings remain subject to the same listing and search rules.</p></div>
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary"><Sparkles className="h-4 w-4" /></div>
+                  <div><p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">More visibility</p><h2 className="mt-1 text-base font-semibold tracking-tight">Promote this listing</h2><p className="mt-1.5 text-sm leading-5 text-muted-foreground">Give this property a premium sponsored placement so it can stand out more prominently in relevant searches. Sponsored listings remain subject to the same listing and search rules.</p></div>
                 </div>
-                <Button asChild className="mt-5 w-full rounded-xl sm:w-auto"><Link href={'/promote?property=' + property.id}>Explore sponsored placement</Link></Button>
+                <Button asChild className="mt-3 w-full rounded-lg sm:w-auto"><Link href={'/promote?property=' + property.id}>Explore sponsored placement</Link></Button>
               </div>
             </section>
             )}
 
-            <section className="rounded-2xl border bg-background shadow-sm">
-              <div className="border-b px-5 py-5 md:px-7">
+            <section className="rounded-xl border bg-background shadow-sm">
+              <div className="border-b px-4 py-3 md:px-5">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
                     <MapPin className="h-4 w-4" />
                   </div>
                   <div>
-                    <h2 className="font-semibold">Property location</h2>
+                    <h2 className="text-sm font-semibold">Property location</h2>
                     <p className="text-xs text-muted-foreground">Approximate map location</p>
                   </div>
                 </div>
               </div>
-              <div className="p-4 md:p-5">
+              <div className="p-3 md:p-4">
                 {property.latitude != null && property.longitude != null ? (
                   <InteractiveLocationMap
                     value={{ lat: property.latitude, lng: property.longitude }}
@@ -402,30 +402,30 @@ export default function PropertyDetailPage({ params: paramsProp }: { params: Pro
                     Map location not available for this listing.
                   </div>
                 )}
-                <div className="mt-3 flex items-start gap-2 text-sm text-muted-foreground">
+                <div className="mt-2 flex items-start gap-2 text-xs text-muted-foreground">
                   <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
                   <span>{property.location}</span>
                 </div>
               </div>
             </section>
 
-            <section className="rounded-2xl border bg-background shadow-sm">
-              <div className="border-b px-5 py-5 md:px-7">
+            <section className="rounded-xl border bg-background shadow-sm">
+              <div className="border-b px-4 py-3 md:px-5">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted text-muted-foreground">
                     <ShieldAlert className="h-4 w-4" />
                   </div>
                   <div>
-                    <h2 className="font-semibold">Something wrong with this listing?</h2>
+                    <h2 className="text-sm font-semibold">Something wrong with this listing?</h2>
                     <p className="text-xs text-muted-foreground">Help us keep NyumbaFinder accurate and safe.</p>
                   </div>
                 </div>
               </div>
-              <div className="space-y-3 p-5 md:p-7">
+              <div className="space-y-2.5 p-4">
                 <select
                   value={reportType}
                   onChange={(e) => setReportType(e.target.value)}
-                  className="h-11 w-full rounded-xl border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-primary/20"
+                  className="h-9 w-full rounded-lg border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-primary/20"
                 >
                   <option>Incorrect information</option>
                   <option>No longer available</option>
@@ -438,11 +438,11 @@ export default function PropertyDetailPage({ params: paramsProp }: { params: Pro
                   value={reportDescription}
                   onChange={(e) => setReportDescription(e.target.value)}
                   placeholder="Optional details"
-                  className="min-h-24 w-full resize-y rounded-xl border bg-background p-3 text-sm outline-none focus:ring-2 focus:ring-primary/20"
+                  className="min-h-20 w-full resize-y rounded-lg border bg-background p-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/20"
                 />
                 <Button
                   variant="outline"
-                  className="w-full rounded-xl"
+                  className="h-9 w-full rounded-lg sm:w-auto"
                   disabled={reportSent}
                   onClick={async () => {
                     const response = await fetch('/api/property-reports', {
@@ -466,17 +466,17 @@ export default function PropertyDetailPage({ params: paramsProp }: { params: Pro
             </section>
           </div>
 
-          <aside className="space-y-5">
-            <Card className="overflow-hidden rounded-2xl border shadow-sm">
-              <div className="border-b bg-primary/[0.04] px-5 py-6">
+          <aside className="space-y-4">
+            <Card className="overflow-hidden rounded-xl border shadow-sm">
+              <div className="border-b bg-primary/[0.04] px-4 py-4">
                 <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">{property.listingType === 'FOR_SALE' ? 'Sale price' : property.listingType === 'SHORT_STAY' ? 'Short-stay price' : 'Monthly rent'}</p>
-                <p className="mt-1 text-3xl font-semibold tracking-tight">
+                <p className="mt-1 text-2xl font-semibold tracking-tight">
                   Ksh {property.price.toLocaleString()}
                   {property.listingType !== 'FOR_SALE' && <span className="ml-1 text-sm font-medium text-muted-foreground">{pricePeriodLabel}</span>}
                 </p>
               </div>
-              <CardContent className="space-y-4 p-5">
-                <div className="rounded-xl border bg-muted/20 p-4">
+              <CardContent className="space-y-3 p-4">
+                <div className="rounded-lg border bg-muted/20 p-3">
                   <div className="flex items-start gap-3">
                     <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-background text-primary shadow-sm">
                       <Phone className="h-4 w-4" />
@@ -492,14 +492,14 @@ export default function PropertyDetailPage({ params: paramsProp }: { params: Pro
                       <a
                         href={'tel:' + property.phoneNumber}
                         onClick={() => trackContactEvent('click_to_call')}
-                        className="mt-4 flex h-11 items-center justify-center rounded-xl bg-accent px-4 text-sm font-semibold text-accent-foreground transition-colors hover:bg-accent/90"
+                        className="mt-3 flex h-10 items-center justify-center rounded-lg bg-accent px-4 text-sm font-semibold text-accent-foreground transition-colors hover:bg-accent/90"
                       >
                         <Phone className="mr-2 h-4 w-4" />
                         {property.phoneNumber}
                       </a>
                     ) : (
                       <Button
-                        className="mt-4 h-11 w-full rounded-xl bg-accent text-accent-foreground hover:bg-accent/90"
+                        className="mt-3 h-10 w-full rounded-lg bg-accent text-accent-foreground hover:bg-accent/90"
                         onClick={() => { trackContactEvent('show_phone'); setShowPhoneNumber(true); }}
                       >
                         <Phone className="mr-2 h-4 w-4" />
@@ -518,9 +518,9 @@ export default function PropertyDetailPage({ params: paramsProp }: { params: Pro
               </CardContent>
             </Card>
 
-            <Card className="rounded-2xl border shadow-sm">
+            <Card className="rounded-xl border shadow-sm">
               <CardHeader className="pb-3">
-                <CardTitle className="text-base">At a glance</CardTitle>
+                <CardTitle className="text-sm">At a glance</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="flex items-center justify-between border-b pb-3 text-sm">
