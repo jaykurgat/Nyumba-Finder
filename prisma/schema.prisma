@@ -118,7 +118,8 @@ model LandlordProfile {
 model PropertyImage {
   id         String   @id @default(uuid()) @db.Uuid
   propertyId String   @db.Uuid
-  data       Bytes
+  data       Bytes?
+  url        String?
   mimeType   String
   createdAt  DateTime @default(now())
   property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
