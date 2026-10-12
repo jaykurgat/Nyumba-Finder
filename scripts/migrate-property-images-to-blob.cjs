@@ -37,6 +37,7 @@ async function main() {
         access: 'public',
         contentType: image.mimeType,
         addRandomSuffix: false,
+        allowOverwrite: true,
         token,
       });
 
