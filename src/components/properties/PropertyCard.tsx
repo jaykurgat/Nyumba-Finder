@@ -13,8 +13,10 @@ interface PropertyCardProps {
 
 function trackAnalyticsEvent(eventName: string, params: Record<string, string | number>) {
   if (typeof window === 'undefined') return;
-  const analyticsWindow = window as Window & { dataLayer?: Array<Record<string, unknown>> };
-  analyticsWindow.dataLayer?.push({ event: eventName, ...params });
+  const analyticsWindow = window as Window & {
+    gtag?: (command: string, eventName: string, eventParams: Record<string, string | number>) => void;
+  };
+  analyticsWindow.gtag?.('event', eventName, params);
 }
 
 export function PropertyCard({ property }: PropertyCardProps) {
