@@ -776,7 +776,27 @@ async function main() {
     });
   }
 
-  console.log(`Seeded ${counties.length} Kenyan counties and county-capital location nodes.`);
+
+  // Shared curated rental-market locations power both SEO pages and public location selectors.
+  // Keep this list in one JSON master so public forms and location landing pages cannot drift.
+  const rentalLocations = require('./location-seo-targets.json');
+  const normalizeRentalSlug = (value) => String(value).normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  const rentalCountyAliases = { Nairobi: 'Nairobi City' };
+  for (const location of rentalLocations) {
+    const countyName = rentalCountyAliases[location.county] || location.county;
+    const county = await prisma.county.findFirst({ where: { name: { equals: countyName, mode: 'insensitive' } } });
+    if (!county) continue;
+    const level = location.kind === 'city' ? 'CITY' : location.kind === 'town' ? 'TOWN' : location.kind === 'estate' ? 'ESTATE' : 'AREA';
+    const slug = normalizeRentalSlug(location.name);
+    const existing = await prisma.locationNode.findFirst({ where: { countyId: county.id, level, slug, parentId: null } });
+    if (existing) {
+      await prisma.locationNode.update({ where: { id: existing.id }, data: { name: location.name, searchable: true, searchPriority: Math.max(existing.searchPriority, location.kind === 'city' ? 100 : location.kind === 'town' ? 80 : 60), source: 'CURATED_RENTAL_MARKET' } });
+    } else {
+      await prisma.locationNode.create({ data: { countyId: county.id, level, name: location.name, slug, parentId: null, searchable: true, searchPriority: location.kind === 'city' ? 100 : location.kind === 'town' ? 80 : 60, source: 'CURATED_RENTAL_MARKET' } });
+    }
+  }
+
+  console.log(`Seeded ${counties.length} Kenyan counties, county-capital nodes and curated rental-market locations.`);
 }
 
 main().catch((error) => {
