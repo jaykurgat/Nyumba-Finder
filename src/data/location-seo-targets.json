@@ -333,7 +333,7 @@
     "kind": "area",
     "market": "nairobi-metro",
     "description": "Explore rental options in Kahawa and nearby northern Nairobi neighborhoods.",
-    "parentName": null
+    "parentName": "Nairobi"
   },
   {
     "slug": "githurai",
@@ -342,7 +342,7 @@
     "kind": "area",
     "market": "nairobi-metro",
     "description": "Browse rental homes in Githurai and the neighboring Nairobi–Kiambu corridor.",
-    "parentName": null
+    "parentName": "Nairobi"
   },
   {
     "slug": "ruai",
@@ -351,7 +351,7 @@
     "kind": "area",
     "market": "nairobi-metro",
     "description": "Explore rental homes in Ruai and nearby eastern Nairobi areas.",
-    "parentName": null
+    "parentName": "Nairobi"
   },
   {
     "slug": "karen",
@@ -378,7 +378,7 @@
     "kind": "estate",
     "market": "nairobi-metro",
     "description": "Browse rental homes in Ridgeways, Nairobi.",
-    "parentName": null
+    "parentName": "Nairobi"
   },
   {
     "slug": "gigiri",
@@ -387,7 +387,7 @@
     "kind": "area",
     "market": "nairobi-metro",
     "description": "Explore rental homes in Gigiri and nearby northern Nairobi neighborhoods.",
-    "parentName": null
+    "parentName": "Nairobi"
   },
   {
     "slug": "muthaiga",
@@ -396,7 +396,7 @@
     "kind": "estate",
     "market": "nairobi-metro",
     "description": "Browse rental properties in Muthaiga, Nairobi.",
-    "parentName": null
+    "parentName": "Nairobi"
   },
   {
     "slug": "gachie",
@@ -862,6 +862,6 @@
     "kind": "area",
     "market": "eldoret",
     "description": "Browse rental homes in Huruma, Eldoret.",
-    "parentName": null
+    "parentName": "Eldoret"
   }
 ]
