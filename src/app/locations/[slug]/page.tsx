@@ -15,7 +15,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const data = await getLocationSeoData(slug);
   if (!data) return { title: "Location not found | NyumbaFinder", robots: { index: false, follow: true } };
 
-  const { target, properties, canonical } = data;
+  const { target, canonical } = data;
   const title = `Houses for Rent in ${target.name} | NyumbaFinder`;
   const description = `${target.description} View current rental listings on NyumbaFinder and compare available homes.`;
 
