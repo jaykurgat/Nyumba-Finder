@@ -14,6 +14,7 @@ export async function GET(request: NextRequest) {
     const level = params.get('level')?.trim() || '';
     const excludeLevel = params.get('excludeLevel')?.trim() || '';
     const kind = params.get('kind')?.trim() || '';
+    const primaryLocations = level === 'PRIMARY';
 
     if (kind === 'counties') {
       const counties = await prisma.county.findMany({ select: { id: true, name: true }, orderBy: { name: 'asc' } });
@@ -23,12 +24,13 @@ export async function GET(request: NextRequest) {
     if (!query && !countyId && !parentId && !level) return NextResponse.json({ locations: [] });
 
     const normalizedQuery = normalize(query);
+    const effectiveLevels = primaryLocations ? ['TOWN', 'CITY', 'ESTATE', 'NEIGHBORHOOD', 'AREA', 'VILLAGE', 'LOCALITY'] : level ? [level] : undefined;
     const rows = await prisma.locationNode.findMany({
       where: {
         searchable: true,
         ...(countyId ? { countyId } : {}),
         ...(parentId ? { parentId } : {}),
-        ...(level ? { level } : {}),
+        ...(effectiveLevels ? { level: { in: effectiveLevels } } : {}),
         ...(excludeLevel ? { NOT: { level: excludeLevel } } : {}),
         ...(query ? {
           OR: [
