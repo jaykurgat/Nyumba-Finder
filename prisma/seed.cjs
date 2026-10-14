@@ -788,11 +788,14 @@ async function main() {
     if (!county) continue;
     const level = location.kind === 'city' ? 'CITY' : location.kind === 'town' ? 'TOWN' : location.kind === 'estate' ? 'ESTATE' : 'AREA';
     const slug = normalizeRentalSlug(location.name);
-    const existing = await prisma.locationNode.findFirst({ where: { countyId: county.id, level, slug, parentId: null } });
+    const parentName = location.parentName || null;
+    const parent = parentName ? await prisma.locationNode.findFirst({ where: { countyId: county.id, name: { equals: parentName, mode: 'insensitive' }, level: { in: ['TOWN', 'CITY'] }, searchable: true }, select: { id: true } }) : null;
+    const parentId = parent?.id ?? null;
+    const existing = await prisma.locationNode.findFirst({ where: { countyId: county.id, level, slug, parentId } });
     if (existing) {
       await prisma.locationNode.update({ where: { id: existing.id }, data: { name: location.name, searchable: true, searchPriority: Math.max(existing.searchPriority, location.kind === 'city' ? 100 : location.kind === 'town' ? 80 : 60), source: 'CURATED_RENTAL_MARKET' } });
     } else {
-      await prisma.locationNode.create({ data: { countyId: county.id, level, name: location.name, slug, parentId: null, searchable: true, searchPriority: location.kind === 'city' ? 100 : location.kind === 'town' ? 80 : 60, source: 'CURATED_RENTAL_MARKET' } });
+      await prisma.locationNode.create({ data: { countyId: county.id, level, name: location.name, slug, parentId, searchable: true, searchPriority: location.kind === 'city' ? 100 : location.kind === 'town' ? 80 : 60, source: 'CURATED_RENTAL_MARKET' } });
     }
   }
 
