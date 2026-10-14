@@ -117,7 +117,7 @@ export function PropertySearchForm({ onFormSubmit, isInSheet = false }: { onForm
       <Form {...form}>
         <form onSubmit={form.handleSubmit(submit)} className="space-y-6">
           <ListingTypeField form={form} />
-          <LocationField form={form} />
+          <LocationField form={form} locations={locations} />
           <Panel title="Price range" description={pricePeriodLabel}>
             <PriceFields form={form} />
           </Panel>
@@ -142,7 +142,7 @@ export function PropertySearchForm({ onFormSubmit, isInSheet = false }: { onForm
       <form onSubmit={form.handleSubmit(submit)} className="relative rounded-2xl border bg-background p-2 shadow-sm">
         <div className="flex flex-col lg:flex-row lg:items-center">
           <ListingTypeField form={form} compact />
-          <LocationField form={form} compact />
+          <LocationField form={form} locations={locations} compact />
           <div className="hidden h-8 w-px bg-border lg:block" />
           <FilterMenu name="price" label={priceLabel} active={priceActive} open={open === "price"} setOpen={setOpen} icon={null}>
             <PriceFields form={form} />
@@ -187,7 +187,7 @@ function ListingTypeField({ form, compact = false }: { form: any; compact?: bool
   );
 }
 
-function LocationField({ form, compact = false }: { form: any; compact?: boolean }) {
+function LocationField({ form, locations, compact = false }: { form: any; locations: string[]; compact?: boolean }) {
   return (
     <div className={compact ? "flex min-h-12 flex-1 items-center gap-3 px-3" : "space-y-2"}>
       {!compact && <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Location</p>}
