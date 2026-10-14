@@ -38,7 +38,7 @@ const formSchema = z.object({
   description: z.string().min(20, "Description must be at least 20 characters.").max(1000, "Description cannot exceed 1000 characters."),
   countyId: z.string().min(1, "Please select a county."),
   location: z.string().min(2, "Please specify a location."),
-  locationNodeId: z.string().min(1, "Please select a Town / City."),
+  locationNodeId: z.string().min(1, "Please select a town, city or estate."),
   propertyType: z.string().min(2, "Please select a property type."),
   listingType: z.enum(["FOR_RENT", "FOR_SALE", "SHORT_STAY"]),
   price: z.coerce.number().positive("Price must be a positive number."),
@@ -165,7 +165,7 @@ export default function ListPropertyPage() {
 
     fetch('/api/locations?' + new URLSearchParams({
       countyId: watchedCountyId,
-      level: 'TOWN',
+      level: 'PRIMARY',
     }).toString(), { cache: 'no-store' })
       .then(async (response) => {
         const data = await response.json().catch(() => ({}));
@@ -541,7 +541,7 @@ export default function ListPropertyPage() {
 
                       <div className="grid gap-5 md:grid-cols-2">
                         <div className="space-y-2">
-                          <FormLabel>Town / City <span className="text-primary">*</span></FormLabel>
+                          <FormLabel>Town, city or estate <span className="text-primary">*</span></FormLabel>
                           <select
                             value={selectedTownId}
                             disabled={!watchedCountyId || townsLoading}
@@ -558,7 +558,7 @@ export default function ListPropertyPage() {
                             }}
                             className="flex h-11 w-full rounded-xl border bg-background px-3 text-sm outline-none transition focus:ring-2 focus:ring-primary/20"
                           >
-                            <option value="">{!watchedCountyId ? 'Select county first' : townsLoading ? 'Loading towns and cities...' : towns.length ? 'Select a town or city' : 'No towns or cities available'}</option>
+                            <option value="">{!watchedCountyId ? 'Select county first' : townsLoading ? 'Loading towns and cities...' : towns.length ? 'Select a town, city or estate' : 'No matching locations available'}</option>
                             {towns.map((town) => (
                               <option key={town.id} value={town.id}>{town.name}</option>
                             ))}
