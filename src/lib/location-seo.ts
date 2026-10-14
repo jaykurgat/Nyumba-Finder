@@ -33,11 +33,11 @@ export async function getLocationSeoData(slug: string) {
       }
     }
   }
-  const isCityPage = ["nairobi", "nakuru", "mombasa", "kisumu", "eldoret"].includes(target.slug);
+  const isCityPage = target.slug === "nairobi";
   const conditions = [
     ...(nodeIds.size ? [{ locationNodeId: { in: [...nodeIds] } }] : []),
     { location: { contains: target.name, mode: "insensitive" as const } },
-    ...(target.slug === "rongai" ? [{ location: { contains: "Ongata Rongai", mode: "insensitive" as const } }] : []),
+    ...(target.slug === "ongata-rongai" ? [{ location: { contains: "Ongata Rongai", mode: "insensitive" as const } }] : []),
   ];
   const properties = await prisma.property.findMany({
     where: { status: "ACTIVE", OR: isCityPage ? [{ countyId: county.id }, { location: { contains: target.name, mode: "insensitive" } }] : conditions },
@@ -82,7 +82,7 @@ export async function getLocationSeoSitemapEntries() {
       const isCityPage = ["nairobi", "nakuru", "mombasa", "kisumu", "eldoret"].includes(target.slug);
       const match = (isCityPage && property.countyId === countyId) ||
         locationText.includes(normalizeLocationSlug(target.name)) ||
-        (target.slug === "rongai" && locationText.includes("ongata-rongai")) ||
+        (target.slug === "ongata-rongai" && locationText.includes("ongata-rongai")) ||
         (property.locationNodeId ? descendantIds.get(target.slug)?.has(property.locationNodeId) : false) ||
         Boolean(countyId && ancestorKeys.has(`${countyId}|${normalizeLocationSlug(target.name)}`));
       if (match) counts.set(target.slug, (counts.get(target.slug) ?? 0) + 1);
