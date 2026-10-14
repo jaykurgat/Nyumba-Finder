@@ -38,7 +38,7 @@ const formSchema = z.object({
   description: z.string().min(20, "Description must be at least 20 characters.").max(1000, "Description cannot exceed 1000 characters."),
   countyId: z.string().min(1, "Please select a county."),
   location: z.string().min(2, "Please specify a location."),
-  locationNodeId: z.string().min(1, "Please select a Town / City."),
+  locationNodeId: z.string().min(1, "Please select a town, city or estate."),
   propertyType: z.string().min(2, "Please select a property type."),
   listingType: z.enum(["FOR_RENT", "FOR_SALE", "SHORT_STAY"]),
   price: z.coerce.number().positive("Price must be a positive number."),
@@ -193,7 +193,7 @@ export default function ListPropertyPage() {
     }
     let cancelled = false;
     setAreasLoading(true);
-    fetch('/api/locations?' + new URLSearchParams({ parentId: selectedTownId, level: 'AREA' }).toString(), { cache: 'no-store' })
+    fetch('/api/locations?' + new URLSearchParams({ parentId: selectedTownId, level: 'RESIDENTIAL' }).toString(), { cache: 'no-store' })
       .then(async (response) => {
         const data = await response.json().catch(() => ({}));
         if (!response.ok) throw new Error(data.message || 'Failed to load area suggestions.');

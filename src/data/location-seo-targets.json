@@ -1,0 +1,867 @@
+[
+  {
+    "slug": "nairobi",
+    "name": "Nairobi",
+    "county": "Nairobi City",
+    "kind": "city",
+    "market": "nairobi-metro",
+    "description": "Explore rental homes across Nairobi, with options by estate, property type and budget."
+  },
+  {
+    "slug": "westlands",
+    "name": "Westlands",
+    "county": "Nairobi City",
+    "kind": "estate",
+    "market": "nairobi-metro",
+    "description": "Browse rental homes in Westlands and compare available properties, rents and features.",
+    "parentName": "Nairobi"
+  },
+  {
+    "slug": "kilimani",
+    "name": "Kilimani",
+    "county": "Nairobi City",
+    "kind": "estate",
+    "market": "nairobi-metro",
+    "description": "Explore apartments and rental homes in Kilimani, Nairobi.",
+    "parentName": "Nairobi"
+  },
+  {
+    "slug": "kileleshwa",
+    "name": "Kileleshwa",
+    "county": "Nairobi City",
+    "kind": "estate",
+    "market": "nairobi-metro",
+    "description": "Explore rental apartments and homes in Kileleshwa, Nairobi.",
+    "parentName": "Nairobi"
+  },
+  {
+    "slug": "lavington",
+    "name": "Lavington",
+    "county": "Nairobi City",
+    "kind": "estate",
+    "market": "nairobi-metro",
+    "description": "Find rental homes in Lavington and compare available options.",
+    "parentName": "Nairobi"
+  },
+  {
+    "slug": "parklands",
+    "name": "Parklands",
+    "county": "Nairobi City",
+    "kind": "estate",
+    "market": "nairobi-metro",
+    "description": "Browse rental properties in Parklands, Nairobi.",
+    "parentName": "Nairobi"
+  },
+  {
+    "slug": "south-b",
+    "name": "South B",
+    "county": "Nairobi City",
+    "kind": "estate",
+    "market": "nairobi-metro",
+    "description": "Explore rental apartments and homes in South B, Nairobi.",
+    "parentName": "Nairobi"
+  },
+  {
+    "slug": "south-c",
+    "name": "South C",
+    "county": "Nairobi City",
+    "kind": "estate",
+    "market": "nairobi-metro",
+    "description": "Browse available rental homes in South C, Nairobi.",
+    "parentName": "Nairobi"
+  },
+  {
+    "slug": "langata",
+    "name": "Langata",
+    "county": "Nairobi City",
+    "kind": "area",
+    "market": "nairobi-metro",
+    "description": "Explore rental homes in Langata and nearby Nairobi neighborhoods.",
+    "parentName": "Nairobi"
+  },
+  {
+    "slug": "ongata-rongai",
+    "name": "Ongata Rongai",
+    "county": "Kajiado",
+    "kind": "town",
+    "market": "nairobi-metro",
+    "description": "Compare rental homes in Ongata Rongai and nearby areas south of Nairobi."
+  },
+  {
+    "slug": "kasarani",
+    "name": "Kasarani",
+    "county": "Nairobi City",
+    "kind": "estate",
+    "market": "nairobi-metro",
+    "description": "Browse houses and apartments for rent in Kasarani, Nairobi.",
+    "parentName": "Nairobi"
+  },
+  {
+    "slug": "roysambu",
+    "name": "Roysambu",
+    "county": "Nairobi City",
+    "kind": "estate",
+    "market": "nairobi-metro",
+    "description": "Explore bedsitters, apartments and other rentals in Roysambu.",
+    "parentName": "Nairobi"
+  },
+  {
+    "slug": "ruaka",
+    "name": "Ruaka",
+    "county": "Kiambu",
+    "kind": "town",
+    "market": "nairobi-metro",
+    "description": "Browse rental homes in Ruaka and the surrounding Nairobi metropolitan area."
+  },
+  {
+    "slug": "banana",
+    "name": "Banana",
+    "county": "Kiambu",
+    "kind": "area",
+    "market": "nairobi-metro",
+    "description": "Explore rental homes in Banana and nearby areas of Kiambu County.",
+    "parentName": "Kiambu Town"
+  },
+  {
+    "slug": "kiambu-town",
+    "name": "Kiambu Town",
+    "county": "Kiambu",
+    "kind": "town",
+    "market": "nairobi-metro",
+    "description": "Compare available rental homes in Kiambu Town."
+  },
+  {
+    "slug": "thika",
+    "name": "Thika",
+    "county": "Kiambu",
+    "kind": "town",
+    "market": "nairobi-metro",
+    "description": "Explore houses and apartments for rent in Thika, Kiambu County."
+  },
+  {
+    "slug": "ruiru",
+    "name": "Ruiru",
+    "county": "Kiambu",
+    "kind": "town",
+    "market": "nairobi-metro",
+    "description": "Browse rental homes in Ruiru, with available options across property types and budgets."
+  },
+  {
+    "slug": "juja",
+    "name": "Juja",
+    "county": "Kiambu",
+    "kind": "town",
+    "market": "nairobi-metro",
+    "description": "Explore rental homes in Juja and compare current listings."
+  },
+  {
+    "slug": "kikuyu",
+    "name": "Kikuyu",
+    "county": "Kiambu",
+    "kind": "town",
+    "market": "nairobi-metro",
+    "description": "Browse rental houses and apartments in Kikuyu, west of Nairobi."
+  },
+  {
+    "slug": "thogoto",
+    "name": "Thogoto",
+    "county": "Kiambu",
+    "kind": "area",
+    "market": "nairobi-metro",
+    "description": "Explore rental options in Thogoto and nearby Kikuyu areas.",
+    "parentName": "Kikuyu"
+  },
+  {
+    "slug": "kinoo",
+    "name": "Kinoo",
+    "county": "Kiambu",
+    "kind": "area",
+    "market": "nairobi-metro",
+    "description": "Browse rental homes in Kinoo and the surrounding Kikuyu corridor.",
+    "parentName": "Kikuyu"
+  },
+  {
+    "slug": "zambezi",
+    "name": "Zambezi",
+    "county": "Kiambu",
+    "kind": "area",
+    "market": "nairobi-metro",
+    "description": "Explore rental properties around Zambezi in the greater Kikuyu area.",
+    "parentName": "Kikuyu"
+  },
+  {
+    "slug": "kidfarmaco",
+    "name": "Kidfarmaco",
+    "county": "Kiambu",
+    "kind": "area",
+    "market": "nairobi-metro",
+    "description": "Browse rental options in Kidfarmaco and nearby Kikuyu neighborhoods.",
+    "parentName": "Kikuyu"
+  },
+  {
+    "slug": "limuru",
+    "name": "Limuru",
+    "county": "Kiambu",
+    "kind": "town",
+    "market": "nairobi-metro",
+    "description": "Explore rental houses and apartments in Limuru and nearby areas."
+  },
+  {
+    "slug": "rironi",
+    "name": "Rironi",
+    "county": "Kiambu",
+    "kind": "area",
+    "market": "nairobi-metro",
+    "description": "Browse rental options in Rironi and the Limuru corridor.",
+    "parentName": "Limuru"
+  },
+  {
+    "slug": "tigoni",
+    "name": "Tigoni",
+    "county": "Kiambu",
+    "kind": "area",
+    "market": "nairobi-metro",
+    "description": "Explore homes for rent in Tigoni and the surrounding Limuru area.",
+    "parentName": "Limuru"
+  },
+  {
+    "slug": "ngong",
+    "name": "Ngong",
+    "county": "Kajiado",
+    "kind": "town",
+    "market": "nairobi-metro",
+    "description": "Compare rental houses and apartments in Ngong, within the wider Nairobi commuter region."
+  },
+  {
+    "slug": "kiserian",
+    "name": "Kiserian",
+    "county": "Kajiado",
+    "kind": "town",
+    "market": "nairobi-metro",
+    "description": "Explore rental homes in Kiserian and nearby towns south of Nairobi."
+  },
+  {
+    "slug": "kitengela",
+    "name": "Kitengela",
+    "county": "Kajiado",
+    "kind": "town",
+    "market": "nairobi-metro",
+    "description": "Browse rental houses and apartments in Kitengela, Kajiado County."
+  },
+  {
+    "slug": "athi-river",
+    "name": "Athi River",
+    "county": "Machakos",
+    "kind": "town",
+    "market": "nairobi-metro",
+    "description": "Explore rental homes in Athi River and the wider Nairobi metropolitan area."
+  },
+  {
+    "slug": "syokimau",
+    "name": "Syokimau",
+    "county": "Machakos",
+    "kind": "area",
+    "market": "nairobi-metro",
+    "description": "Browse rental apartments and houses in Syokimau, near Nairobi and the airport corridor.",
+    "parentName": "Athi River"
+  },
+  {
+    "slug": "mlolongo",
+    "name": "Mlolongo",
+    "county": "Machakos",
+    "kind": "town",
+    "market": "nairobi-metro",
+    "description": "Explore rental homes in Mlolongo and nearby areas along Mombasa Road."
+  },
+  {
+    "slug": "machakos-town",
+    "name": "Machakos Town",
+    "county": "Machakos",
+    "kind": "town",
+    "market": "nairobi-metro",
+    "description": "Browse available rental homes in Machakos Town."
+  },
+  {
+    "slug": "embakasi",
+    "name": "Embakasi",
+    "county": "Nairobi City",
+    "kind": "estate",
+    "market": "nairobi-metro",
+    "description": "Browse rental homes in Embakasi and nearby eastern Nairobi neighborhoods.",
+    "parentName": "Nairobi"
+  },
+  {
+    "slug": "donholm",
+    "name": "Donholm",
+    "county": "Nairobi City",
+    "kind": "estate",
+    "market": "nairobi-metro",
+    "description": "Explore rental apartments and houses in Donholm, Nairobi.",
+    "parentName": "Nairobi"
+  },
+  {
+    "slug": "buruburu",
+    "name": "Buruburu",
+    "county": "Nairobi City",
+    "kind": "estate",
+    "market": "nairobi-metro",
+    "description": "Browse available rental homes in Buruburu, Nairobi.",
+    "parentName": "Nairobi"
+  },
+  {
+    "slug": "umoja",
+    "name": "Umoja",
+    "county": "Nairobi City",
+    "kind": "estate",
+    "market": "nairobi-metro",
+    "description": "Explore rental homes in Umoja and nearby eastern Nairobi estates.",
+    "parentName": "Nairobi"
+  },
+  {
+    "slug": "komarock",
+    "name": "Komarock",
+    "county": "Nairobi City",
+    "kind": "estate",
+    "market": "nairobi-metro",
+    "description": "Browse rental houses and apartments in Komarock, Nairobi.",
+    "parentName": "Nairobi"
+  },
+  {
+    "slug": "kahawa",
+    "name": "Kahawa",
+    "county": "Nairobi City",
+    "kind": "area",
+    "market": "nairobi-metro",
+    "description": "Explore rental options in Kahawa and nearby northern Nairobi neighborhoods.",
+    "parentName": "Nairobi"
+  },
+  {
+    "slug": "githurai",
+    "name": "Githurai",
+    "county": "Nairobi City",
+    "kind": "area",
+    "market": "nairobi-metro",
+    "description": "Browse rental homes in Githurai and the neighboring Nairobi–Kiambu corridor.",
+    "parentName": "Nairobi"
+  },
+  {
+    "slug": "ruai",
+    "name": "Ruai",
+    "county": "Nairobi City",
+    "kind": "area",
+    "market": "nairobi-metro",
+    "description": "Explore rental homes in Ruai and nearby eastern Nairobi areas.",
+    "parentName": "Nairobi"
+  },
+  {
+    "slug": "karen",
+    "name": "Karen",
+    "county": "Nairobi City",
+    "kind": "estate",
+    "market": "nairobi-metro",
+    "description": "Browse rental houses and apartments in Karen, Nairobi.",
+    "parentName": "Nairobi"
+  },
+  {
+    "slug": "runda",
+    "name": "Runda",
+    "county": "Nairobi City",
+    "kind": "estate",
+    "market": "nairobi-metro",
+    "description": "Explore rental homes in Runda and nearby northern Nairobi neighborhoods.",
+    "parentName": "Nairobi"
+  },
+  {
+    "slug": "ridgeways",
+    "name": "Ridgeways",
+    "county": "Nairobi City",
+    "kind": "estate",
+    "market": "nairobi-metro",
+    "description": "Browse rental homes in Ridgeways, Nairobi.",
+    "parentName": "Nairobi"
+  },
+  {
+    "slug": "gigiri",
+    "name": "Gigiri",
+    "county": "Nairobi City",
+    "kind": "area",
+    "market": "nairobi-metro",
+    "description": "Explore rental homes in Gigiri and nearby northern Nairobi neighborhoods.",
+    "parentName": "Nairobi"
+  },
+  {
+    "slug": "muthaiga",
+    "name": "Muthaiga",
+    "county": "Nairobi City",
+    "kind": "estate",
+    "market": "nairobi-metro",
+    "description": "Browse rental properties in Muthaiga, Nairobi.",
+    "parentName": "Nairobi"
+  },
+  {
+    "slug": "gachie",
+    "name": "Gachie",
+    "county": "Kiambu",
+    "kind": "area",
+    "market": "nairobi-metro",
+    "description": "Explore rental homes in Gachie and the Kiambu side of the Nairobi commuter belt.",
+    "parentName": "Kiambu Town"
+  },
+  {
+    "slug": "ndenderu",
+    "name": "Ndenderu",
+    "county": "Kiambu",
+    "kind": "area",
+    "market": "nairobi-metro",
+    "description": "Browse rental homes in Ndenderu and nearby Kiambaa areas.",
+    "parentName": "Kiambu Town"
+  },
+  {
+    "slug": "wangige",
+    "name": "Wangige",
+    "county": "Kiambu",
+    "kind": "town",
+    "market": "nairobi-metro",
+    "description": "Explore rental properties in Wangige and the wider Kabete area."
+  },
+  {
+    "slug": "kabete",
+    "name": "Kabete",
+    "county": "Kiambu",
+    "kind": "town",
+    "market": "nairobi-metro",
+    "description": "Browse rental homes in Kabete and nearby western Nairobi suburbs."
+  },
+  {
+    "slug": "uthiru",
+    "name": "Uthiru",
+    "county": "Kiambu",
+    "kind": "area",
+    "market": "nairobi-metro",
+    "description": "Explore rental options in Uthiru along the Nairobi–Kikuyu corridor.",
+    "parentName": "Kikuyu"
+  },
+  {
+    "slug": "gitaru",
+    "name": "Gitaru",
+    "county": "Kiambu",
+    "kind": "area",
+    "market": "nairobi-metro",
+    "description": "Browse rental homes in Gitaru and nearby Kikuyu corridor neighborhoods.",
+    "parentName": "Kikuyu"
+  },
+  {
+    "slug": "gikambura",
+    "name": "Gikambura",
+    "county": "Kiambu",
+    "kind": "area",
+    "market": "nairobi-metro",
+    "description": "Explore rental options in Gikambura and nearby Kikuyu areas.",
+    "parentName": "Kikuyu"
+  },
+  {
+    "slug": "isinya",
+    "name": "Isinya",
+    "county": "Kajiado",
+    "kind": "town",
+    "market": "nairobi-metro",
+    "description": "Browse rental homes in Isinya and the southern Nairobi commuter region."
+  },
+  {
+    "slug": "joska",
+    "name": "Joska",
+    "county": "Machakos",
+    "kind": "area",
+    "market": "nairobi-metro",
+    "description": "Explore rental homes in Joska and the eastern Nairobi commuter corridor.",
+    "parentName": "Machakos"
+  },
+  {
+    "slug": "katani",
+    "name": "Katani",
+    "county": "Machakos",
+    "kind": "area",
+    "market": "nairobi-metro",
+    "description": "Browse rental properties in Katani and nearby Mavoko areas.",
+    "parentName": "Athi River"
+  },
+  {
+    "slug": "section-58-nakuru",
+    "name": "Section 58",
+    "county": "Nakuru",
+    "kind": "estate",
+    "market": "nakuru",
+    "description": "Explore rental homes in Section 58, Nakuru.",
+    "parentName": "Nakuru"
+  },
+  {
+    "slug": "lanet",
+    "name": "Lanet",
+    "county": "Nakuru",
+    "kind": "area",
+    "market": "nakuru",
+    "description": "Browse rental homes in Lanet and nearby Nakuru neighborhoods.",
+    "parentName": "Nakuru"
+  },
+  {
+    "slug": "naka",
+    "name": "Naka",
+    "county": "Nakuru",
+    "kind": "area",
+    "market": "nakuru",
+    "description": "Explore rental options in Naka, Nakuru.",
+    "parentName": "Nakuru"
+  },
+  {
+    "slug": "shabab",
+    "name": "Shabab",
+    "county": "Nakuru",
+    "kind": "area",
+    "market": "nakuru",
+    "description": "Browse rental homes in Shabab, Nakuru.",
+    "parentName": "Nakuru"
+  },
+  {
+    "slug": "tudor",
+    "name": "Tudor",
+    "county": "Mombasa",
+    "kind": "estate",
+    "market": "mombasa",
+    "description": "Explore rental houses and apartments in Tudor, Mombasa.",
+    "parentName": "Mombasa"
+  },
+  {
+    "slug": "mtwapa",
+    "name": "Mtwapa",
+    "county": "Kilifi",
+    "kind": "town",
+    "market": "mombasa",
+    "description": "Browse rental homes in Mtwapa and the wider Mombasa coastal commuter area."
+  },
+  {
+    "slug": "manyatta",
+    "name": "Manyatta",
+    "county": "Kisumu",
+    "kind": "area",
+    "market": "kisumu",
+    "description": "Explore rental homes in Manyatta, Kisumu.",
+    "parentName": "Kisumu"
+  },
+  {
+    "slug": "kondele",
+    "name": "Kondele",
+    "county": "Kisumu",
+    "kind": "area",
+    "market": "kisumu",
+    "description": "Browse rental options in Kondele and nearby Kisumu neighborhoods.",
+    "parentName": "Kisumu"
+  },
+  {
+    "slug": "pioneer-eldoret",
+    "name": "Pioneer",
+    "county": "Uasin Gishu",
+    "kind": "estate",
+    "market": "eldoret",
+    "description": "Explore rental homes in Pioneer, Eldoret.",
+    "parentName": "Eldoret"
+  },
+  {
+    "slug": "elgon-view",
+    "name": "Elgon View",
+    "county": "Uasin Gishu",
+    "kind": "estate",
+    "market": "eldoret",
+    "description": "Browse rental houses and apartments in Elgon View, Eldoret.",
+    "parentName": "Eldoret"
+  },
+  {
+    "slug": "annex-eldoret",
+    "name": "Annex",
+    "county": "Uasin Gishu",
+    "kind": "area",
+    "market": "eldoret",
+    "description": "Explore rental options in Annex, Eldoret.",
+    "parentName": "Eldoret"
+  },
+  {
+    "slug": "kamakis",
+    "name": "Kamakis",
+    "county": "Kiambu",
+    "kind": "area",
+    "market": "nairobi-metro",
+    "description": "Explore rental homes in Kamakis and the eastern Ruiru corridor.",
+    "parentName": "Ruiru"
+  },
+  {
+    "slug": "membley",
+    "name": "Membley",
+    "county": "Kiambu",
+    "kind": "estate",
+    "market": "nairobi-metro",
+    "description": "Browse rental homes in Membley and nearby Ruiru neighborhoods.",
+    "parentName": "Ruiru"
+  },
+  {
+    "slug": "kahawa-sukari",
+    "name": "Kahawa Sukari",
+    "county": "Kiambu",
+    "kind": "estate",
+    "market": "nairobi-metro",
+    "description": "Explore rental homes in Kahawa Sukari and the northern Nairobi commuter belt.",
+    "parentName": "Ruiru"
+  },
+  {
+    "slug": "kahawa-wendani",
+    "name": "Kahawa Wendani",
+    "county": "Kiambu",
+    "kind": "area",
+    "market": "nairobi-metro",
+    "description": "Browse rental homes in Kahawa Wendani and nearby university-area neighborhoods.",
+    "parentName": "Ruiru"
+  },
+  {
+    "slug": "witeithie",
+    "name": "Witeithie",
+    "county": "Kiambu",
+    "kind": "area",
+    "market": "nairobi-metro",
+    "description": "Explore rental options in Witeithie near Juja and Thika Road.",
+    "parentName": "Juja"
+  },
+  {
+    "slug": "githunguri",
+    "name": "Githunguri",
+    "county": "Kiambu",
+    "kind": "town",
+    "market": "nairobi-metro",
+    "description": "Browse rental houses and apartments in Githunguri, Kiambu County."
+  },
+  {
+    "slug": "gatundu",
+    "name": "Gatundu",
+    "county": "Kiambu",
+    "kind": "town",
+    "market": "nairobi-metro",
+    "description": "Explore available rental homes in Gatundu and nearby communities."
+  },
+  {
+    "slug": "mangu",
+    "name": "Mangu",
+    "county": "Kiambu",
+    "kind": "area",
+    "market": "nairobi-metro",
+    "description": "Browse rental homes in Mangu and nearby Thika-area communities.",
+    "parentName": "Thika"
+  },
+  {
+    "slug": "makongeni",
+    "name": "Makongeni",
+    "county": "Kiambu",
+    "kind": "estate",
+    "market": "nairobi-metro",
+    "description": "Explore rental options in Makongeni, Thika.",
+    "parentName": "Thika"
+  },
+  {
+    "slug": "matasia",
+    "name": "Matasia",
+    "county": "Kajiado",
+    "kind": "area",
+    "market": "nairobi-metro",
+    "description": "Browse rental homes in Matasia and the Ngong–Kiserian corridor.",
+    "parentName": "Ngong"
+  },
+  {
+    "slug": "mavoko",
+    "name": "Mavoko",
+    "county": "Machakos",
+    "kind": "town",
+    "market": "nairobi-metro",
+    "description": "Explore rental homes across Mavoko and the wider Nairobi commuter region."
+  },
+  {
+    "slug": "malaa",
+    "name": "Malaa",
+    "county": "Machakos",
+    "kind": "area",
+    "market": "nairobi-metro",
+    "description": "Browse rental options in Malaa and nearby eastern Nairobi commuter towns.",
+    "parentName": "Machakos"
+  },
+  {
+    "slug": "free-area-nakuru",
+    "name": "Free Area",
+    "county": "Nakuru",
+    "kind": "area",
+    "market": "nakuru",
+    "description": "Browse rental homes in Free Area, Nakuru.",
+    "parentName": "Nakuru"
+  },
+  {
+    "slug": "bamburi",
+    "name": "Bamburi",
+    "county": "Mombasa",
+    "kind": "area",
+    "market": "mombasa",
+    "description": "Browse rental properties in Bamburi and nearby coastal neighborhoods.",
+    "parentName": "Mombasa"
+  },
+  {
+    "slug": "nyamasaria",
+    "name": "Nyamasaria",
+    "county": "Kisumu",
+    "kind": "area",
+    "market": "kisumu",
+    "description": "Explore rental homes in Nyamasaria and nearby Kisumu neighborhoods.",
+    "parentName": "Kisumu"
+  },
+  {
+    "slug": "riat",
+    "name": "Riat",
+    "county": "Kisumu",
+    "kind": "area",
+    "market": "kisumu",
+    "description": "Browse rental options in Riat and the greater Kisumu area.",
+    "parentName": "Kisumu"
+  },
+  {
+    "slug": "kimumu",
+    "name": "Kimumu",
+    "county": "Uasin Gishu",
+    "kind": "area",
+    "market": "eldoret",
+    "description": "Explore rental homes in Kimumu and nearby Eldoret neighborhoods.",
+    "parentName": "Eldoret"
+  },
+  {
+    "slug": "nakuru",
+    "name": "Nakuru",
+    "county": "Nakuru",
+    "kind": "city",
+    "market": "nakuru",
+    "description": "Explore rental homes in Nakuru and compare options by location, home type and budget."
+  },
+  {
+    "slug": "milimani-nakuru",
+    "name": "Milimani",
+    "county": "Nakuru",
+    "kind": "estate",
+    "market": "nakuru",
+    "description": "Browse rental properties in Milimani, Nakuru.",
+    "parentName": "Nakuru"
+  },
+  {
+    "slug": "pipeline-nakuru",
+    "name": "Pipeline",
+    "county": "Nakuru",
+    "kind": "estate",
+    "market": "nakuru",
+    "description": "Explore rental homes in Pipeline, Nakuru.",
+    "parentName": "Nakuru"
+  },
+  {
+    "slug": "mombasa",
+    "name": "Mombasa",
+    "county": "Mombasa",
+    "kind": "city",
+    "market": "mombasa",
+    "description": "Browse rental homes across Mombasa and its residential neighborhoods."
+  },
+  {
+    "slug": "nyali",
+    "name": "Nyali",
+    "county": "Mombasa",
+    "kind": "estate",
+    "market": "mombasa",
+    "description": "Explore rental apartments and houses in Nyali, Mombasa.",
+    "parentName": "Mombasa"
+  },
+  {
+    "slug": "likoni",
+    "name": "Likoni",
+    "county": "Mombasa",
+    "kind": "area",
+    "market": "mombasa",
+    "description": "Explore rental homes in Likoni, Mombasa.",
+    "parentName": "Mombasa"
+  },
+  {
+    "slug": "kisauni",
+    "name": "Kisauni",
+    "county": "Mombasa",
+    "kind": "area",
+    "market": "mombasa",
+    "description": "Browse rental homes in Kisauni and nearby areas of Mombasa.",
+    "parentName": "Mombasa"
+  },
+  {
+    "slug": "kisumu",
+    "name": "Kisumu",
+    "county": "Kisumu",
+    "kind": "city",
+    "market": "kisumu",
+    "description": "Explore rental houses and apartments in Kisumu and its surrounding neighborhoods."
+  },
+  {
+    "slug": "milimani-kisumu",
+    "name": "Milimani",
+    "county": "Kisumu",
+    "kind": "estate",
+    "market": "kisumu",
+    "description": "Browse rental homes in Milimani, Kisumu.",
+    "parentName": "Nakuru"
+  },
+  {
+    "slug": "mamboleo",
+    "name": "Mamboleo",
+    "county": "Kisumu",
+    "kind": "area",
+    "market": "kisumu",
+    "description": "Explore rental options in Mamboleo and nearby Kisumu neighborhoods.",
+    "parentName": "Kisumu"
+  },
+  {
+    "slug": "nyalenda",
+    "name": "Nyalenda",
+    "county": "Kisumu",
+    "kind": "area",
+    "market": "kisumu",
+    "description": "Browse rental homes in Nyalenda, Kisumu.",
+    "parentName": "Kisumu"
+  },
+  {
+    "slug": "eldoret",
+    "name": "Eldoret",
+    "county": "Uasin Gishu",
+    "kind": "city",
+    "market": "eldoret",
+    "description": "Explore rental homes in Eldoret and compare available listings by budget and property type."
+  },
+  {
+    "slug": "kapsoya",
+    "name": "Kapsoya",
+    "county": "Uasin Gishu",
+    "kind": "estate",
+    "market": "eldoret",
+    "description": "Browse houses and apartments for rent in Kapsoya, Eldoret.",
+    "parentName": "Eldoret"
+  },
+  {
+    "slug": "langas",
+    "name": "Langas",
+    "county": "Uasin Gishu",
+    "kind": "area",
+    "market": "eldoret",
+    "description": "Explore rental options in Langas and nearby areas of Eldoret.",
+    "parentName": "Eldoret"
+  },
+  {
+    "slug": "huruma-eldoret",
+    "name": "Huruma",
+    "county": "Uasin Gishu",
+    "kind": "area",
+    "market": "eldoret",
+    "description": "Browse rental homes in Huruma, Eldoret.",
+    "parentName": "Eldoret"
+  }
+]

@@ -3,11 +3,12 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { usePathname } from "next/navigation";
-import { Heart, Home, Search, Sparkles } from "lucide-react";
+import { Heart, Home, Search, Sparkles, MapPin } from "lucide-react";
 
 const items = [
   { label: "Home", href: "/", icon: Home, key: "home" },
   { label: "Properties", href: "/properties", icon: Search, key: "explore" },
+  { label: "Locations", href: "/locations", icon: MapPin, key: "locations" },
   { label: "House Hunt", href: "/find-a-house", icon: Sparkles, key: "hunt" },
   { label: "Saved", href: "/saved", icon: Heart, key: "saved" },
 ];
@@ -19,6 +20,7 @@ function MobileBottomNavContent() {
   function isActive(key: string) {
     if (key === "home") return pathname === "/";
     if (key === "explore") return pathname === "/properties";
+    if (key === "locations") return pathname === "/locations" || pathname.startsWith("/locations/");
     if (key === "hunt") return pathname === "/find-a-house";
     if (key === "saved") return savedView;
     return false;

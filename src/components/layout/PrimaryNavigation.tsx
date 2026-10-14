@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Heart, Search, Sparkles } from "lucide-react";
+import { Heart, Search, Sparkles, MapPin } from "lucide-react";
 
 const links = [
   { label: "Find a House", href: "/find-a-house", icon: Sparkles, match: (path: string) => path === "/find-a-house" },
+  { label: "Locations", href: "/locations", icon: MapPin, match: (path: string) => path === "/locations" || path.startsWith("/locations/") },
   { label: "Properties", href: "/properties", icon: Search, match: (path: string) => path === "/properties" || path.startsWith("/properties/") },
   { label: "Saved", href: "/saved", icon: Heart, match: (path: string) => path === "/saved" },
 ];

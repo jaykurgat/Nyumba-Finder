@@ -12,7 +12,6 @@ import { Form, FormControl, FormField, FormItem, FormMessage } from "@/component
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 
-const locations = ["Mombasa","Kwale","Kilifi","Hola","Lamu","Voi","Garissa","Wajir","Mandera","Marsabit","Isiolo","Meru","Kathwana","Embu","Kitui","Machakos","Wote","Ol Kalou","Nyeri","Kerugoya","Murang'a","Kiambu","Lodwar","Kapenguria","Maralal","Kitale","Eldoret","Iten","Kapsabet","Kabarnet","Nanyuki","Nakuru","Narok","Kajiado","Kericho","Bomet","Kakamega","Vihiga","Bungoma","Busia","Siaya","Kisumu","Homa Bay","Migori","Kisii","Nyamira","Nairobi"];
 const amenities = ["Parking","Swimming Pool","Gym","Security","Balcony","Garden","Internet Ready","Servant Quarters","Lift","Water Included","Beach Access","Air Conditioning"];
 
 const schema = z.object({
@@ -33,6 +32,21 @@ export function PropertySearchForm({ onFormSubmit, isInSheet = false }: { onForm
   const router = useRouter();
   const params = useSearchParams();
   const [open, setOpen] = useState<string | null>(null);
+  const [locations, setLocations] = useState<string[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/locations?level=SEARCHABLE", { cache: "no-store" })
+      .then((response) => response.ok ? response.json() : Promise.reject(new Error("Location suggestions unavailable")))
+      .then((data) => {
+        if (!cancelled) {
+          const names: string[] = Array.isArray(data.locations) ? data.locations.map((item: { name?: string }) => item.name).filter((name: unknown): name is string => typeof name === "string") : [];
+          setLocations(Array.from(new Set<string>(names)).sort((a, b) => a.localeCompare(b)));
+        }
+      })
+      .catch(() => { if (!cancelled) setLocations([]); });
+    return () => { cancelled = true; };
+  }, []);
 
   const form = useForm<Values>({
     resolver: zodResolver(schema),
@@ -103,7 +117,7 @@ export function PropertySearchForm({ onFormSubmit, isInSheet = false }: { onForm
       <Form {...form}>
         <form onSubmit={form.handleSubmit(submit)} className="space-y-6">
           <ListingTypeField form={form} />
-          <LocationField form={form} />
+          <LocationField form={form} locations={locations} />
           <Panel title="Price range" description={pricePeriodLabel}>
             <PriceFields form={form} />
           </Panel>
@@ -128,7 +142,7 @@ export function PropertySearchForm({ onFormSubmit, isInSheet = false }: { onForm
       <form onSubmit={form.handleSubmit(submit)} className="relative rounded-2xl border bg-background p-2 shadow-sm">
         <div className="flex flex-col lg:flex-row lg:items-center">
           <ListingTypeField form={form} compact />
-          <LocationField form={form} compact />
+          <LocationField form={form} locations={locations} compact />
           <div className="hidden h-8 w-px bg-border lg:block" />
           <FilterMenu name="price" label={priceLabel} active={priceActive} open={open === "price"} setOpen={setOpen} icon={null}>
             <PriceFields form={form} />
@@ -173,7 +187,7 @@ function ListingTypeField({ form, compact = false }: { form: any; compact?: bool
   );
 }
 
-function LocationField({ form, compact = false }: { form: any; compact?: boolean }) {
+function LocationField({ form, locations, compact = false }: { form: any; locations: string[]; compact?: boolean }) {
   return (
     <div className={compact ? "flex min-h-12 flex-1 items-center gap-3 px-3" : "space-y-2"}>
       {!compact && <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Location</p>}

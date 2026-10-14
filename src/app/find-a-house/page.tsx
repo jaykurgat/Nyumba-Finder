@@ -55,6 +55,10 @@ export default function FindAHousePage() {
     <>
       <FindAHouseClient />
       <section aria-labelledby="find-a-house-guide" className="mx-auto max-w-6xl px-4 pb-14 pt-6 md:px-6 md:pb-20">
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#dce5d6] bg-[#f5f7f1] px-4 py-3 sm:px-5">
+          <div><p className="text-sm font-semibold text-[#2d3b29]">Know where you want to live?</p><p className="mt-0.5 text-xs text-[#687565]">Browse rental homes by city, town or estate.</p></div>
+          <Link href="/locations" className="inline-flex min-h-10 items-center rounded-xl bg-[#238447] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#1c6c39]">Browse locations</Link>
+        </div>
         <div className="grid gap-8 border-t border-[#e4e7df] pt-8 lg:grid-cols-[minmax(0,1fr)_280px] lg:gap-12">
           <article className="min-w-0">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#62765a]">NyumbaFinder house-finding guide</p>

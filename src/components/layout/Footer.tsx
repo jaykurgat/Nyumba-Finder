@@ -5,6 +5,7 @@ const groups = [
     title: 'Explore',
     links: [
       ['Search Homes', '/properties'],
+      ['Browse Locations', '/locations'],
       ['How It Works', '/info/how-it-works'],
       ['FAQ', '/info/faq'],
       ['About NyumbaFinder', '/info/about'],
