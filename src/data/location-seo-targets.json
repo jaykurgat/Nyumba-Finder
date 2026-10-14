@@ -10,7 +10,7 @@
   {
     "slug": "westlands",
     "name": "Westlands",
-    "county": "Nairobi",
+    "county": "Nairobi City",
     "kind": "estate",
     "market": "nairobi-metro",
     "description": "Browse rental homes in Westlands and compare available properties, rents and features.",
@@ -19,7 +19,7 @@
   {
     "slug": "kilimani",
     "name": "Kilimani",
-    "county": "Nairobi",
+    "county": "Nairobi City",
     "kind": "estate",
     "market": "nairobi-metro",
     "description": "Explore apartments and rental homes in Kilimani, Nairobi.",
@@ -28,7 +28,7 @@
   {
     "slug": "kileleshwa",
     "name": "Kileleshwa",
-    "county": "Nairobi",
+    "county": "Nairobi City",
     "kind": "estate",
     "market": "nairobi-metro",
     "description": "Explore rental apartments and homes in Kileleshwa, Nairobi.",
@@ -37,7 +37,7 @@
   {
     "slug": "lavington",
     "name": "Lavington",
-    "county": "Nairobi",
+    "county": "Nairobi City",
     "kind": "estate",
     "market": "nairobi-metro",
     "description": "Find rental homes in Lavington and compare available options.",
@@ -46,7 +46,7 @@
   {
     "slug": "parklands",
     "name": "Parklands",
-    "county": "Nairobi",
+    "county": "Nairobi City",
     "kind": "estate",
     "market": "nairobi-metro",
     "description": "Browse rental properties in Parklands, Nairobi.",
@@ -55,7 +55,7 @@
   {
     "slug": "south-b",
     "name": "South B",
-    "county": "Nairobi",
+    "county": "Nairobi City",
     "kind": "estate",
     "market": "nairobi-metro",
     "description": "Explore rental apartments and homes in South B, Nairobi.",
@@ -64,7 +64,7 @@
   {
     "slug": "south-c",
     "name": "South C",
-    "county": "Nairobi",
+    "county": "Nairobi City",
     "kind": "estate",
     "market": "nairobi-metro",
     "description": "Browse available rental homes in South C, Nairobi.",
@@ -73,7 +73,7 @@
   {
     "slug": "langata",
     "name": "Langata",
-    "county": "Nairobi",
+    "county": "Nairobi City",
     "kind": "area",
     "market": "nairobi-metro",
     "description": "Explore rental homes in Langata and nearby Nairobi neighborhoods.",
@@ -90,7 +90,7 @@
   {
     "slug": "kasarani",
     "name": "Kasarani",
-    "county": "Nairobi",
+    "county": "Nairobi City",
     "kind": "estate",
     "market": "nairobi-metro",
     "description": "Browse houses and apartments for rent in Kasarani, Nairobi.",
@@ -99,7 +99,7 @@
   {
     "slug": "roysambu",
     "name": "Roysambu",
-    "county": "Nairobi",
+    "county": "Nairobi City",
     "kind": "estate",
     "market": "nairobi-metro",
     "description": "Explore bedsitters, apartments and other rentals in Roysambu.",
@@ -284,7 +284,7 @@
   {
     "slug": "embakasi",
     "name": "Embakasi",
-    "county": "Nairobi",
+    "county": "Nairobi City",
     "kind": "estate",
     "market": "nairobi-metro",
     "description": "Browse rental homes in Embakasi and nearby eastern Nairobi neighborhoods.",
@@ -293,7 +293,7 @@
   {
     "slug": "donholm",
     "name": "Donholm",
-    "county": "Nairobi",
+    "county": "Nairobi City",
     "kind": "estate",
     "market": "nairobi-metro",
     "description": "Explore rental apartments and houses in Donholm, Nairobi.",
@@ -302,7 +302,7 @@
   {
     "slug": "buruburu",
     "name": "Buruburu",
-    "county": "Nairobi",
+    "county": "Nairobi City",
     "kind": "estate",
     "market": "nairobi-metro",
     "description": "Browse available rental homes in Buruburu, Nairobi.",
@@ -311,7 +311,7 @@
   {
     "slug": "umoja",
     "name": "Umoja",
-    "county": "Nairobi",
+    "county": "Nairobi City",
     "kind": "estate",
     "market": "nairobi-metro",
     "description": "Explore rental homes in Umoja and nearby eastern Nairobi estates.",
@@ -320,7 +320,7 @@
   {
     "slug": "komarock",
     "name": "Komarock",
-    "county": "Nairobi",
+    "county": "Nairobi City",
     "kind": "estate",
     "market": "nairobi-metro",
     "description": "Browse rental houses and apartments in Komarock, Nairobi.",
@@ -329,7 +329,7 @@
   {
     "slug": "kahawa",
     "name": "Kahawa",
-    "county": "Nairobi",
+    "county": "Nairobi City",
     "kind": "area",
     "market": "nairobi-metro",
     "description": "Explore rental options in Kahawa and nearby northern Nairobi neighborhoods.",
@@ -338,7 +338,7 @@
   {
     "slug": "githurai",
     "name": "Githurai",
-    "county": "Nairobi",
+    "county": "Nairobi City",
     "kind": "area",
     "market": "nairobi-metro",
     "description": "Browse rental homes in Githurai and the neighboring Nairobi–Kiambu corridor.",
@@ -347,7 +347,7 @@
   {
     "slug": "ruai",
     "name": "Ruai",
-    "county": "Nairobi",
+    "county": "Nairobi City",
     "kind": "area",
     "market": "nairobi-metro",
     "description": "Explore rental homes in Ruai and nearby eastern Nairobi areas.",
@@ -356,7 +356,7 @@
   {
     "slug": "karen",
     "name": "Karen",
-    "county": "Nairobi",
+    "county": "Nairobi City",
     "kind": "estate",
     "market": "nairobi-metro",
     "description": "Browse rental houses and apartments in Karen, Nairobi.",
@@ -365,7 +365,7 @@
   {
     "slug": "runda",
     "name": "Runda",
-    "county": "Nairobi",
+    "county": "Nairobi City",
     "kind": "estate",
     "market": "nairobi-metro",
     "description": "Explore rental homes in Runda and nearby northern Nairobi neighborhoods.",
@@ -374,7 +374,7 @@
   {
     "slug": "ridgeways",
     "name": "Ridgeways",
-    "county": "Nairobi",
+    "county": "Nairobi City",
     "kind": "estate",
     "market": "nairobi-metro",
     "description": "Browse rental homes in Ridgeways, Nairobi.",
@@ -383,7 +383,7 @@
   {
     "slug": "gigiri",
     "name": "Gigiri",
-    "county": "Nairobi",
+    "county": "Nairobi City",
     "kind": "area",
     "market": "nairobi-metro",
     "description": "Explore rental homes in Gigiri and nearby northern Nairobi neighborhoods.",
@@ -392,7 +392,7 @@
   {
     "slug": "muthaiga",
     "name": "Muthaiga",
-    "county": "Nairobi",
+    "county": "Nairobi City",
     "kind": "estate",
     "market": "nairobi-metro",
     "description": "Browse rental properties in Muthaiga, Nairobi.",
