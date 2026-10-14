@@ -1,9 +1,10 @@
+import { cache } from "react";
 import { prisma } from "@/lib/prisma";
 import { getLocationSeoTarget, LOCATION_SEO_TARGETS, normalizeLocationSlug } from "@/data/location-seo";
 
 const SITE_URL = "https://www.nyumba-finder.com";
 
-export async function getLocationSeoData(slug: string) {
+export const getLocationSeoData = cache(async (slug: string) => {
   const target = getLocationSeoTarget(slug);
   if (!target) return null;
   const county = await prisma.county.findFirst({
@@ -46,7 +47,7 @@ export async function getLocationSeoData(slug: string) {
     take: 24,
   });
   return { target, county, properties, indexable: properties.length >= 2, canonical: `${SITE_URL}/locations/${target.slug}` };
-}
+});
 
 export async function getLocationSeoSitemapEntries() {
   const [counties, nodes, properties] = await Promise.all([
