@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
     if (!query && !countyId && !parentId && !level) return NextResponse.json({ locations: [] });
 
     const normalizedQuery = normalize(query);
-    const effectiveLevels = primaryLocations ? ['TOWN', 'CITY', 'ESTATE', 'NEIGHBORHOOD', 'AREA', 'VILLAGE', 'LOCALITY'] : level ? [level] : undefined;
+    const effectiveLevels = primaryLocations ? ['TOWN', 'CITY'] : level === 'RESIDENTIAL' ? ['ESTATE', 'NEIGHBORHOOD', 'AREA', 'VILLAGE', 'LOCALITY'] : level ? [level] : undefined;
     const rows = await prisma.locationNode.findMany({
       where: {
         searchable: true,
