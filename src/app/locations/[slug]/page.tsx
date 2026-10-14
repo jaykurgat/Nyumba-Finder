@@ -10,10 +10,6 @@ const SITE_URL = "https://www.nyumba-finder.com";
 
 type Props = { params: Promise<{ slug: string }> };
 
-export function generateStaticParams() {
-  return LOCATION_SEO_TARGETS.map(({ slug }) => ({ slug }));
-}
-
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const data = await getLocationSeoData(slug);
@@ -44,7 +40,7 @@ export default async function LocationLandingPage({ params }: Props) {
   const data = await getLocationSeoData(slug);
   if (!data) notFound();
 
-  const { target, county, properties, canonical } = data;
+  const { target, properties, canonical } = data;
   const related = LOCATION_SEO_TARGETS
     .filter((item) => item.slug !== target.slug && item.market === target.market)
     .slice(0, 10);
