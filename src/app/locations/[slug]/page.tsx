@@ -111,7 +111,7 @@ export default async function LocationLandingPage({ params }: Props) {
         {properties.length > 0 ? (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {properties.map((property) => {
-              const imageUrl = property.images.find((url) => url.startsWith("https://") || url.startsWith("http://") || url.startsWith("/"));
+              const imageUrl = property.images.find((url) => url.startsWith("/") || url.startsWith("https://placehold.co/") || url.includes(".public.blob.vercel-storage.com"));
               return (
                 <article key={property.id} className="group overflow-hidden rounded-2xl border border-[#e4e9e0] bg-white shadow-[0_3px_14px_rgba(25,40,24,0.035)] transition duration-200 hover:-translate-y-0.5 hover:border-[#cbdcc5] hover:shadow-[0_12px_30px_rgba(25,40,24,0.09)]">
                   <Link href={`/properties/${property.id}`} className="block">
