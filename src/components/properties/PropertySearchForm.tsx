@@ -12,7 +12,6 @@ import { Form, FormControl, FormField, FormItem, FormMessage } from "@/component
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 
-const locations = ["Mombasa","Kwale","Kilifi","Hola","Lamu","Voi","Garissa","Wajir","Mandera","Marsabit","Isiolo","Meru","Kathwana","Embu","Kitui","Machakos","Wote","Ol Kalou","Nyeri","Kerugoya","Murang'a","Kiambu","Lodwar","Kapenguria","Maralal","Kitale","Eldoret","Iten","Kapsabet","Kabarnet","Nanyuki","Nakuru","Narok","Kajiado","Kericho","Bomet","Kakamega","Vihiga","Bungoma","Busia","Siaya","Kisumu","Homa Bay","Migori","Kisii","Nyamira","Nairobi"];
 const amenities = ["Parking","Swimming Pool","Gym","Security","Balcony","Garden","Internet Ready","Servant Quarters","Lift","Water Included","Beach Access","Air Conditioning"];
 
 const schema = z.object({
@@ -33,6 +32,21 @@ export function PropertySearchForm({ onFormSubmit, isInSheet = false }: { onForm
   const router = useRouter();
   const params = useSearchParams();
   const [open, setOpen] = useState<string | null>(null);
+  const [locations, setLocations] = useState<string[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/locations?level=SEARCHABLE", { cache: "no-store" })
+      .then((response) => response.ok ? response.json() : Promise.reject(new Error("Location suggestions unavailable")))
+      .then((data) => {
+        if (!cancelled) {
+          const names = Array.isArray(data.locations) ? data.locations.map((item: { name?: string }) => item.name).filter((name: unknown): name is string => typeof name === "string") : [];
+          setLocations([...new Set(names)].sort((a, b) => a.localeCompare(b)));
+        }
+      })
+      .catch(() => { if (!cancelled) setLocations([]); });
+    return () => { cancelled = true; };
+  }, []);
 
   const form = useForm<Values>({
     resolver: zodResolver(schema),
