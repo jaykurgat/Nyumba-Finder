@@ -40,8 +40,8 @@ export function PropertySearchForm({ onFormSubmit, isInSheet = false }: { onForm
       .then((response) => response.ok ? response.json() : Promise.reject(new Error("Location suggestions unavailable")))
       .then((data) => {
         if (!cancelled) {
-          const names = Array.isArray(data.locations) ? data.locations.map((item: { name?: string }) => item.name).filter((name: unknown): name is string => typeof name === "string") : [];
-          setLocations([...new Set(names)].sort((a, b) => a.localeCompare(b)));
+          const names: string[] = Array.isArray(data.locations) ? data.locations.map((item: { name?: string }) => item.name).filter((name: unknown): name is string => typeof name === "string") : [];
+          setLocations(Array.from(new Set<string>(names)).sort((a, b) => a.localeCompare(b)));
         }
       })
       .catch(() => { if (!cancelled) setLocations([]); });
