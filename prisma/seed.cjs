@@ -743,7 +743,7 @@ async function main() {
   const locationMaster = require('./kenya-location-master.json');
   const normalizeSlug = (value) => String(value)
     .normalize('NFD')
-    .replace(/[\\u0300-\\u036f]/g, '')
+    .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-|-$/g, '');
