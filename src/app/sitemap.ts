@@ -47,6 +47,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: "weekly",
       priority: 0.9,
     },
+    {
+      url: `${SITE_URL}/locations`,
+      lastModified: new Date(),
+      changeFrequency: "weekly",
+      priority: 0.82,
+    },
     ...locationEntries,
     { url: `${SITE_URL}/promote`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.65 },
     ...infoPages.map((slug) => ({
