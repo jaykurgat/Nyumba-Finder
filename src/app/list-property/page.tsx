@@ -165,7 +165,7 @@ export default function ListPropertyPage() {
 
     fetch('/api/locations?' + new URLSearchParams({
       countyId: watchedCountyId,
-      level: 'PRIMARY',
+      level: 'TOWN',
     }).toString(), { cache: 'no-store' })
       .then(async (response) => {
         const data = await response.json().catch(() => ({}));
@@ -193,7 +193,7 @@ export default function ListPropertyPage() {
     }
     let cancelled = false;
     setAreasLoading(true);
-    fetch('/api/locations?' + new URLSearchParams({ parentId: selectedTownId, level: 'AREA' }).toString(), { cache: 'no-store' })
+    fetch('/api/locations?' + new URLSearchParams({ parentId: selectedTownId, level: 'RESIDENTIAL' }).toString(), { cache: 'no-store' })
       .then(async (response) => {
         const data = await response.json().catch(() => ({}));
         if (!response.ok) throw new Error(data.message || 'Failed to load area suggestions.');
@@ -541,7 +541,7 @@ export default function ListPropertyPage() {
 
                       <div className="grid gap-5 md:grid-cols-2">
                         <div className="space-y-2">
-                          <FormLabel>Town, city or estate <span className="text-primary">*</span></FormLabel>
+                          <FormLabel>Town / City <span className="text-primary">*</span></FormLabel>
                           <select
                             value={selectedTownId}
                             disabled={!watchedCountyId || townsLoading}
@@ -558,7 +558,7 @@ export default function ListPropertyPage() {
                             }}
                             className="flex h-11 w-full rounded-xl border bg-background px-3 text-sm outline-none transition focus:ring-2 focus:ring-primary/20"
                           >
-                            <option value="">{!watchedCountyId ? 'Select county first' : townsLoading ? 'Loading towns and cities...' : towns.length ? 'Select a town, city or estate' : 'No matching locations available'}</option>
+                            <option value="">{!watchedCountyId ? 'Select county first' : townsLoading ? 'Loading towns and cities...' : towns.length ? 'Select a town or city' : 'No towns or cities available'}</option>
                             {towns.map((town) => (
                               <option key={town.id} value={town.id}>{town.name}</option>
                             ))}
