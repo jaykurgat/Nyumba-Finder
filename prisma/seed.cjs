@@ -779,7 +779,7 @@ async function main() {
 
   // Shared curated rental-market locations power both SEO pages and public location selectors.
   // Keep this list in one JSON master so public forms and location landing pages cannot drift.
-  const rentalLocations = require('./location-seo-targets.json');
+  const rentalLocations = require('../src/data/location-seo-targets.json');
   const normalizeRentalSlug = (value) => String(value).normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
   const rentalCountyAliases = { Nairobi: 'Nairobi City' };
   for (const location of rentalLocations) {
