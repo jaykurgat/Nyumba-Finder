@@ -3,10 +3,10 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { MapPin, BedDouble, Bath, ArrowUpRight, Search } from "lucide-react";
-import { getLocationSeoData } from "@/lib/location-seo";
-import { LOCATION_SEO_TARGETS } from "@/data/location-seo";
+import { getActiveLocationDirectory, getLocationSeoData } from "@/lib/location-seo";
 
 const SITE_URL = "https://www.nyumba-finder.com";
+export const revalidate = 60;
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -41,8 +41,9 @@ export default async function LocationLandingPage({ params }: Props) {
   if (!data) notFound();
 
   const { target, properties, canonical } = data;
-  const related = LOCATION_SEO_TARGETS
-    .filter((item) => item.slug !== target.slug && item.market === target.market)
+  const allLocations = await getActiveLocationDirectory();
+  const related = allLocations
+    .filter((item) => item.slug !== target.slug && item.count > 0 && (item.county === target.county || item.market === target.market))
     .slice(0, 10);
 
   const structuredData = {
