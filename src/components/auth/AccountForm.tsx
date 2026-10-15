@@ -4,6 +4,7 @@ import { FormEvent, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Eye, EyeOff, LockKeyhole, Mail, ArrowRight, Loader2 } from 'lucide-react';
+import { trackGoogleAdsConversion } from '@/components/analytics/GoogleAnalytics';
 
 type Mode = 'login' | 'register' | 'forgot' | 'reset';
 const inputClass = 'mt-1 block w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15';
@@ -33,6 +34,9 @@ export function AccountForm({ mode }: { mode: Mode }) {
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.message || 'Something went wrong. Please try again.');
       setMessage(data.message || 'Signed in successfully.');
+      if (mode === 'register') {
+        trackGoogleAdsConversion(process.env.NEXT_PUBLIC_GOOGLE_ADS_SIGNUP_LABEL);
+      }
       if (mode === 'login') { router.push('/'); router.refresh(); }
       if (mode === 'register') { router.push(data.emailSent === false ? '/account?welcome=failed' : '/account?welcome=sent'); router.refresh(); }
       if (mode === 'reset') window.setTimeout(() => router.push('/account?mode=login&reset=success'), 900);
