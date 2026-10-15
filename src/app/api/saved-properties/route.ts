@@ -14,6 +14,20 @@ export async function GET(request: NextRequest) {
       });
       return NextResponse.json({ saved: Boolean(saved) });
     }
+    const requestedIds = request.nextUrl.searchParams.get('ids');
+    if (requestedIds !== null) {
+      const propertyIds = [...new Set(requestedIds.split(',').filter(Boolean))].slice(0, 100);
+      if (propertyIds.length === 0) return NextResponse.json({ savedIds: [] });
+      const rows = await prisma.savedProperty.findMany({
+        where: {
+          userId: user.id,
+          propertyId: { in: propertyIds },
+          property: { status: 'ACTIVE' },
+        },
+        select: { propertyId: true },
+      });
+      return NextResponse.json({ savedIds: rows.map((row) => row.propertyId) });
+    }
     const rows = await prisma.savedProperty.findMany({
       where: { userId: user.id, property: { status: 'ACTIVE' } },
       orderBy: { createdAt: 'desc' },

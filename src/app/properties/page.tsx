@@ -20,31 +20,52 @@ function PropertyListingsSkeleton() {
 
 function PropertyListingsContent() {
   const [properties, setProperties] = useState<Property[]>([]);
-  const [totalCount, setTotalCount] = useState(0);
+  const [totalCount, setTotalCount] = useState(0);\n  const [savedPropertyIds, setSavedPropertyIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const params = useSearchParams();
 
-  const load = useCallback(async function () {
+  const load = useCallback(async function (signal?: AbortSignal) {
     setLoading(true); setError(null);
     try {
       const query = params.toString();
-      const response = await fetch("/api/properties" + (query ? "?" + query : ""), { cache: "no-store" });
+      const response = await fetch("/api/properties" + (query ? "?" + query : ""), { cache: "no-store", signal });
       if (!response.ok) {
         let message = "Failed to fetch properties.";
         try { const data = await response.json(); message = data.message || message; } catch {}
         throw new Error(message);
       }
-      setProperties(await response.json());
+      const loadedProperties: Property[] = await response.json();
+      setProperties(loadedProperties);
       setTotalCount(Number(response.headers.get("X-Total-Count") || 0));
+      setSavedPropertyIds([]);
+      if (loadedProperties.length) {
+        try {
+          const ids = loadedProperties.map((property) => property.id).join(",");
+          const savedResponse = await fetch("/api/saved-properties?ids=" + encodeURIComponent(ids), { cache: "no-store", signal });
+          if (savedResponse.ok) {
+            const savedData: { savedIds?: string[] } = await savedResponse.json();
+            if (!signal?.aborted) setSavedPropertyIds(Array.isArray(savedData.savedIds) ? savedData.savedIds : []);
+          }
+        } catch (savedError) {
+          if (signal?.aborted) return;
+        }
+      }
     } catch (e: any) {
+      if (signal?.aborted) return;
       setError(e.message || "Unable to load properties.");
       setProperties([]);
       setTotalCount(0);
-    } finally { setLoading(false); }
+    } finally {
+      if (!signal?.aborted) setLoading(false);
+    }
   }, [params]);
 
-  useEffect(function () { load(); }, [load]);
+  useEffect(function () {
+    const controller = new AbortController();
+    void load(controller.signal);
+    return () => controller.abort();
+  }, [load]);
 
   if (loading) return <PropertyListingsSkeleton />;
   if (error) return <Alert variant="destructive"><AlertTriangle className="h-4 w-4" /><AlertTitle>Error loading properties</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>;
@@ -62,7 +83,7 @@ function PropertyListingsContent() {
       </div>
       {active > 0 && <p className="text-sm text-primary">{active} active filter{active === 1 ? "" : "s"}</p>}
     </div>
-    {properties.length ? <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">{properties.map(function (p) { return <PropertyCard key={p.id} property={p} />; })}</div> :
+    {properties.length ? <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">{properties.map(function (p) { return <PropertyCard key={p.id} property={p} initiallySaved={savedPropertyIds.includes(p.id)} />; })}</div> :
       <div className="border bg-card px-6 py-16 text-center"><h3 className="text-lg font-semibold">No homes match those filters</h3><p className="mt-2 text-sm text-muted-foreground">Try widening your location or price range, or remove a filter.</p></div>}
   </div>;
 }

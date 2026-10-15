@@ -25,7 +25,10 @@ export function PropertyCard({ property, initiallySaved = false }: PropertyCardP
   const [saveBusy, setSaveBusy] = useState(false);
 
   useEffect(() => {
-    if (initiallySaved) return;
+    if (initiallySaved !== undefined) {
+      setIsSaved(initiallySaved);
+      return;
+    }
     let active = true;
     fetch('/api/saved-properties?propertyId=' + encodeURIComponent(property.id), { cache: 'no-store' })
       .then(async (response) => {
