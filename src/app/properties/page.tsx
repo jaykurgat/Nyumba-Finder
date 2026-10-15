@@ -20,7 +20,8 @@ function PropertyListingsSkeleton() {
 
 function PropertyListingsContent() {
   const [properties, setProperties] = useState<Property[]>([]);
-  const [totalCount, setTotalCount] = useState(0);\n  const [savedPropertyIds, setSavedPropertyIds] = useState<string[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
+  const [savedPropertyIds, setSavedPropertyIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const params = useSearchParams();
