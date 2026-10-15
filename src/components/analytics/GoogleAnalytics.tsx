@@ -7,7 +7,7 @@ const GOOGLE_ADS_ID = process.env.NEXT_PUBLIC_GOOGLE_ADS_ID;
 
 declare global {
   interface Window {
-    dataLayer?: IArguments[] | unknown[];
+    dataLayer?: unknown[][];
     gtag?: (...args: unknown[]) => void;
   }
 }
@@ -29,13 +29,14 @@ export function trackGoogleAdsConversion(conversionLabel: string | undefined) {
 }
 
 export function GoogleAnalytics() {
-  if (!GA_ID) return null;
+  const tagId = GA_ID || GOOGLE_ADS_ID;
+  if (!tagId) return null;
 
   return (
     <>
       <Script
         async
-        src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`}
+        src={`https://www.googletagmanager.com/gtag/js?id=${tagId}`}
         strategy="afterInteractive"
       />
       <Script id="google-analytics" strategy="afterInteractive">
@@ -43,7 +44,7 @@ export function GoogleAnalytics() {
           window.dataLayer = window.dataLayer || [];
           function gtag(){dataLayer.push(arguments);}
           gtag('js', new Date());
-          gtag('config', '${GA_ID}');
+          ${GA_ID ? `gtag('config', '${GA_ID}');` : ''}
           ${GOOGLE_ADS_ID ? `gtag('config', '${GOOGLE_ADS_ID}');` : ''}
         `}
       </Script>
