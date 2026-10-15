@@ -47,7 +47,7 @@ function PropertyListingsContent() {
             const savedData: { savedIds?: string[] } = await savedResponse.json();
             if (!signal?.aborted) setSavedPropertyIds(Array.isArray(savedData.savedIds) ? savedData.savedIds : []);
           }
-        } catch (savedError) {
+        } catch {
           if (signal?.aborted) return;
         }
       }
