@@ -18,7 +18,9 @@ export async function GET(request: NextRequest) {
 
     if (kind === 'counties') {
       const counties = await prisma.county.findMany({ select: { id: true, name: true }, orderBy: { name: 'asc' } });
-      return NextResponse.json({ counties });
+      const response = NextResponse.json({ counties });
+      response.headers.set('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=3600');
+      return response;
     }
 
     if (!query && !countyId && !parentId && !level) return NextResponse.json({ locations: [] });
@@ -81,7 +83,11 @@ export async function GET(request: NextRequest) {
       .slice(0, query ? 15 : 1000)
       .map(({ _score, ...location }) => location);
 
-    return NextResponse.json({ locations: results });
+    const response = NextResponse.json({ locations: results });
+    response.headers.set('Cache-Control', query
+      ? 'public, s-maxage=60, stale-while-revalidate=300'
+      : 'public, s-maxage=300, stale-while-revalidate=3600');
+    return response;
   } catch (error) {
     console.error('API_ROUTE_ERROR: [GET /api/locations]', error);
     return NextResponse.json({ message: 'Error fetching locations.' }, { status: 500 });
