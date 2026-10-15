@@ -71,12 +71,7 @@ export async function GET(request: NextRequest) {
     const locationContext = await resolveLocationContext(searchParams.get('location')?.trim() || '', prisma);
     const radiusKm = Math.max(1, Math.min(100, getOptionalNumber(searchParams.get('radiusKm')) ?? 25));
 
-    const neighboringCountyIds = locationContext?.canonicalCountyId
-      ? (await prisma.countyNeighbor.findMany({
-          where: { countyId: locationContext.canonicalCountyId },
-          select: { neighborId: true },
-        })).map((item) => item.neighborId)
-      : [];
+    const neighboringCountyIds = locationContext?.neighboringCountyIds ?? [];
 
     const searchConditions: Prisma.PropertyWhereInput[] = [];
 
@@ -133,6 +128,15 @@ export async function GET(request: NextRequest) {
               endsAt: { gte: new Date() },
             },
             orderBy: { boost: 'desc' },
+            select: {
+              id: true,
+              package: true,
+              boost: true,
+              targetLocation: true,
+              targetType: true,
+              minBedrooms: true,
+              maxBedrooms: true,
+            },
           },
         },
       }),
