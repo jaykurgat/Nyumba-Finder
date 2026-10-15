@@ -1,4 +1,5 @@
 import { cache } from "react";
+import { unstable_cache } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { getLocationSeoTarget, LOCATION_SEO_TARGETS, normalizeLocationSlug, type LocationSeoTarget } from "@/data/location-seo";
 
@@ -40,7 +41,7 @@ function targetForNode(node: DirectoryNode): LocationSeoTarget {
   };
 }
 
-async function getActiveLocationContext() {
+const loadActiveLocationContext = unstable_cache(async () => {
   const [nodes, properties] = await Promise.all([
     prisma.locationNode.findMany({
       where: { searchable: true },
@@ -63,7 +64,12 @@ async function getActiveLocationContext() {
     .filter((node) => (counts.get(node.id) ?? 0) > 0)
     .map((node) => ({ node: node as DirectoryNode, target: targetForNode(node as DirectoryNode), count: counts.get(node.id) ?? 0 }))
     .sort((a, b) => a.target.county.localeCompare(b.target.county) || (a.node.parent?.name ?? "").localeCompare(b.node.parent?.name ?? "") || a.target.name.localeCompare(b.target.name));
-  return { nodes: nodes as DirectoryNode[], nodeById, properties, targets };
+  return { nodes: nodes as DirectoryNode[], properties, targets };
+}, ["nyumbafinder-active-location-context-v1"], { revalidate: 60 });
+
+async function getActiveLocationContext() {
+  const context = await loadActiveLocationContext();
+  return { ...context, nodeById: new Map(context.nodes.map((node) => [node.id, node])) };
 }
 
 export const getActiveLocationDirectory = cache(async () => {
