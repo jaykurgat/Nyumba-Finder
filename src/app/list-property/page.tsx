@@ -7,6 +7,7 @@ import * as z from "zod";
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState, useEffect, use } from 'react';
 import { PropertyImage } from "@/components/properties/PropertyImage";
+import { trackGoogleAdsConversion } from "@/components/analytics/GoogleAnalytics";
 import { InteractiveLocationMap } from "@/components/properties/InteractiveLocationMap";
 
 import { Button } from "@/components/ui/button";
@@ -423,6 +424,9 @@ export default function ListPropertyPage() {
       }
 
       const result = await response.json();
+      if (!isEditMode) {
+        trackGoogleAdsConversion(process.env.NEXT_PUBLIC_GOOGLE_ADS_PROPERTY_LISTING_LABEL);
+      }
       toast({
         title: isEditMode ? "Property Updated!" : "Property Listed!",
         description: result.message || `Your property has been successfully ${isEditMode ? 'updated' : 'submitted'}.`,
