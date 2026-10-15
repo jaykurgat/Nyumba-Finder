@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getLocationSeoSitemapEntries } from "@/lib/location-seo";
 
 const SITE_URL = "https://www.nyumba-finder.com";
+export const revalidate = 60;
 
 const infoPages = [
   "about",
