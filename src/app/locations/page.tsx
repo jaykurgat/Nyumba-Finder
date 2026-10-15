@@ -36,16 +36,23 @@ export default function LocationsIndexPage() {
                 <h2 id={`location-group-${group.id}`} className="text-xl font-semibold tracking-tight sm:text-2xl">{group.title}</h2>
                 <p className="mt-1.5 text-sm leading-6 text-[#687565]">{group.description}</p>
               </div>
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                {places.map((place) => (
-                  <Link key={place.slug} href={`/locations/${place.slug}`} className="group flex min-h-[112px] items-start gap-3 rounded-2xl border border-[#e2e8dd] bg-white p-4 shadow-[0_2px_10px_rgba(25,40,24,0.025)] transition hover:-translate-y-0.5 hover:border-[#c8d9c1] hover:shadow-[0_10px_24px_rgba(25,40,24,0.07)]">
-                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#edf4e9] text-[#2f7540]"><MapPin className="h-4 w-4" /></span>
-                    <span className="min-w-0 flex-1">
-                      <span className="flex items-center gap-1 text-sm font-semibold text-[#2d3b2c] group-hover:text-[#237b40]">{place.name}<ArrowUpRight className="h-3.5 w-3.5 opacity-0 transition group-hover:opacity-100" /></span>
-                      <span className="mt-1 block text-xs leading-5 text-[#778171]">{place.county} County · {place.kind === "estate" ? "Estate" : place.kind === "area" ? "Area" : place.kind === "city" ? "City" : "Town"}</span>
-                    </span>
-                  </Link>
-                ))}
+              <div className="rounded-2xl border border-[#e2e8dd] bg-white px-4 py-2 shadow-[0_2px_10px_rgba(25,40,24,0.025)] sm:px-5">
+                <div className="grid grid-cols-1 divide-y divide-[#edf0e9] sm:grid-cols-2 sm:divide-y-0 sm:gap-x-8 lg:grid-cols-3 xl:grid-cols-4">
+                  {places.map((place) => (
+                    <Link
+                      key={place.slug}
+                      href={`/locations/${place.slug}`}
+                      className="group flex min-w-0 items-center justify-between gap-3 py-3 text-sm transition-colors hover:text-[#237b40] sm:border-b sm:border-[#edf0e9]"
+                    >
+                      <span className="flex min-w-0 items-center gap-2.5">
+                        <span aria-hidden="true" className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#83a77a] transition-colors group-hover:bg-[#237b40]" />
+                        <span className="truncate font-medium text-[#344333] group-hover:text-[#237b40]">{place.name}</span>
+                        <span className="shrink-0 text-xs text-[#879080]">{place.kind === "estate" ? "Estate" : place.kind === "area" ? "Area" : place.kind === "city" ? "City" : "Town"}</span>
+                      </span>
+                      <ArrowUpRight className="h-3.5 w-3.5 shrink-0 text-[#9aa494] opacity-0 transition group-hover:translate-x-0.5 group-hover:opacity-100" />
+                    </Link>
+                  ))}
+                </div>
               </div>
             </section>
           );
