@@ -10,6 +10,7 @@ export type LocationContext = {
   exactPlaceTerms: string[];
   countyTerms: string[];
   neighboringCountyTerms: string[];
+  neighboringCountyIds: string[];
 };
 
 function normalize(value: string) {
@@ -64,6 +65,7 @@ export async function resolveLocationContext(rawQuery: string, prisma: PrismaCli
     exactPlaceTerms,
     countyTerms,
     neighboringCountyTerms: neighboring.map((item) => item.neighbor.name),
+    neighboringCountyIds: neighboring.map((item) => item.neighborId),
   };
 }
 
