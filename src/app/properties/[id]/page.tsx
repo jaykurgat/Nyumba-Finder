@@ -61,8 +61,8 @@ function ImageCarousel({ images, title }: { images: string[]; title: string }) {
           alt={title + ' - No Image Available'}
           sizes="(max-width: 1024px) 100vw, 66vw"
           priority
-          minHeightClassName="min-h-[300px] md:min-h-[500px]"
-          maxHeightClassName="max-h-[72vh]"
+          minHeightClassName="min-h-[240px] md:min-h-[400px]"
+          maxHeightClassName="max-h-[56vh]"
         />
       </div>
     );
@@ -136,7 +136,7 @@ function PropertyDetailSkeleton() {
             <CardContent className="space-y-5 p-6">
               <Skeleton className="h-9 w-3/4" />
               <Skeleton className="h-5 w-1/2" />
-              <div className="grid gap-2 sm:grid-cols-3">
+              <div className="grid grid-cols-3 gap-2">
                 <Skeleton className="h-16" />
                 <Skeleton className="h-16" />
                 <Skeleton className="h-16" />
@@ -157,6 +157,7 @@ function PropertyDetailSkeleton() {
 export default function PropertyDetailPage({ params: paramsProp }: { params: Promise<{ id: string }> }) {
   const params = use(paramsProp);
   const [property, setProperty] = useState<Property | null>(null);
+  const [relatedProperties, setRelatedProperties] = useState<Property[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showPhoneNumber, setShowPhoneNumber] = useState(false);
@@ -228,6 +229,18 @@ export default function PropertyDetailPage({ params: paramsProp }: { params: Pro
   }, []);
 
   useEffect(() => {
+    const controller = new AbortController();
+    setRelatedProperties([]);
+    fetch('/api/properties/' + encodeURIComponent(params.id) + '/related', { cache: 'no-store', signal: controller.signal })
+      .then((response) => response.ok ? response.json() : { properties: [] })
+      .then((data: { properties?: Property[] }) => {
+        if (!controller.signal.aborted && Array.isArray(data.properties)) setRelatedProperties(data.properties);
+      })
+      .catch(() => {});
+    return () => controller.abort();
+  }, [params.id]);
+
+  useEffect(() => {
     if (!params?.id) {
       setError('No property ID provided.');
       setIsLoading(false);
@@ -270,7 +283,7 @@ export default function PropertyDetailPage({ params: paramsProp }: { params: Pro
 
   return (
     <main className="min-h-screen bg-muted/20">
-      <div className="container mx-auto max-w-6xl px-3 py-4 sm:px-4 md:py-6">
+      <div className="container mx-auto max-w-7xl px-3 py-3 sm:px-4 md:py-4">
         <div className="mb-4 flex items-center justify-between gap-3">
           <Link href="/properties" className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
             ← Back to properties
@@ -289,8 +302,8 @@ export default function PropertyDetailPage({ params: paramsProp }: { params: Pro
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start">
-          <div className="space-y-4">
+        <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_300px] xl:grid-cols-[minmax(0,1fr)_320px]">
+          <div className="space-y-3">
             <ImageCarousel images={property.images || []} title={property.title} />
 
             <section className="rounded-xl border bg-background shadow-sm">
@@ -309,7 +322,7 @@ export default function PropertyDetailPage({ params: paramsProp }: { params: Pro
                 </div>
               </div>
 
-              <div className="space-y-5 px-4 py-4 md:px-5">
+              <div className="space-y-4 px-4 py-3 md:px-5">
                 <div className="grid gap-2 sm:grid-cols-3">
                   <DetailStat
                     icon={BedDouble}
@@ -343,7 +356,7 @@ export default function PropertyDetailPage({ params: paramsProp }: { params: Pro
 
                 <div>
                   <h2 className="mb-2 text-base font-semibold">About this property</h2>
-                  <p className="whitespace-pre-line text-sm leading-6 text-muted-foreground">
+                  <p className="whitespace-pre-line text-sm leading-5 text-muted-foreground">
                     {property.description}
                   </p>
                 </div>
@@ -409,61 +422,7 @@ export default function PropertyDetailPage({ params: paramsProp }: { params: Pro
               </div>
             </section>
 
-            <section className="rounded-xl border bg-background shadow-sm">
-              <div className="border-b px-4 py-3 md:px-5">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted text-muted-foreground">
-                    <ShieldAlert className="h-4 w-4" />
-                  </div>
-                  <div>
-                    <h2 className="text-sm font-semibold">Something wrong with this listing?</h2>
-                    <p className="text-xs text-muted-foreground">Help us keep NyumbaFinder accurate and safe.</p>
-                  </div>
-                </div>
-              </div>
-              <div className="space-y-2.5 p-4">
-                <select
-                  value={reportType}
-                  onChange={(e) => setReportType(e.target.value)}
-                  className="h-9 w-full rounded-lg border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-primary/20"
-                >
-                  <option>Incorrect information</option>
-                  <option>No longer available</option>
-                  <option>Duplicate listing</option>
-                  <option>Wrong location</option>
-                  <option>Possible scam</option>
-                  <option>Inappropriate content</option>
-                </select>
-                <textarea
-                  value={reportDescription}
-                  onChange={(e) => setReportDescription(e.target.value)}
-                  placeholder="Optional details"
-                  className="min-h-20 w-full resize-y rounded-lg border bg-background p-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/20"
-                />
-                <Button
-                  variant="outline"
-                  className="h-9 w-full rounded-lg sm:w-auto"
-                  disabled={reportSent}
-                  onClick={async () => {
-                    const response = await fetch('/api/property-reports', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({
-                        propertyId: property.id,
-                        type: reportType,
-                        description: reportDescription,
-                      }),
-                    });
-                    if (response.ok) {
-                      setReportSent(true);
-                      setReportDescription('');
-                    }
-                  }}
-                >
-                  {reportSent ? 'Report submitted' : 'Submit report'}
-                </Button>
-              </div>
-            </section>
+ection>
           </div>
 
           <aside className="space-y-4">
@@ -547,8 +506,91 @@ export default function PropertyDetailPage({ params: paramsProp }: { params: Pro
                 )}
               </CardContent>
             </Card>
+
+            <section className="rounded-xl border bg-background shadow-sm">
+              <div className="border-b px-4 py-3 md:px-5">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+                    <ShieldAlert className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <h2 className="text-sm font-semibold">Something wrong with this listing?</h2>
+                    <p className="text-xs text-muted-foreground">Help us keep NyumbaFinder accurate and safe.</p>
+                  </div>
+                </div>
+              </div>
+              <div className="space-y-2.5 p-4">
+                <select
+                  value={reportType}
+                  onChange={(e) => setReportType(e.target.value)}
+                  className="h-9 w-full rounded-lg border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-primary/20"
+                >
+                  <option>Incorrect information</option>
+                  <option>No longer available</option>
+                  <option>Duplicate listing</option>
+                  <option>Wrong location</option>
+                  <option>Possible scam</option>
+                  <option>Inappropriate content</option>
+                </select>
+                <textarea
+                  value={reportDescription}
+                  onChange={(e) => setReportDescription(e.target.value)}
+                  placeholder="Optional details"
+                  className="min-h-20 w-full resize-y rounded-lg border bg-background p-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/20"
+                />
+                <Button
+                  variant="outline"
+                  className="h-9 w-full rounded-lg sm:w-auto"
+                  disabled={reportSent}
+                  onClick={async () => {
+                    const response = await fetch('/api/property-reports', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        propertyId: property.id,
+                        type: reportType,
+                        description: reportDescription,
+                      }),
+                    });
+                    if (response.ok) {
+                      setReportSent(true);
+                      setReportDescription('');
+                    }
+                  }}
+                >
+                  {reportSent ? 'Report submitted' : 'Submit report'}
+                </Button>
+              </div>
+            </s
           </aside>
         </div>
+        {relatedProperties.length > 0 && (
+          <section className="mt-5 rounded-xl border bg-background p-3 shadow-sm sm:p-4">
+            <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">Picked for you</p>
+                <h2 className="mt-0.5 text-lg font-semibold tracking-tight">Similar homes worth a look</h2>
+                <p className="mt-1 text-xs text-muted-foreground">Matched by location, price and property features.</p>
+              </div>
+              <Link href="/properties" className="text-xs font-semibold text-primary hover:underline">Browse all listings</Link>
+            </div>
+            <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+              {relatedProperties.map((item) => (
+                <Link key={item.id} href={'/properties/' + item.id} className="group min-w-0 overflow-hidden rounded-lg border transition-colors hover:border-primary/40">
+                  <div className="relative aspect-[4/3] overflow-hidden bg-muted">
+                    <PropertyImage src={item.images?.[0] || 'https://placehold.co/640x480.png'} alt={item.title} sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw" minHeightClassName="min-h-0" maxHeightClassName="max-h-52" />
+                  </div>
+                  <div className="space-y-1.5 p-2.5">
+                    <p className="line-clamp-2 min-h-9 text-sm font-semibold leading-4 group-hover:text-primary">{item.title}</p>
+                    <p className="flex items-center gap-1 truncate text-[11px] text-muted-foreground"><MapPin className="h-3 w-3 shrink-0" />{item.location}</p>
+                    <p className="text-sm font-bold tracking-tight">Ksh {item.price.toLocaleString()}<span className="ml-1 text-[10px] font-medium text-muted-foreground">{item.listingType === 'SHORT_STAY' ? '/ night' : item.listingType === 'FOR_SALE' ? 'sale' : item.pricePeriod === 'WEEK' ? '/ week' : '/ month'}</span></p>
+                    <div className="flex flex-wrap gap-x-2 gap-y-1 text-[11px] text-muted-foreground"><span>{item.bedrooms === 0 ? 'Studio' : item.bedrooms + ' bed'}</span><span>{item.bathrooms} bath</span>{item.area ? <span>{item.area} m²</span> : null}</div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </section>
+        )}
       </div>
     </main>
   );
