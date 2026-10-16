@@ -422,7 +422,7 @@ export default function PropertyDetailPage({ params: paramsProp }: { params: Pro
               </div>
             </section>
 
-ection>
+            </section>
           </div>
 
           <aside className="space-y-4">
@@ -561,7 +561,7 @@ ection>
                   {reportSent ? 'Report submitted' : 'Submit report'}
                 </Button>
               </div>
-            </s
+            </section>
           </aside>
         </div>
         {relatedProperties.length > 0 && (
