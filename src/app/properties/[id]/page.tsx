@@ -421,8 +421,6 @@ export default function PropertyDetailPage({ params: paramsProp }: { params: Pro
                 </div>
               </div>
             </section>
-
-            </section>
           </div>
 
           <aside className="space-y-4">
