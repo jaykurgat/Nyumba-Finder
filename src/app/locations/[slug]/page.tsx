@@ -67,7 +67,7 @@ export default async function LocationLandingPage({ params }: Props) {
   };
 
   return (
-    <main className="min-h-screen bg-[#fafbf8] text-[#202b21]">
+    <main className="min-h-screen bg-[#fbfaf6] text-[#202b21]">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData).replace(/</g, "\\u003c") }} />
       <section className="border-b border-[#e3e9df] bg-gradient-to-br from-[#f2f6ee] via-[#fbfcf9] to-[#f7f1e7]">
         <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-12 lg:px-8">
@@ -78,19 +78,19 @@ export default async function LocationLandingPage({ params }: Props) {
           </nav>
           <div className="grid items-end gap-7 lg:grid-cols-[minmax(0,1fr)_300px]">
             <div className="max-w-3xl">
-              <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-[#d9e4d2] bg-white/80 px-3 py-1.5 text-xs font-semibold text-[#486341]">
+              <div className="mb-3 inline-flex items-center gap-2 rounded-none border border-[#d9e4d2] bg-white/80 px-3 py-1.5 text-xs font-semibold text-[#486341]">
                 <MapPin className="h-3.5 w-3.5" /> {target.county} County · Kenya
               </div>
               <h1 className="text-3xl font-semibold tracking-tight text-[#233323] sm:text-4xl lg:text-[2.65rem]">Houses for rent in {target.name}</h1>
               <p className="mt-3 max-w-2xl text-sm leading-6 text-[#606d5c] sm:text-base">{target.description} Compare listing details and contact the advertiser to confirm availability before arranging a viewing.</p>
               <div className="mt-5 flex flex-wrap gap-3">
-                <Link href={`/find-a-house?location=${encodeURIComponent(target.name)}`} className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-[#238447] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#1c6c39]">
+                <Link href={`/find-a-house?location=${encodeURIComponent(target.name)}`} className="inline-flex min-h-11 items-center gap-2 rounded-none bg-[#238447] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#1c6c39]">
                   <Search className="h-4 w-4" /> Search {target.name}
                 </Link>
-                <Link href="/properties" className="inline-flex min-h-11 items-center rounded-xl border border-[#d9e1d5] bg-white px-4 py-2.5 text-sm font-semibold text-[#3b4d38] transition hover:bg-[#f3f6ef]">All properties</Link>
+                <Link href="/properties" className="inline-flex min-h-11 items-center rounded-none border border-[#d9e1d5] bg-white px-4 py-2.5 text-sm font-semibold text-[#3b4d38] transition hover:bg-[#f3f6ef]">All properties</Link>
               </div>
             </div>
-            <div className="rounded-2xl border border-white bg-white/85 p-5 shadow-[0_12px_35px_rgba(40,65,35,0.07)] backdrop-blur">
+            <div className="rounded-none border border-white bg-white/85 p-5 shadow-[0_12px_35px_rgba(40,65,35,0.07)] backdrop-blur">
               <p className="text-xs font-semibold uppercase tracking-[0.13em] text-[#71806b]">Local rental search</p>
               <p className="mt-2 text-3xl font-semibold tracking-tight text-[#263b28]">{properties.length}</p>
               <p className="mt-1 text-sm text-[#697565]">{properties.length === 1 ? "listing currently shown" : "listings currently shown"}</p>
@@ -114,11 +114,11 @@ export default async function LocationLandingPage({ params }: Props) {
             {properties.map((property) => {
               const imageUrl = property.images.find((url) => url.startsWith("/") || url.startsWith("https://placehold.co/") || url.includes(".public.blob.vercel-storage.com"));
               return (
-                <article key={property.id} className="group overflow-hidden rounded-2xl border border-[#e4e9e0] bg-white shadow-[0_3px_14px_rgba(25,40,24,0.035)] transition duration-200 hover:-translate-y-0.5 hover:border-[#cbdcc5] hover:shadow-[0_12px_30px_rgba(25,40,24,0.09)]">
+                <article key={property.id} className="group overflow-hidden rounded-none border border-[#e4e9e0] bg-white shadow-[0_3px_14px_rgba(25,40,24,0.035)] transition duration-200 hover:-translate-y-0.5 hover:border-[#cbdcc5] hover:shadow-[0_12px_30px_rgba(25,40,24,0.09)]">
                   <Link href={`/properties/${property.id}`} className="block">
                     <div className="relative aspect-[16/10] overflow-hidden bg-[#eef1eb]">
                       {imageUrl ? <Image src={imageUrl} alt={property.title} fill sizes="(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 33vw" className="object-cover transition duration-300 group-hover:scale-[1.025]" /> : <div className="flex h-full items-center justify-center text-sm text-[#778271]">Photo not available</div>}
-                      <span className="absolute left-3 top-3 rounded-full border border-white/70 bg-white/95 px-2.5 py-1 text-[11px] font-semibold text-[#3c5838]">{property.listingType === "FOR_SALE" ? "For sale" : property.pricePeriod === "NIGHT" ? "Short stay" : "For rent"}</span>
+                      <span className="absolute left-3 top-3 rounded-none border border-white/70 bg-white/95 px-2.5 py-1 text-[11px] font-semibold text-[#3c5838]">{property.listingType === "FOR_SALE" ? "For sale" : property.pricePeriod === "NIGHT" ? "Short stay" : "For rent"}</span>
                     </div>
                     <div className="p-4">
                       <p className="text-lg font-semibold tracking-tight text-[#243a27]">{money(property.price, property.pricePeriod, property.listingType)}</p>
@@ -136,11 +136,11 @@ export default async function LocationLandingPage({ params }: Props) {
             })}
           </div>
         ) : (
-          <div className="rounded-2xl border border-dashed border-[#d5dfcf] bg-white px-6 py-10 text-center">
+          <div className="rounded-none border border-dashed border-[#d5dfcf] bg-white px-6 py-10 text-center">
             <MapPin className="mx-auto h-7 w-7 text-[#7a8b72]" />
             <h3 className="mt-3 text-base font-semibold">No matching listings to show yet</h3>
             <p className="mx-auto mt-1 max-w-lg text-sm leading-6 text-[#6d7868]">Try the wider search to see nearby options. We only want to feature homes that are actually listed, not invent local availability.</p>
-            <Link href="/find-a-house" className="mt-4 inline-flex min-h-10 items-center rounded-xl bg-[#238447] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1c6c39]">Search all homes</Link>
+            <Link href="/find-a-house" className="mt-4 inline-flex min-h-10 items-center rounded-none bg-[#238447] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1c6c39]">Search all homes</Link>
           </div>
         )}
 
@@ -150,7 +150,7 @@ export default async function LocationLandingPage({ params }: Props) {
             <Link href="/find-a-house" className="text-sm font-semibold text-[#24783e] hover:underline">Open house search</Link>
           </div>
           <div className="mt-4 flex flex-wrap gap-2">
-            {related.map((place) => <Link key={place.slug} href={`/locations/${place.slug}`} className="inline-flex items-center rounded-full border border-[#e0e7dc] bg-white px-3.5 py-2 text-sm font-medium text-[#475844] transition hover:border-[#b8cfaf] hover:bg-[#f1f6ed] hover:text-[#216c37]">{place.name}</Link>)}
+            {related.map((place) => <Link key={place.slug} href={`/locations/${place.slug}`} className="inline-flex items-center rounded-none border border-[#e0e7dc] bg-white px-3.5 py-2 text-sm font-medium text-[#475844] transition hover:border-[#b8cfaf] hover:bg-[#f1f6ed] hover:text-[#216c37]">{place.name}</Link>)}
           </div>
         </div>
       </section>
