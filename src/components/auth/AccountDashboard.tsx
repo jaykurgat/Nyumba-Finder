@@ -39,9 +39,9 @@ export function AccountDashboard({ user }: { user: AccountUser }) {
         <h1 className="mt-2 text-3xl font-semibold tracking-tight">Welcome, {name}</h1>
         <p className="mt-2 text-sm leading-6 text-muted-foreground">You are signed in to NyumbaFinder.</p>
       </div>
-      {search.get("welcome") === "sent" && <p role="status" className="mb-4 rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-800">Your account is ready. A welcome email has been sent to {email}.</p>}
-      {search.get("welcome") === "failed" && <p role="status" className="mb-4 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">Your account is ready, but the welcome email could not be sent. You can continue using NyumbaFinder; please try again later if you need the email.</p>}
-      <div className="rounded-2xl border bg-card p-5 shadow-sm sm:p-7">
+      {search.get("welcome") === "sent" && <p role="status" className="mb-4 rounded-none border border-green-200 bg-green-50 p-3 text-sm text-green-800">Your account is ready. A welcome email has been sent to {email}.</p>}
+      {search.get("welcome") === "failed" && <p role="status" className="mb-4 rounded-none border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">Your account is ready, but the welcome email could not be sent. You can continue using NyumbaFinder; please try again later if you need the email.</p>}
+      <div className="rounded-none border bg-card p-5 shadow-sm sm:p-7">
         <div className="flex items-center gap-4">
           {user.profile?.avatarUrl ? (
             <img src={user.profile.avatarUrl} alt="" className="h-14 w-14 rounded-full object-cover" referrerPolicy="no-referrer" />
@@ -53,12 +53,12 @@ export function AccountDashboard({ user }: { user: AccountUser }) {
             <p className="mt-1 flex items-center gap-2 break-all text-sm text-muted-foreground"><Mail className="h-4 w-4 shrink-0" />{email}</p>
           </div>
         </div>
-        <div className="mt-6 flex items-start gap-3 rounded-xl bg-muted/50 p-4 text-sm">
+        <div className="mt-6 flex items-start gap-3 rounded-none bg-muted/50 p-4 text-sm">
           <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
           <p>Your NyumbaFinder account is active. You can use this account to sign in again with your registered method.</p>
         </div>
-        {error && <p role="alert" className="mt-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p>}
-        <button type="button" onClick={signOut} disabled={busy} className="mt-6 inline-flex h-10 items-center justify-center gap-2 rounded-lg border px-4 text-sm font-medium transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60">
+        {error && <p role="alert" className="mt-4 rounded-none border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p>}
+        <button type="button" onClick={signOut} disabled={busy} className="mt-6 inline-flex h-10 items-center justify-center gap-2 rounded-none border px-4 text-sm font-medium transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60">
           <LogOut className="h-4 w-4" />{busy ? "Signing out…" : "Sign out"}
         </button>
       </div>
