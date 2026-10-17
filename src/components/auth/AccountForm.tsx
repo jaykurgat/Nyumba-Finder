@@ -7,8 +7,8 @@ import { Eye, EyeOff, LockKeyhole, Mail, ArrowRight, Loader2 } from 'lucide-reac
 import { trackGoogleAdsConversion } from '@/components/analytics/GoogleAnalytics';
 
 type Mode = 'login' | 'register' | 'forgot' | 'reset';
-const inputClass = 'mt-1 block w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15';
-const buttonClass = 'inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60';
+const inputClass = 'mt-1 block w-full rounded-none border border-input bg-background px-3 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15';
+const buttonClass = 'inline-flex h-11 w-full items-center justify-center gap-2 rounded-none bg-primary px-4 text-sm font-semibold text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60';
 
 export function AccountForm({ mode }: { mode: Mode }) {
   const router = useRouter();
@@ -51,14 +51,14 @@ export function AccountForm({ mode }: { mode: Mode }) {
 
   return <section className="mx-auto w-full max-w-md py-10 sm:py-16">
     <div className="mb-6 text-center">
-      <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary"><LockKeyhole className="h-5 w-5" /></div>
+      <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-none bg-primary/10 text-primary"><LockKeyhole className="h-5 w-5" /></div>
       <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
       <p className="mt-2 text-sm leading-6 text-muted-foreground">{subtitle}</p>
     </div>
-    <div className="rounded-2xl border bg-card p-5 shadow-sm sm:p-7">
-      {notice && <p className="mb-4 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">{notice}</p>}
+    <div className="rounded-none border bg-card p-5 shadow-sm sm:p-7">
+      {notice && <p className="mb-4 rounded-none border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">{notice}</p>}
       {mode === 'login' && <>
-        <a href="/api/auth/google/start" className="flex h-11 w-full items-center justify-center gap-3 rounded-lg border bg-background px-4 text-sm font-medium transition hover:bg-muted">
+        <a href="/api/auth/google/start" className="flex h-11 w-full items-center justify-center gap-3 rounded-none border bg-background px-4 text-sm font-medium transition hover:bg-muted">
           <svg aria-hidden="true" viewBox="0 0 48 48" className="h-5 w-5"><path fill="#EA4335" d="M24 9.5c3.5 0 6.3 1.2 8.6 3.4l6.4-6.4C35.1 2.5 30.1 0 24 0 14.6 0 6.5 5.4 3 13.2l7.5 5.8C12.2 13.1 17.6 9.5 24 9.5z"/><path fill="#4285F4" d="M46.1 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.4c-.5 2.9-2.1 5.4-4.6 7.1l7.4 5.7c4.3-4 6.9-9.9 6.9-17.3z"/><path fill="#FBBC05" d="M10.5 28.9A14.4 14.4 0 0 1 9.7 24c0-1.7.3-3.3.8-4.9L3 13.2A24 24 0 0 0 0 24c0 3.9.9 7.6 3 10.8l7.5-5.9z"/><path fill="#34A853" d="M24 48c6.1 0 11.2-2 15-6.2l-7.4-5.7c-2.1 1.4-4.6 2.3-7.6 2.3-6.4 0-11.8-3.6-13.5-9.5L3 34.8C6.5 43.1 14.6 48 24 48z"/></svg>
           Continue with Google
         </a>
@@ -71,8 +71,8 @@ export function AccountForm({ mode }: { mode: Mode }) {
         </div>}
         {mode !== 'reset' && <label className="block text-sm font-medium">Email address<div className="relative"><Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" /><input className={inputClass + ' pl-9'} type="email" value={email} onChange={e => setEmail(e.target.value)} autoComplete="email" required /></div></label>}
         {(mode === 'login' || mode === 'register' || mode === 'reset') && <label className="block text-sm font-medium">{mode === 'reset' ? 'New password' : 'Password'}<div className="relative"><LockKeyhole className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" /><input className={inputClass + ' pl-9 pr-10'} type={showPassword ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)} autoComplete={mode === 'login' ? 'current-password' : 'new-password'} minLength={10} maxLength={128} required /><button type="button" className="absolute right-3 top-2.5 text-muted-foreground hover:text-foreground" aria-label={showPassword ? 'Hide password' : 'Show password'} onClick={() => setShowPassword(v => !v)}>{showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</button></div>{(mode === 'register' || mode === 'reset') && <span className="mt-1 block text-xs font-normal text-muted-foreground">Use at least 10 characters.</span>}</label>}
-        {error && <p role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p>}
-        {message && <p role="status" className="rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-800">{message}</p>}
+        {error && <p role="alert" className="rounded-none border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p>}
+        {message && <p role="status" className="rounded-none border border-green-200 bg-green-50 p-3 text-sm text-green-800">{message}</p>}
         <button className={buttonClass} type="submit" disabled={busy}>{busy ? <><Loader2 className="h-4 w-4 animate-spin" />Please wait…</> : <>{mode === 'login' ? 'Sign in' : mode === 'register' ? 'Create account' : mode === 'forgot' ? 'Send reset link' : 'Update password'}<ArrowRight className="h-4 w-4" /></>}</button>
       </form>
       <div className="mt-5 flex flex-wrap items-center justify-between gap-3 text-sm">
