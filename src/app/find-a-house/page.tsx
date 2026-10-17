@@ -55,9 +55,9 @@ export default function FindAHousePage() {
     <>
       <FindAHouseClient />
       <section aria-labelledby="find-a-house-guide" className="mx-auto max-w-6xl px-4 pb-14 pt-6 md:px-6 md:pb-20">
-        <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#dce5d6] bg-[#f5f7f1] px-4 py-3 sm:px-5">
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-none border border-[#dce5d6] bg-[#f5f7f1] px-4 py-3 sm:px-5">
           <div><p className="text-sm font-semibold text-[#2d3b29]">Know where you want to live?</p><p className="mt-0.5 text-xs text-[#687565]">Browse rental homes by city, town or estate.</p></div>
-          <Link href="/locations" className="inline-flex min-h-10 items-center rounded-xl bg-[#238447] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#1c6c39]">Browse locations</Link>
+          <Link href="/locations" className="inline-flex min-h-10 items-center rounded-none bg-[#238447] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#1c6c39]">Browse locations</Link>
         </div>
         <div className="grid gap-8 border-t border-[#e4e7df] pt-8 lg:grid-cols-[minmax(0,1fr)_280px] lg:gap-12">
           <article className="min-w-0">
@@ -91,10 +91,10 @@ export default function FindAHousePage() {
               entered place may need review before it becomes part of the shared location database.
             </p>
 
-            <div className="mt-8 rounded-2xl border border-[#dce4d5] bg-[#f5f6f0] p-5 sm:p-6">
+            <div className="mt-8 rounded-none border border-[#dce4d5] bg-[#f5f6f0] p-5 sm:p-6">
               <h3 className="text-lg font-semibold tracking-tight text-[#2d3b29]">Prefer to browse homes yourself?</h3>
               <p className="mt-2 text-sm leading-6 text-[#606a5d]">Explore current property listings, compare the information available and contact advertisers about homes that suit your needs. Availability should always be confirmed before arranging a visit.</p>
-              <Link href="/properties" className="mt-4 inline-flex min-h-11 items-center justify-center rounded-xl bg-[#53694b] px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#43563c]">Browse property listings</Link>
+              <Link href="/properties" className="mt-4 inline-flex min-h-11 items-center justify-center rounded-none bg-[#53694b] px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#43563c]">Browse property listings</Link>
             </div>
 
             <h3 className="mt-8 text-lg font-semibold tracking-tight">Frequently asked questions</h3>
@@ -106,7 +106,7 @@ export default function FindAHousePage() {
             </div>
           </article>
 
-          <aside className="self-start rounded-2xl border border-[#e0e4da] bg-white p-5 lg:sticky lg:top-6">
+          <aside className="self-start rounded-none border border-[#e0e4da] bg-white p-5 lg:sticky lg:top-6">
             <h3 className="text-base font-semibold text-[#2d3b29]">Continue your search</h3>
             <p className="mt-2 text-sm leading-6 text-muted-foreground">Use the guided form to describe your needs or browse available listings directly.</p>
             <nav aria-label="House search resources" className="mt-4 flex flex-col gap-3 text-sm">
