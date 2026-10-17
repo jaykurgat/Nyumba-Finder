@@ -139,7 +139,7 @@ export function PropertySearchForm({ onFormSubmit, isInSheet = false }: { onForm
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(submit)} className="relative rounded-2xl border bg-background p-2 shadow-sm">
+      <form onSubmit={form.handleSubmit(submit)} className="relative border border-[#d9ded4] bg-white p-2 shadow-none">
         <div className="flex flex-col lg:flex-row lg:items-center">
           <ListingTypeField form={form} compact />
           <LocationField form={form} locations={locations} compact />
