@@ -13,7 +13,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/co
 import { useIsMobile } from "@/hooks/use-mobile";
 
 function PropertyListingsSkeleton() {
-  return <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">{[1,2,3,4,5,6].map(function (i) {
+  return <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">{[1,2,3,4,5,6].map(function (i) {
     return <div key={i} className="overflow-hidden border bg-card"><Skeleton className="h-52 w-full" /><div className="space-y-3 p-4"><Skeleton className="h-5 w-3/4" /><Skeleton className="h-4 w-1/2" /><Skeleton className="h-4 w-full" /><Skeleton className="h-9 w-full" /></div></div>;
   })}</div>;
 }
@@ -93,18 +93,18 @@ export default function PropertiesPage() {
   const isMobile = useIsMobile();
   const [filtersOpen, setFiltersOpen] = useState(false);
 
-  return <div className="min-h-screen bg-muted/20">
-    <div className="container mx-auto px-4 py-6 md:px-6 md:py-8">
-      <div className="mb-6 max-w-3xl">
-        <p className="text-sm font-semibold tracking-[0.16em] text-primary">NYUMBAFINDER</p>
-        <h1 className="mt-1 text-3xl font-semibold tracking-tight sm:text-4xl">Find a place that feels like home.</h1>
-        <p className="mt-2 text-sm text-muted-foreground sm:text-base">Search rentals, homes for sale, and short stays by location, budget and the features you care about.</p>
+  return <div className="min-h-screen bg-[#fbfaf6]">
+    <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 md:py-8 lg:px-10">
+      <div className="mb-6 max-w-3xl border-l-2 border-[#f28c28] pl-4">
+        <p className="text-[10px] font-bold tracking-[0.2em] text-[#60715b]">NYUMBAFINDER</p>
+        <h1 className="mt-2 text-3xl font-semibold leading-tight tracking-[-0.04em] text-[#20271f] sm:text-4xl">Find a place that feels like home.</h1>
+        <p className="mt-2 max-w-2xl text-sm leading-6 text-[#687066] sm:text-base">Search rentals, homes for sale, and short stays by location, budget and the features you care about.</p>
       </div>
 
       <div className="mb-8">
         {isMobile ? <Sheet open={filtersOpen} onOpenChange={setFiltersOpen}>
-          <SheetTrigger asChild><Button variant="outline" className="h-12 w-full justify-between bg-background px-4 shadow-sm"><span className="flex items-center gap-2"><SlidersHorizontal className="h-4 w-4 text-primary" />Search & filters</span><span className="text-sm text-muted-foreground">Open</span></Button></SheetTrigger>
-          <SheetContent side="bottom" className="h-[92vh] rounded-t-2xl p-0">
+          <SheetTrigger asChild><Button variant="outline" className="h-12 w-full justify-between rounded-none border-[#d9ded4] bg-white px-4 shadow-none"><span className="flex items-center gap-2"><SlidersHorizontal className="h-4 w-4 text-primary" />Search & filters</span><span className="text-sm text-muted-foreground">Open</span></Button></SheetTrigger>
+          <SheetContent side="bottom" className="h-[92dvh] rounded-none p-0">
             <SheetHeader className="border-b px-5 py-4 text-left"><SheetTitle>Find a property</SheetTitle></SheetHeader>
             <div className="h-[calc(92vh-73px)] overflow-y-auto px-4 py-5"><Suspense fallback={<Skeleton className="h-96 w-full" />}><PropertySearchForm isInSheet onFormSubmit={function () { setFiltersOpen(false); }} /></Suspense></div>
           </SheetContent>
