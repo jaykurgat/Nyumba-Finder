@@ -3,12 +3,12 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { usePathname } from "next/navigation";
-import { Heart, Home, Search, Sparkles, UserRound } from "lucide-react";
+import { Building2, Heart, Home, House, UserRound } from "lucide-react";
 
 const items = [
   { label: "Home", href: "/", icon: Home, key: "home" },
-  { label: "Properties", href: "/properties", icon: Search, key: "explore" },
-  { label: "House Hunt", href: "/find-a-house", icon: Sparkles, key: "hunt" },
+  { label: "Properties", href: "/properties", icon: Building2, key: "explore" },
+  { label: "House Hunt", href: "/find-a-house", icon: House, key: "hunt" },
   { label: "Saved", href: "/saved", icon: Heart, key: "saved" },
   { label: "Account", href: "/account", icon: UserRound, key: "account" },
 ];
