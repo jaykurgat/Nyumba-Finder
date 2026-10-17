@@ -1,10 +1,16 @@
 import Link from 'next/link';
+import { Facebook, Music2 } from 'lucide-react';
 
 const groups = [
   { title: 'Explore', links: [['Search Homes', '/properties'], ['Find a House', '/find-a-house'], ['How It Works', '/info/how-it-works'], ['FAQ', '/info/faq'], ['About NyumbaFinder', '/info/about']] },
   { title: 'For Landlords', links: [['List Your Property', '/list-property'], ['Promote a Listing', '/promote'], ['Landlord Guidelines', '/info/landlord-guidelines'], ['Listing Rules', '/info/listing-rules'], ['Report a Listing', '/info/report-listing']] },
   { title: 'Help & Safety', links: [['Safety & Scam Awareness', '/info/safety-scams'], ['Contact Us', '/info/contact']] },
   { title: 'Legal', links: [['Privacy & Analytics', '/privacy'], ['Cookie Policy', '/info/cookies'], ['Terms of Use', '/info/terms'], ['Disclaimer', '/info/disclaimer']] },
+];
+
+const socialLinks = [
+  { label: 'Facebook', href: 'https://www.facebook.com/profile.php?id=61577323867967', Icon: Facebook },
+  { label: 'TikTok', href: 'https://vm.tiktok.com/ZS9UPCJ9daJ4T-Fq1dl/', Icon: Music2 },
 ];
 
 export function Footer() {
@@ -19,6 +25,14 @@ export function Footer() {
             </Link>
             <p className="mt-3 max-w-xs text-sm leading-6 text-white/65">Find a place that feels like home. Rental homes and local house-hunting support across Kenya.</p>
             <Link href="/properties" className="mt-4 inline-flex items-center border-b border-[#f28c28] pb-1 text-sm font-semibold text-white hover:text-[#f7b15f]">Explore homes <span aria-hidden="true" className="ml-2 text-[#f28c28]">→</span></Link>
+            <div className="mt-5 flex items-center gap-2.5" aria-label="Follow NyumbaFinder">
+              {socialLinks.map(({ label, href, Icon }) => (
+                <a key={label} href={href} target="_blank" rel="noopener noreferrer" aria-label={`NyumbaFinder on ${label} (opens in a new tab)`} className="inline-flex h-10 w-10 items-center justify-center border border-white/25 text-white transition-colors hover:border-[#f28c28] hover:bg-white/5 hover:text-[#f2a14b]">
+                  <Icon className="h-5 w-5" aria-hidden="true" />
+                </a>
+              ))}
+              <span className="ml-1 text-xs text-white/60">Follow us</span>
+            </div>
           </div>
           {groups.map((group) => (
             <div key={group.title} className="border-t border-white/15 pt-4 lg:border-0 lg:pt-1">
