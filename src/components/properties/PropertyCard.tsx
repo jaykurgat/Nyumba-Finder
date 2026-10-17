@@ -115,7 +115,7 @@ export function PropertyCard({ property, initiallySaved = false }: PropertyCardP
 
 
   return (
-    <Card className="w-full min-w-0 overflow-hidden shadow-sm transition-shadow duration-300 hover:shadow-lg flex flex-col">
+    <Card className="w-full min-w-0 overflow-hidden rounded-none border-[#dfe2d8] shadow-none transition-colors duration-200 hover:border-[#9eaf96] hover:shadow-none flex flex-col">
       <CardHeader className="p-0 relative">
         <Link href={`/properties/${property.id}`} className="block" onClick={trackClick}>
           <PropertyImage
@@ -133,11 +133,11 @@ export function PropertyCard({ property, initiallySaved = false }: PropertyCardP
           aria-label={isSaved ? "Remove from saved properties" : "Save property"}
           aria-pressed={isSaved}
           title={isSaved ? "Remove from saved" : "Save property"}
-          className="absolute right-2 top-2 z-10 flex h-10 w-10 items-center justify-center rounded-full border bg-background/95 text-foreground shadow-sm transition hover:scale-105 hover:text-primary disabled:opacity-60"
+          className="absolute right-2 top-2 z-10 flex h-10 w-10 items-center justify-center border border-white/80 bg-white/95 text-foreground transition-colors hover:bg-white hover:text-primary disabled:opacity-60"
         >
           <Heart className={"h-5 w-5 " + (isSaved ? "fill-current text-primary" : "")} />
         </button>
-        <Badge variant="secondary" className="absolute bottom-2 right-2 max-w-[calc(100%-1rem)] truncate bg-background/95 text-xs font-semibold text-foreground sm:text-sm">
+        <Badge variant="secondary" className="absolute bottom-2 right-2 max-w-[calc(100%-1rem)] truncate rounded-none bg-[#fbfaf6] text-xs font-semibold text-[#244c2c] sm:text-sm">
           Ksh {property.price.toLocaleString()}{priceLabel}
         </Badge>
         {property.isSponsored && (
@@ -146,7 +146,7 @@ export function PropertyCard({ property, initiallySaved = false }: PropertyCardP
           </span>
         )}
       </CardHeader>
-      <CardContent className="p-4 flex-grow">
+      <CardContent className="flex-grow p-3.5 sm:p-4">
         <Link href={`/properties/${property.id}`} className="block" onClick={trackClick}>
           <CardTitle className="text-lg font-semibold mb-2 hover:text-primary transition-colors truncate">{property.title}</CardTitle>
         </Link>
@@ -168,8 +168,8 @@ export function PropertyCard({ property, initiallySaved = false }: PropertyCardP
            )}
         </div>
       </CardContent>
-      <CardFooter className="p-4 pt-0 border-t">
-         <Button variant="outline" className="w-full" asChild>
+      <CardFooter className="border-t border-[#e1e4dc] p-3.5 pt-3 sm:p-4 sm:pt-3">
+         <Button variant="outline" className="w-full rounded-none border-[#d1d8cc] text-[#244c2c] hover:bg-[#f0f2eb]" asChild>
              <Link href={`/properties/${property.id}`} onClick={trackClick}>View Details</Link>
           </Button>
       </CardFooter>
