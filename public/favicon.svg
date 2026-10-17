@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title">
+<title>NyumbaFinder</title>
+<path fill="#004c3d" d="M256 35 464 202 432 243 389 209 V426 Q389 462 353 462 H307 Q277 462 277 432 V280 L256 263 235 280 V432 Q235 462 205 462 H159 Q123 462 123 426 V209 L80 243 48 202 Z"/>
+<path fill="#004c3d" d="M143 151 V84 Q143 57 170 57 H210 Q237 57 237 84 V120 Z"/>
+<g fill="#f2a000"><rect x="218" y="277" width="58" height="58" rx="6"/><rect x="290" y="277" width="58" height="58" rx="6"/><rect x="218" y="349" width="58" height="58" rx="6"/><rect x="290" y="349" width="58" height="58" rx="6"/></g>
+</svg>

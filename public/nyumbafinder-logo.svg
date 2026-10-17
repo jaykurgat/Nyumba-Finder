@@ -1,14 +1,10 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 240" role="img" aria-labelledby="title desc">
-  <title id="title">NyumbaFinder</title><desc id="desc">NyumbaFinder — Find your next home.</desc>
-  <g transform="translate(20 20)" fill="none" stroke="#004c3d" stroke-width="20" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M14 105 100 30l86 75"/>
-    <path d="M40 91v95h55"/>
-    <path d="M160 91v95h-28"/>
-  </g>
-  <g fill="#f2a000">
-    <rect x="94" y="113" width="28" height="28" rx="3"/><rect x="130" y="113" width="28" height="28" rx="3"/>
-    <rect x="94" y="149" width="28" height="28" rx="3"/><rect x="130" y="149" width="28" height="28" rx="3"/>
-  </g>
-  <text x="235" y="142" font-family="Inter, Arial, sans-serif" font-size="102" font-weight="750" letter-spacing="-5"><tspan fill="#004c3d">Nyumba</tspan><tspan fill="#f2a000">Finder</tspan></text>
-  <text x="240" y="194" font-family="Inter, Arial, sans-serif" font-size="26" font-weight="600" letter-spacing="7" fill="#004c3d">FIND YOUR NEXT HOME</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 230" role="img" aria-labelledby="title desc">
+<title id="title">NyumbaFinder</title><desc id="desc">NyumbaFinder — Find your next home.</desc>
+<g transform="translate(8 8)">
+<path fill="#004c3d" d="M92 6 174 72 162 90 143 75 143 178 Q143 192 129 192 H111 Q99 192 99 180 V113 L92 107 85 113 V180 Q85 192 72 192 H54 Q40 192 40 178 V75 L21 90 9 72 Z"/>
+<path fill="#004c3d" d="M47 49 V22 Q47 12 57 12 H72 Q82 12 82 22 V35 Z"/>
+<g fill="#f2a000"><rect x="76" y="91" width="24" height="24" rx="2"/><rect x="106" y="91" width="24" height="24" rx="2"/><rect x="76" y="121" width="24" height="24" rx="2"/><rect x="106" y="121" width="24" height="24" rx="2"/></g>
+</g>
+<text x="200" y="108" font-family="Arial, Helvetica, sans-serif" font-size="84" font-weight="700" letter-spacing="-3"><tspan fill="#004c3d">Nyumba</tspan><tspan fill="#f2a000">Finder</tspan></text>
+<text x="205" y="155" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="600" letter-spacing="5.8" fill="#004c3d">FIND YOUR NEXT HOME</text>
 </svg>
