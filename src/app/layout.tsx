@@ -16,9 +16,9 @@ export const metadata: Metadata = {
   metadataBase: new URL('https://www.nyumba-finder.com'),
   alternates: { canonical: '/' },
   icons: {
-    icon: [{ url: '/favicon.svg?v=3', type: 'image/svg+xml' }],
-    shortcut: '/favicon.svg?v=3',
-    apple: '/favicon.svg?v=3',
+    icon: [{ url: '/favicon.svg?v=4', type: 'image/svg+xml' }],
+    shortcut: '/favicon.svg?v=4',
+    apple: '/favicon.svg?v=4',
   },
 };
 
@@ -35,18 +35,11 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
           <MobileBottomNav />
         </div>
         <GoogleAnalytics />
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: JSON.stringify({
-              '@context': 'https://schema.org',
-              '@type': 'Organization',
-              name: 'NyumbaFinder',
-              url: 'https://www.nyumba-finder.com',
-              logo: 'https://www.nyumba-finder.com/nyumbafinder-logo.svg',
-            }),
-          }}
-        />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
+          '@context': 'https://schema.org', '@type': 'Organization',
+          name: 'NyumbaFinder', url: 'https://www.nyumba-finder.com',
+          logo: 'https://www.nyumba-finder.com/nyumbafinder-logo.svg',
+        }) }} />
         <Toaster />
       </body>
     </html>
