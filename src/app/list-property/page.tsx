@@ -458,14 +458,14 @@ export default function ListPropertyPage() {
   }
 
   return (
-    <div className="min-h-screen bg-muted/20">
+    <div className="min-h-screen bg-[#fbfaf6]">
       <div className="container mx-auto max-w-4xl px-4 py-8 md:py-12">
         <div className="mb-8 max-w-2xl">
           <p className="mb-2 text-sm font-medium text-primary">NyumbaFinder</p>
           <h1 className="text-3xl font-semibold tracking-tight md:text-4xl">{pageTitle}</h1>
           <p className="mt-2 text-sm leading-6 text-muted-foreground md:text-base">Add the details tenants need to discover and compare your property. We’ll use the location you choose to make it easier to find in relevant searches.</p>
         </div>
-        <Card className="overflow-hidden rounded-3xl border bg-background shadow-sm">
+        <Card className="overflow-hidden rounded-none border bg-background shadow-sm">
           <CardHeader className="border-b bg-background px-5 py-5 md:px-7">
             <CardTitle className="text-base font-semibold">Property information</CardTitle>
           </CardHeader>
@@ -507,9 +507,9 @@ export default function ListPropertyPage() {
                     )}
                   />
 
-                  <div className="rounded-2xl border bg-card p-5 shadow-sm md:p-6">
+                  <div className="rounded-none border bg-card p-5 shadow-sm md:p-6">
                     <div className="mb-5 flex items-start gap-3">
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary"><MapPin className="h-5 w-5" /></div>
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-none bg-primary/10 text-primary"><MapPin className="h-5 w-5" /></div>
                       <div>
                         <h2 className="text-lg font-semibold tracking-tight">Where is the property?</h2>
                         <p className="mt-1 text-sm text-muted-foreground">Choose the county, then select the town or city and enter the local area.</p>
@@ -532,7 +532,7 @@ export default function ListPropertyPage() {
                               form.setValue('locationNodeId', '', { shouldValidate: true, shouldDirty: true });
                               setMapPosition(null);
                             }}
-                            className="flex h-11 w-full rounded-xl border bg-background px-3 text-sm outline-none transition focus:ring-2 focus:ring-primary/20"
+                            className="flex h-11 w-full rounded-none border bg-background px-3 text-sm outline-none transition focus:ring-2 focus:ring-primary/20"
                           >
                             <option value="">{countiesLoading ? 'Loading counties...' : countiesError ? 'Unable to load counties' : 'Select a county'}</option>
                             {counties.map((county) => <option key={county.id} value={county.id}>{county.name}</option>)}
@@ -560,7 +560,7 @@ export default function ListPropertyPage() {
                               setMapPosition(town?.latitude != null && town?.longitude != null ? { lat: town.latitude, lng: town.longitude } : null);
                               setLocationSource("USER_SELECTED");
                             }}
-                            className="flex h-11 w-full rounded-xl border bg-background px-3 text-sm outline-none transition focus:ring-2 focus:ring-primary/20"
+                            className="flex h-11 w-full rounded-none border bg-background px-3 text-sm outline-none transition focus:ring-2 focus:ring-primary/20"
                           >
                             <option value="">{!watchedCountyId ? 'Select county first' : townsLoading ? 'Loading towns and cities...' : towns.length ? 'Select a town or city' : 'No towns or cities available'}</option>
                             {towns.map((town) => (
@@ -604,10 +604,10 @@ export default function ListPropertyPage() {
                         )} />
                       </div>
 
-                      <div className="rounded-xl border bg-muted/20 p-4">
+                      <div className="rounded-none border bg-[#fbfaf6] p-4">
                         <div className="flex items-start justify-between gap-4">
                           <div className="flex gap-3">
-                            <div className="mt-0.5 flex h-9 w-9 items-center justify-center rounded-lg bg-background text-primary shadow-sm">
+                            <div className="mt-0.5 flex h-9 w-9 items-center justify-center rounded-none bg-background text-primary shadow-sm">
                               <Navigation className="h-4 w-4" />
                             </div>
                             <div>
@@ -619,7 +619,7 @@ export default function ListPropertyPage() {
                             type="button"
                             variant="outline"
                             size="sm"
-                            className="shrink-0 rounded-lg"
+                            className="shrink-0 rounded-none"
                             onClick={() => {
                               if (!navigator.geolocation) {
                                 toast({ title: "Location unavailable", description: "Your browser does not support location access.", variant: "destructive" });
@@ -670,7 +670,7 @@ export default function ListPropertyPage() {
                       <FormItem>
                         <FormLabel>Listing Type</FormLabel>
                         <FormControl>
-                          <select {...field} className="h-11 w-full rounded-xl border bg-background px-3 text-sm">
+                          <select {...field} className="h-11 w-full rounded-none border bg-background px-3 text-sm">
                             <option value="FOR_RENT">For Rent</option>
                             <option value="FOR_SALE">For Sale</option>
                             <option value="SHORT_STAY">Short Stay</option>
@@ -759,7 +759,7 @@ export default function ListPropertyPage() {
                   </div>
 
                   {watchedListingType === 'SHORT_STAY' && (
-                    <div className="rounded-2xl border bg-card p-5 shadow-sm md:p-6">
+                    <div className="rounded-none border bg-card p-5 shadow-sm md:p-6">
                       <h2 className="text-base font-semibold">Short-stay details</h2>
                       <p className="mt-1 text-sm text-muted-foreground">Optional details for furnished, holiday, serviced, or Airbnb-style stays.</p>
                       <div className="mt-5 grid gap-4 md:grid-cols-3">
@@ -859,7 +859,7 @@ export default function ListPropertyPage() {
                                 multiple
                                 accept="image/*"
                                 onChange={handleImageChange}
-                                className="block w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-md file:border file:border-input file:bg-background file:text-sm file:font-medium file:text-foreground hover:file:bg-accent hover:file:text-accent-foreground disabled:opacity-50"
+                                className="block w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-none file:border file:border-input file:bg-background file:text-sm file:font-medium file:text-foreground hover:file:bg-accent hover:file:text-accent-foreground disabled:opacity-50"
                                 disabled={isUploading || (watchedImages && watchedImages.length >= 5)}
                                 suppressHydrationWarning
                               />
@@ -889,7 +889,7 @@ export default function ListPropertyPage() {
                         </div>
                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                           {watchedImages.map((uri, index) => (
-                            <div key={uri + index} className="relative overflow-hidden rounded-md border shadow-sm">
+                            <div key={uri + index} className="relative overflow-hidden rounded-none border shadow-sm">
                               <PropertyImage
                                 src={uri}
                                 alt={`Preview ${index + 1}`}
@@ -917,9 +917,9 @@ export default function ListPropertyPage() {
                     )}
 
 
-                  <div className="mb-5 rounded-2xl border border-primary/15 bg-gradient-to-br from-primary/[0.05] via-background to-accent/[0.06] p-5">
+                  <div className="mb-5 rounded-none border border-primary/15 bg-gradient-to-br from-primary/[0.05] via-background to-accent/[0.06] p-5">
                     <div className="flex items-start gap-3">
-                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary"><Sparkles className="h-4 w-4" /></div>
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-none bg-primary/10 text-primary"><Sparkles className="h-4 w-4" /></div>
                       <div>
                         <p className="text-sm font-semibold">Want more visibility?</p>
                         <p className="mt-1 text-sm leading-6 text-muted-foreground">Once your listing is active, you can request Sponsored placement to give it additional visibility in relevant searches.</p>
