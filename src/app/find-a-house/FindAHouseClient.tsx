@@ -298,11 +298,11 @@ export default function FindAHousePage() {
       <main className="mx-auto max-w-6xl px-4 py-8 md:px-6 md:py-14">
         <div className="mx-auto max-w-3xl">
           <div className="rounded-[2rem] border border-[#dce3d6] bg-[#f5f6f0] p-6 sm:p-10">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#e0e8d9] text-[#4f6748]"><CheckCircle2 className="h-7 w-7" /></div>
+            <div className="flex h-14 w-14 items-center justify-center rounded-none bg-[#e0e8d9] text-[#4f6748]"><CheckCircle2 className="h-7 w-7" /></div>
             <p className="mt-6 text-xs font-semibold uppercase tracking-[0.22em] text-[#62765a]">Request received</p>
             <h1 className="mt-2 text-3xl font-semibold tracking-tight text-[#253126] sm:text-4xl">Your next home search starts here.</h1>
             <p className="mt-3 max-w-2xl leading-7 text-[#606a5d]">Thanks, {form.name}. We've received your house-hunting request. A NyumbaFinder representative will reach out to discuss suitable options and the next steps.</p>
-            <div className="mt-5 rounded-2xl border border-[#d7dfd0] bg-white p-4 sm:p-5">
+            <div className="mt-5 rounded-none border border-[#d7dfd0] bg-white p-4 sm:p-5">
               <p className="text-sm font-semibold text-[#33432f]">Your House Hunt service · KSh 2,500</p>
               <p className="mt-2 text-sm leading-6 text-[#606a5d]">Includes up to five WhatsApp video previews of suitable properties, subject to availability, plus help coordinating viewings. No payment has been taken through this form; your representative will explain the next steps.</p>
             </div>
@@ -312,15 +312,15 @@ export default function FindAHousePage() {
             </div>
             <div className="mt-6 flex flex-col gap-3 sm:flex-row">
               {result.whatsappUrl ? (
-                <Button asChild className="h-12 rounded-xl bg-[#53694b] px-5 hover:bg-[#43563c]">
+                <Button asChild className="h-12 rounded-none bg-[#53694b] px-5 hover:bg-[#43563c]">
                   <a href={result.whatsappUrl} target="_blank" rel="noreferrer"><MessageCircle className="mr-2 h-4 w-4" />Contact us on WhatsApp</a>
                 </Button>
               ) : (
-                <Button asChild className="h-12 rounded-xl bg-[#53694b] px-5 hover:bg-[#43563c]">
+                <Button asChild className="h-12 rounded-none bg-[#53694b] px-5 hover:bg-[#43563c]">
                   <Link href="/properties"><Search className="mr-2 h-4 w-4" />Browse available homes</Link>
                 </Button>
               )}
-              <Button asChild variant="outline" className="h-12 rounded-xl border-[#d7dfd0] bg-white px-5"><Link href="/properties">Browse all homes <ArrowRight className="ml-2 h-4 w-4" /></Link></Button>
+              <Button asChild variant="outline" className="h-12 rounded-none border-[#d7dfd0] bg-white px-5"><Link href="/properties">Browse all homes <ArrowRight className="ml-2 h-4 w-4" /></Link></Button>
             </div>
             <p className="mt-4 text-sm leading-6 text-[#53634d]">
               {result.notifications.clientEmailSent
@@ -342,11 +342,11 @@ export default function FindAHousePage() {
                 <p className="mt-2 text-sm text-muted-foreground">Ranked using your budget, preferred location and house requirements.</p>
               </div>
             </div>
-            {result.usedNearbyFallback && <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900">We couldn't find a close match in your exact location, so these options are broader suggestions within your budget. Check each location before arranging a visit.</div>}
+            {result.usedNearbyFallback && <div className="mt-5 rounded-none border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900">We couldn't find a close match in your exact location, so these options are broader suggestions within your budget. Check each location before arranging a visit.</div>}
             {result.matches.length ? (
               <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
                 {result.matches.map((property) => (
-                  <article key={property.id} className="group overflow-hidden rounded-2xl border bg-card transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg">
+                  <article key={property.id} className="group overflow-hidden rounded-none border bg-card transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg">
                     <Link href={property.href} className="block">
                       <div className="relative aspect-[4/3] overflow-hidden bg-[#f1f0eb]">
                         {property.image ? <img src={property.image} alt={property.title} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]" /> : <div className="flex h-full items-center justify-center text-muted-foreground"><Home className="h-9 w-9" /></div>}
@@ -361,26 +361,26 @@ export default function FindAHousePage() {
                         <span className="flex items-center gap-1.5"><Bath className="h-4 w-4" />{property.bathrooms} baths</span>
                       </div>
                       {!!property.reasons.length && <div className="mt-4 flex flex-wrap gap-1.5">{property.reasons.slice(0, 3).map((reason) => <span key={reason} className="rounded-full bg-[#f0f3ed] px-2.5 py-1 text-[11px] font-medium text-[#52674b]">{reason}</span>)}</div>}
-                      <Button asChild variant="outline" className="mt-4 h-10 w-full rounded-xl"><Link href={property.href}>View property <ArrowRight className="ml-2 h-4 w-4" /></Link></Button>
+                      <Button asChild variant="outline" className="mt-4 h-10 w-full rounded-none"><Link href={property.href}>View property <ArrowRight className="ml-2 h-4 w-4" /></Link></Button>
                     </div>
                   </article>
                 ))}
               </div>
             ) : (
-              <div className="mt-6 rounded-2xl border border-dashed p-8 text-center">
+              <div className="mt-6 rounded-none border border-dashed p-8 text-center">
                 <Search className="mx-auto h-7 w-7 text-muted-foreground" />
                 <h3 className="mt-3 font-semibold">No close matches just yet</h3>
                 <p className="mx-auto mt-2 max-w-lg text-sm leading-6 text-muted-foreground">We haven't found a listed home that fits your current budget and requirements. Contact us and we can help you explore alternatives.</p>
-                {result.whatsappUrl && <Button asChild className="mt-4 rounded-xl"><a href={result.whatsappUrl} target="_blank" rel="noreferrer"><MessageCircle className="mr-2 h-4 w-4" />Ask us to help</a></Button>}
+                {result.whatsappUrl && <Button asChild className="mt-4 rounded-none"><a href={result.whatsappUrl} target="_blank" rel="noreferrer"><MessageCircle className="mr-2 h-4 w-4" />Ask us to help</a></Button>}
               </div>
             )}
             {result.hasMoreMatches && <p className="mt-5 text-center text-sm text-muted-foreground">These are the strongest matches from the current listings. <Link className="font-medium text-primary underline underline-offset-4" href="/properties">Browse all rentals</Link> for more options.</p>}
-            <div className="mt-8 rounded-2xl border p-5 sm:flex sm:items-center sm:justify-between">
+            <div className="mt-8 rounded-none border p-5 sm:flex sm:items-center sm:justify-between">
               <div>
                 <p className="font-semibold">Want help finding another option?</p>
                 <p className="mt-1 text-sm text-muted-foreground">Share your request reference when you contact us: {result.reference}</p>
               </div>
-              {result.whatsappUrl && <Button asChild variant="outline" className="mt-4 rounded-xl sm:mt-0"><a href={result.whatsappUrl} target="_blank" rel="noreferrer"><MessageCircle className="mr-2 h-4 w-4" />Get personal help</a></Button>}
+              {result.whatsappUrl && <Button asChild variant="outline" className="mt-4 rounded-none sm:mt-0"><a href={result.whatsappUrl} target="_blank" rel="noreferrer"><MessageCircle className="mr-2 h-4 w-4" />Get personal help</a></Button>}
             </div>
           </div>
         </div>
@@ -412,16 +412,16 @@ export default function FindAHousePage() {
                 <p className="mt-2 text-sm leading-6 text-muted-foreground">Choose the closest fit. You can keep your options open.</p>
                 <div className="mt-6 grid gap-3 sm:grid-cols-2">
                   {homeTypes.map((type) => (
-                    <button key={type.value} type="button" onClick={() => { update("propertyType", type.value); update("bedrooms", ["Bedsitter", "Studio"].includes(type.value) ? 0 : form.bedrooms === 0 ? 1 : form.bedrooms); }} className={"group rounded-2xl border p-4 text-left transition-all hover:border-[#8c9c82] hover:bg-[#f8f9f5] " + (form.propertyType === type.value ? "border-[#718568] bg-[#f3f6ef] ring-1 ring-[#718568]" : "bg-card")}>
+                    <button key={type.value} type="button" onClick={() => { update("propertyType", type.value); update("bedrooms", ["Bedsitter", "Studio"].includes(type.value) ? 0 : form.bedrooms === 0 ? 1 : form.bedrooms); }} className={"group rounded-none border p-4 text-left transition-all hover:border-[#8c9c82] hover:bg-[#f8f9f5] " + (form.propertyType === type.value ? "border-[#718568] bg-[#f3f6ef] ring-1 ring-[#718568]" : "bg-card")}>
                       <span className="flex items-center justify-between gap-3"><span className="font-semibold">{type.label}</span><span className={"flex h-5 w-5 items-center justify-center rounded-full border " + (form.propertyType === type.value ? "border-[#627957] bg-[#627957] text-white" : "border-border text-transparent")}><Check className="h-3 w-3" /></span></span>
                       <span className="mt-1.5 block text-sm leading-5 text-muted-foreground">{type.detail}</span>
                     </button>
                   ))}
                 </div>
-                <div className="mt-7 rounded-2xl border p-4 sm:flex sm:items-center sm:justify-between">
+                <div className="mt-7 rounded-none border p-4 sm:flex sm:items-center sm:justify-between">
                   <div><p className="font-medium">How many bedrooms?</p><p className="mt-1 text-sm text-muted-foreground">We'll show homes with at least this many.</p></div>
                   <div className="mt-4 flex flex-wrap gap-2 sm:mt-0">
-                    {[0, 1, 2, 3, 4].map((n) => <button key={n} type="button" onClick={() => update("bedrooms", n)} className={"h-10 min-w-11 rounded-xl border px-3 text-sm font-medium transition-colors " + (form.bedrooms === n ? "border-[#627957] bg-[#edf2e8] text-[#405638]" : "hover:bg-muted")}>{n === 0 ? "Studio" : n === 4 ? "4+" : n}</button>)}
+                    {[0, 1, 2, 3, 4].map((n) => <button key={n} type="button" onClick={() => update("bedrooms", n)} className={"h-10 min-w-11 rounded-none border px-3 text-sm font-medium transition-colors " + (form.bedrooms === n ? "border-[#627957] bg-[#edf2e8] text-[#405638]" : "hover:bg-muted")}>{n === 0 ? "Studio" : n === 4 ? "4+" : n}</button>)}
                   </div>
                 </div>
               </section>
@@ -432,13 +432,13 @@ export default function FindAHousePage() {
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">A place to call home</p>
                 <h2 className="mt-1 text-xl font-semibold tracking-tight">Where would you like to live?</h2>
                 <p className="mt-1 text-sm leading-5 text-muted-foreground">Add up to five locations in priority order. Choose from our location database or add a missing estate, village, town or neighbourhood yourself.</p>
-                <div className="relative mt-4 rounded-2xl border bg-card p-3 sm:p-4">
+                <div className="relative mt-4 rounded-none border bg-card p-3 sm:p-4">
                   <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                     <label htmlFor="location-search" className="block text-sm font-medium">Preferred locations</label>
                     <span className="text-xs text-muted-foreground">{form.preferredLocations.length} of 5 selected</span>
                   </div>
                   {form.preferredLocations.length > 0 && <div className="mb-4 flex flex-col gap-2">
-                    {form.preferredLocations.map((location, index) => <div key={location.label} className="flex items-center gap-2 rounded-xl border border-[#dce4d5] bg-white px-3 py-2.5 text-sm">
+                    {form.preferredLocations.map((location, index) => <div key={location.label} className="flex items-center gap-2 rounded-none border border-[#dce4d5] bg-white px-3 py-2.5 text-sm">
                       <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#53694b] text-xs font-semibold text-white">{index + 1}</span>
                       <span className="min-w-0 flex-1"><span className="block font-medium text-[#33432f]">{location.name}</span><span className="block text-xs text-muted-foreground">{[location.townName && location.townName !== location.name ? location.townName : "", location.countyName].filter(Boolean).join(", ")}{location.source === "CUSTOM" ? " · Added by you" : ""}</span></span>
                       <div className="flex shrink-0 items-center gap-1">
@@ -452,26 +452,26 @@ export default function FindAHousePage() {
                     <label htmlFor="location-search" className="mb-2 block text-xs text-muted-foreground">{form.preferredLocations.length ? "Search for another location" : "Search a county, town, city, estate or neighbourhood"}</label>
                     <div className="relative">
                       <MapPin className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                      <Input id="location-search" value={locationQuery} onChange={(event) => { setLocationQuery(event.target.value); setLocationOpen(true); setError(""); }} onFocus={() => setLocationOpen(true)} placeholder={form.preferredLocations.length ? "Add another location…" : "e.g. Kapsabet, Kilimani, a village…"} className="h-12 rounded-xl pl-11 pr-10" autoComplete="off" />
+                      <Input id="location-search" value={locationQuery} onChange={(event) => { setLocationQuery(event.target.value); setLocationOpen(true); setError(""); }} onFocus={() => setLocationOpen(true)} placeholder={form.preferredLocations.length ? "Add another location…" : "e.g. Kapsabet, Kilimani, a village…"} className="h-12 rounded-none pl-11 pr-10" autoComplete="off" />
                       {locationQuery && <button type="button" onClick={() => { setLocationQuery(""); setLocationResults([]); }} aria-label="Clear location search" className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-1 text-muted-foreground hover:bg-muted"><X className="h-4 w-4" /></button>}
                     </div>
-                    {locationOpen && locationQuery.trim().length >= 2 && <div className="absolute z-20 mt-2 max-h-64 w-[calc(100%-2rem)] overflow-y-auto rounded-xl border bg-background p-1 shadow-xl">
-                      {locationBusy ? <p className="px-3 py-4 text-sm text-muted-foreground">Finding locations…</p> : locationResults.length ? locationResults.map((option) => <button key={option.id} type="button" onClick={() => chooseLocation(option)} className="flex w-full items-start gap-3 rounded-lg px-3 py-3 text-left transition-colors hover:bg-muted"><MapPin className="mt-0.5 h-4 w-4 shrink-0 text-primary" /><span className="min-w-0 flex-1"><span className="block text-sm font-medium">{option.name}</span><span className="mt-0.5 block text-xs text-muted-foreground">{option.label}</span></span><span className="text-[10px] uppercase tracking-wide text-muted-foreground">{option.level.replace(/_/g, " ").toLowerCase()}</span></button>) : <p className="px-3 py-3 text-sm text-muted-foreground">No matching database location found. You can add it below.</p>}
+                    {locationOpen && locationQuery.trim().length >= 2 && <div className="absolute z-20 mt-2 max-h-64 w-[calc(100%-2rem)] overflow-y-auto rounded-none border bg-background p-1 shadow-xl">
+                      {locationBusy ? <p className="px-3 py-4 text-sm text-muted-foreground">Finding locations…</p> : locationResults.length ? locationResults.map((option) => <button key={option.id} type="button" onClick={() => chooseLocation(option)} className="flex w-full items-start gap-3 rounded-none px-3 py-3 text-left transition-colors hover:bg-muted"><MapPin className="mt-0.5 h-4 w-4 shrink-0 text-primary" /><span className="min-w-0 flex-1"><span className="block text-sm font-medium">{option.name}</span><span className="mt-0.5 block text-xs text-muted-foreground">{option.label}</span></span><span className="text-[10px] uppercase tracking-wide text-muted-foreground">{option.level.replace(/_/g, " ").toLowerCase()}</span></button>) : <p className="px-3 py-3 text-sm text-muted-foreground">No matching database location found. You can add it below.</p>}
                     </div>}
-                    <div className="mt-4 rounded-xl border border-dashed p-3 sm:p-4">
+                    <div className="mt-4 rounded-none border border-dashed p-3 sm:p-4">
                       <p className="text-sm font-medium">Can't find your location?</p>
                       <p className="mt-1 text-xs leading-5 text-muted-foreground">Add it manually. We'll save it with its parent county and, where supplied, town/city. New entries are kept for review before being offered as verified suggestions to everyone.</p>
                       <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                        <div><label htmlFor="custom-location-name" className="mb-1.5 block text-xs font-medium">Location name *</label><Input id="custom-location-name" value={locationQuery} onChange={(event) => setLocationQuery(event.target.value)} placeholder="Estate, village or town name" className="h-10 rounded-lg" /></div>
-                        <div><label htmlFor="custom-location-level" className="mb-1.5 block text-xs font-medium">Type of location *</label><select id="custom-location-level" value={customLevel} onChange={(event) => setCustomLevel(event.target.value)} className="h-10 w-full rounded-lg border bg-background px-3 text-sm"><option value="TOWN">Town</option><option value="CITY">City</option><option value="ESTATE">Estate</option><option value="NEIGHBORHOOD">Neighbourhood</option><option value="AREA">Area</option><option value="VILLAGE">Village</option><option value="LOCALITY">Local centre / locality</option></select></div>
-                        <div><label htmlFor="custom-location-county" className="mb-1.5 block text-xs font-medium">Parent county *</label><select id="custom-location-county" value={customCounty} onChange={(event) => { setCustomCounty(event.target.value); setCustomTown(""); setCustomTownManual(false); }} required className="h-10 w-full rounded-lg border bg-background px-3 text-sm"><option value="">Select a county</option>{counties.map((county) => <option key={county.id} value={county.name}>{county.name}</option>)}</select></div>
-                        {!["TOWN", "CITY"].includes(customLevel) && <div><label htmlFor="custom-location-town" className="mb-1.5 block text-xs font-medium">Parent town / city <span className="font-normal text-muted-foreground">(if known)</span></label><select id="custom-location-town" value={customTownManual ? "__manual__" : customTown} onChange={(event) => { if (event.target.value === "__manual__") { setCustomTown(""); setCustomTownManual(true); } else { setCustomTown(event.target.value); setCustomTownManual(false); } }} className="h-10 w-full rounded-lg border bg-background px-3 text-sm"><option value="">Select a town/city (optional)</option>{customTowns.filter((town) => town.countyName === customCounty).map((town) => <option key={town.id} value={town.name}>{town.name}</option>)}<option value="__manual__">Town/city not listed — enter manually</option></select>{customTownManual && <Input value={customTown} onChange={(event) => setCustomTown(event.target.value)} placeholder="Enter town/city name" className="mt-2 h-10 rounded-lg" />}</div>}
+                        <div><label htmlFor="custom-location-name" className="mb-1.5 block text-xs font-medium">Location name *</label><Input id="custom-location-name" value={locationQuery} onChange={(event) => setLocationQuery(event.target.value)} placeholder="Estate, village or town name" className="h-10 rounded-none" /></div>
+                        <div><label htmlFor="custom-location-level" className="mb-1.5 block text-xs font-medium">Type of location *</label><select id="custom-location-level" value={customLevel} onChange={(event) => setCustomLevel(event.target.value)} className="h-10 w-full rounded-none border bg-background px-3 text-sm"><option value="TOWN">Town</option><option value="CITY">City</option><option value="ESTATE">Estate</option><option value="NEIGHBORHOOD">Neighbourhood</option><option value="AREA">Area</option><option value="VILLAGE">Village</option><option value="LOCALITY">Local centre / locality</option></select></div>
+                        <div><label htmlFor="custom-location-county" className="mb-1.5 block text-xs font-medium">Parent county *</label><select id="custom-location-county" value={customCounty} onChange={(event) => { setCustomCounty(event.target.value); setCustomTown(""); setCustomTownManual(false); }} required className="h-10 w-full rounded-none border bg-background px-3 text-sm"><option value="">Select a county</option>{counties.map((county) => <option key={county.id} value={county.name}>{county.name}</option>)}</select></div>
+                        {!["TOWN", "CITY"].includes(customLevel) && <div><label htmlFor="custom-location-town" className="mb-1.5 block text-xs font-medium">Parent town / city <span className="font-normal text-muted-foreground">(if known)</span></label><select id="custom-location-town" value={customTownManual ? "__manual__" : customTown} onChange={(event) => { if (event.target.value === "__manual__") { setCustomTown(""); setCustomTownManual(true); } else { setCustomTown(event.target.value); setCustomTownManual(false); } }} className="h-10 w-full rounded-none border bg-background px-3 text-sm"><option value="">Select a town/city (optional)</option>{customTowns.filter((town) => town.countyName === customCounty).map((town) => <option key={town.id} value={town.name}>{town.name}</option>)}<option value="__manual__">Town/city not listed — enter manually</option></select>{customTownManual && <Input value={customTown} onChange={(event) => setCustomTown(event.target.value)} placeholder="Enter town/city name" className="mt-2 h-10 rounded-none" />}</div>}
                       </div>
-                      <Button type="button" variant="outline" onClick={addCustomLocation} className="mt-3 h-10 w-full rounded-lg border-dashed"><span className="mr-2 text-base">+</span> Add this location</Button>
+                      <Button type="button" variant="outline" onClick={addCustomLocation} className="mt-3 h-10 w-full rounded-none border-dashed"><span className="mr-2 text-base">+</span> Add this location</Button>
                     </div>
                   </> : <p className="text-sm text-muted-foreground">You've added five locations. Remove one to add another.</p>}
                 </div>
-                <div className="mt-3 rounded-xl bg-muted/50 px-3 py-2.5 text-xs leading-5 text-muted-foreground"><ShieldCheck className="mr-2 inline h-4 w-4 text-primary" />We'll prioritize your locations in the order shown. User-added locations remain usable immediately while being reviewed for the shared location database.</div>
+                <div className="mt-3 rounded-none bg-muted/50 px-3 py-2.5 text-xs leading-5 text-muted-foreground"><ShieldCheck className="mr-2 inline h-4 w-4 text-primary" />We'll prioritize your locations in the order shown. User-added locations remain usable immediately while being reviewed for the shared location database.</div>
               </section>
             )}
 
@@ -481,12 +481,12 @@ export default function FindAHousePage() {
                 <h2 className="mt-2 text-2xl font-semibold tracking-tight">What feels comfortable for your budget?</h2>
                 <p className="mt-2 text-sm leading-6 text-muted-foreground">Use monthly rent, not the deposit. You can share other move-in costs in your note.</p>
                 <div className="mt-6 grid gap-4 sm:grid-cols-2">
-                  <div><label htmlFor="min-rent" className="mb-2 block text-sm font-medium">Minimum rent <span className="text-muted-foreground">(optional)</span></label><div className="relative"><Wallet className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><Input id="min-rent" type="number" min="0" value={form.minRent} onChange={(event) => update("minRent", event.target.value)} placeholder="5,000" className="h-12 rounded-xl pl-10" /></div></div>
-                  <div><label htmlFor="max-rent" className="mb-2 block text-sm font-medium">Maximum monthly rent <span className="text-primary">*</span></label><div className="relative"><span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">KSh</span><Input id="max-rent" type="number" min="1" value={form.maxRent} onChange={(event) => update("maxRent", event.target.value)} placeholder="15,000" className="h-12 rounded-xl pl-12" /></div></div>
+                  <div><label htmlFor="min-rent" className="mb-2 block text-sm font-medium">Minimum rent <span className="text-muted-foreground">(optional)</span></label><div className="relative"><Wallet className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><Input id="min-rent" type="number" min="0" value={form.minRent} onChange={(event) => update("minRent", event.target.value)} placeholder="5,000" className="h-12 rounded-none pl-10" /></div></div>
+                  <div><label htmlFor="max-rent" className="mb-2 block text-sm font-medium">Maximum monthly rent <span className="text-primary">*</span></label><div className="relative"><span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">KSh</span><Input id="max-rent" type="number" min="1" value={form.maxRent} onChange={(event) => update("maxRent", event.target.value)} placeholder="15,000" className="h-12 rounded-none pl-12" /></div></div>
                 </div>
-                <div className="mt-7"><p className="text-sm font-medium">When would you like to move?</p><div className="mt-3 flex flex-wrap gap-2">{moveInOptions.map((option) => <button key={option} type="button" onClick={() => update("moveIn", option)} className={"rounded-xl border px-3.5 py-2.5 text-sm transition-colors " + (form.moveIn === option ? "border-[#627957] bg-[#edf2e8] font-medium text-[#405638]" : "hover:bg-muted")}>{option}</button>)}</div></div>
-                <div className="mt-7"><p className="text-sm font-medium">What matters most? <span className="font-normal text-muted-foreground">(choose any)</span></p><div className="mt-3 grid gap-2 sm:grid-cols-2">{featureOptions.map((feature) => <button key={feature} type="button" onClick={() => toggleFeature(feature)} className={"flex items-center gap-3 rounded-xl border px-3.5 py-3 text-left text-sm transition-colors " + (form.mustHaves.includes(feature) ? "border-[#8c9c82] bg-[#f3f6ef] text-[#405638]" : "hover:bg-muted")}><span className={"flex h-5 w-5 shrink-0 items-center justify-center rounded-md border " + (form.mustHaves.includes(feature) ? "border-[#627957] bg-[#627957] text-white" : "border-border")}>{form.mustHaves.includes(feature) && <Check className="h-3 w-3" />}</span>{feature}</button>)}</div></div>
-                <div className="mt-7"><label htmlFor="extra-notes" className="mb-2 block text-sm font-medium">Anything else we should know? <span className="text-muted-foreground">(optional)</span></label><textarea id="extra-notes" value={form.notes} onChange={(event) => update("notes", event.target.value)} maxLength={1000} rows={3} placeholder="For example, close to a particular workplace or a ground-floor home…" className="w-full resize-y rounded-xl border bg-background px-3.5 py-3 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15" /><p className="mt-1 text-right text-xs text-muted-foreground">{form.notes.length}/1000</p></div>
+                <div className="mt-7"><p className="text-sm font-medium">When would you like to move?</p><div className="mt-3 flex flex-wrap gap-2">{moveInOptions.map((option) => <button key={option} type="button" onClick={() => update("moveIn", option)} className={"rounded-none border px-3.5 py-2.5 text-sm transition-colors " + (form.moveIn === option ? "border-[#627957] bg-[#edf2e8] font-medium text-[#405638]" : "hover:bg-muted")}>{option}</button>)}</div></div>
+                <div className="mt-7"><p className="text-sm font-medium">What matters most? <span className="font-normal text-muted-foreground">(choose any)</span></p><div className="mt-3 grid gap-2 sm:grid-cols-2">{featureOptions.map((feature) => <button key={feature} type="button" onClick={() => toggleFeature(feature)} className={"flex items-center gap-3 rounded-none border px-3.5 py-3 text-left text-sm transition-colors " + (form.mustHaves.includes(feature) ? "border-[#8c9c82] bg-[#f3f6ef] text-[#405638]" : "hover:bg-muted")}><span className={"flex h-5 w-5 shrink-0 items-center justify-center rounded-md border " + (form.mustHaves.includes(feature) ? "border-[#627957] bg-[#627957] text-white" : "border-border")}>{form.mustHaves.includes(feature) && <Check className="h-3 w-3" />}</span>{feature}</button>)}</div></div>
+                <div className="mt-7"><label htmlFor="extra-notes" className="mb-2 block text-sm font-medium">Anything else we should know? <span className="text-muted-foreground">(optional)</span></label><textarea id="extra-notes" value={form.notes} onChange={(event) => update("notes", event.target.value)} maxLength={1000} rows={3} placeholder="For example, close to a particular workplace or a ground-floor home…" className="w-full resize-y rounded-none border bg-background px-3.5 py-3 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15" /><p className="mt-1 text-right text-xs text-muted-foreground">{form.notes.length}/1000</p></div>
               </section>
             )}
 
@@ -495,7 +495,7 @@ export default function FindAHousePage() {
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">Almost there</p>
                 <h2 className="mt-2 text-2xl font-semibold tracking-tight">How can we reach you?</h2>
                 <p className="mt-2 text-sm leading-6 text-muted-foreground">A representative will review your requirements and contact you about suitable homes. The House Hunt service costs KSh 2,500.</p>
-                <div className="mt-5 rounded-2xl border border-[#dce4d5] bg-[#f5f6f0] p-4 sm:p-5">
+                <div className="mt-5 rounded-none border border-[#dce4d5] bg-[#f5f6f0] p-4 sm:p-5">
                   <div className="flex flex-wrap items-center justify-between gap-2"><p className="font-semibold text-[#33432f]">House Hunt assistance</p><span className="rounded-full bg-white px-3 py-1.5 text-sm font-semibold text-[#405638]">KSh 2,500</span></div>
                   <ul className="mt-3 space-y-2 text-sm leading-6 text-[#53634d]">
                     <li className="flex gap-2"><Check className="mt-1 h-4 w-4 shrink-0" />Up to five WhatsApp video previews of suitable properties, subject to availability.</li>
@@ -505,33 +505,33 @@ export default function FindAHousePage() {
                   <p className="mt-3 text-xs leading-5 text-[#687164]">This form records your interest; it does not collect payment. Any premium viewing or transport arrangements are discussed separately.</p>
                 </div>
                 <div className="mt-6 grid gap-4 sm:grid-cols-2">
-                  <div><label htmlFor="renter-name" className="mb-2 block text-sm font-medium">Your name <span className="text-primary">*</span></label><Input id="renter-name" autoComplete="name" value={form.name} onChange={(event) => update("name", event.target.value)} placeholder="Name you'd like us to use" className="h-12 rounded-xl" /></div>
-                  <div><label htmlFor="renter-phone" className="mb-2 block text-sm font-medium">Phone / WhatsApp <span className="text-primary">*</span></label><Input id="renter-phone" autoComplete="tel" value={form.phone} onChange={(event) => update("phone", event.target.value)} placeholder="+254 7XX XXX XXX" className="h-12 rounded-xl" /></div>
+                  <div><label htmlFor="renter-name" className="mb-2 block text-sm font-medium">Your name <span className="text-primary">*</span></label><Input id="renter-name" autoComplete="name" value={form.name} onChange={(event) => update("name", event.target.value)} placeholder="Name you'd like us to use" className="h-12 rounded-none" /></div>
+                  <div><label htmlFor="renter-phone" className="mb-2 block text-sm font-medium">Phone / WhatsApp <span className="text-primary">*</span></label><Input id="renter-phone" autoComplete="tel" value={form.phone} onChange={(event) => update("phone", event.target.value)} placeholder="+254 7XX XXX XXX" className="h-12 rounded-none" /></div>
                 </div>
-                <div className="mt-4"><label htmlFor="renter-email" className="mb-2 block text-sm font-medium">Email address <span className="text-muted-foreground">(recommended for confirmation)</span></label><Input id="renter-email" type="email" autoComplete="email" value={form.email} onChange={(event) => update("email", event.target.value)} placeholder="you@example.com" className="h-12 rounded-xl" /></div>
-                <div className="mt-6"><p className="text-sm font-medium">How would you prefer us to contact you?</p><div className="mt-3 grid gap-2 sm:grid-cols-3">{[{value:"WHATSAPP",label:"WhatsApp",icon:MessageCircle},{value:"PHONE",label:"Phone call",icon:Clock3},{value:"EMAIL",label:"Email",icon:Mail}].map((item) => { const Icon = item.icon; return <button key={item.value} type="button" onClick={() => update("contactPreference", item.value)} className={"flex items-center justify-center gap-2 rounded-xl border px-3 py-3 text-sm transition-colors " + (form.contactPreference === item.value ? "border-[#627957] bg-[#edf2e8] font-medium text-[#405638]" : "hover:bg-muted")}><Icon className="h-4 w-4" />{item.label}</button>; })}</div></div>
-                <label className="mt-6 flex cursor-pointer items-start gap-3 rounded-xl border p-4 text-sm leading-6"><input type="checkbox" checked={form.consent} onChange={(event) => update("consent", event.target.checked)} className="mt-1 h-4 w-4 accent-[#627957]" /><span>I agree that NyumbaFinder may use these details to respond to my house search and contact me about suitable listings. I also consent to sharing my contact details with approved, matching local agents so they can respond to my request. My details won't be displayed publicly on the website.</span></label>
+                <div className="mt-4"><label htmlFor="renter-email" className="mb-2 block text-sm font-medium">Email address <span className="text-muted-foreground">(recommended for confirmation)</span></label><Input id="renter-email" type="email" autoComplete="email" value={form.email} onChange={(event) => update("email", event.target.value)} placeholder="you@example.com" className="h-12 rounded-none" /></div>
+                <div className="mt-6"><p className="text-sm font-medium">How would you prefer us to contact you?</p><div className="mt-3 grid gap-2 sm:grid-cols-3">{[{value:"WHATSAPP",label:"WhatsApp",icon:MessageCircle},{value:"PHONE",label:"Phone call",icon:Clock3},{value:"EMAIL",label:"Email",icon:Mail}].map((item) => { const Icon = item.icon; return <button key={item.value} type="button" onClick={() => update("contactPreference", item.value)} className={"flex items-center justify-center gap-2 rounded-none border px-3 py-3 text-sm transition-colors " + (form.contactPreference === item.value ? "border-[#627957] bg-[#edf2e8] font-medium text-[#405638]" : "hover:bg-muted")}><Icon className="h-4 w-4" />{item.label}</button>; })}</div></div>
+                <label className="mt-6 flex cursor-pointer items-start gap-3 rounded-none border p-4 text-sm leading-6"><input type="checkbox" checked={form.consent} onChange={(event) => update("consent", event.target.checked)} className="mt-1 h-4 w-4 accent-[#627957]" /><span>I agree that NyumbaFinder may use these details to respond to my house search and contact me about suitable listings. I also consent to sharing my contact details with approved, matching local agents so they can respond to my request. My details won't be displayed publicly on the website.</span></label>
                 <div className="hidden" aria-hidden="true"><label htmlFor="website">Website</label><input id="website" tabIndex={-1} autoComplete="off" value={form.website} onChange={(event) => update("website", event.target.value)} /></div>
               </section>
             )}
 
-            {error && <div role="alert" className="mt-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{error}</div>}
+            {error && <div role="alert" className="mt-5 rounded-none border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{error}</div>}
             <div className="mt-5 flex items-center justify-between gap-3 border-t pt-4">
-              {step > 1 ? <Button type="button" variant="outline" onClick={() => { setError(""); setStep((current) => current - 1); }} className="h-12 rounded-xl px-5"><ArrowLeft className="mr-2 h-4 w-4" />Back</Button> : <span className="text-xs text-muted-foreground">No account needed</span>}
-              {step < 4 ? <Button type="button" onClick={nextStep} className="h-12 rounded-xl bg-[#53694b] px-6 hover:bg-[#43563c]">Continue <ArrowRight className="ml-2 h-4 w-4" /></Button> : <Button type="submit" disabled={busy} className="h-12 rounded-xl bg-[#53694b] px-6 hover:bg-[#43563c]">{busy ? "Sending your request…" : "Request House Hunt"} {!busy && <ArrowRight className="ml-2 h-4 w-4" />}</Button>}
+              {step > 1 ? <Button type="button" variant="outline" onClick={() => { setError(""); setStep((current) => current - 1); }} className="h-12 rounded-none px-5"><ArrowLeft className="mr-2 h-4 w-4" />Back</Button> : <span className="text-xs text-muted-foreground">No account needed</span>}
+              {step < 4 ? <Button type="button" onClick={nextStep} className="h-12 rounded-none bg-[#53694b] px-6 hover:bg-[#43563c]">Continue <ArrowRight className="ml-2 h-4 w-4" /></Button> : <Button type="submit" disabled={busy} className="h-12 rounded-none bg-[#53694b] px-6 hover:bg-[#43563c]">{busy ? "Sending your request…" : "Request House Hunt"} {!busy && <ArrowRight className="ml-2 h-4 w-4" />}</Button>}
             </div>
           </form>
         </section>
 
         <aside className="hidden lg:block">
-          <div className="sticky top-6 rounded-2xl border border-[#e0e4da] bg-[#f5f6f0] p-5">
-            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white text-[#53694b]"><Heart className="h-5 w-5" /></div>
+          <div className="sticky top-6 rounded-none border border-[#e0e4da] bg-[#f5f6f0] p-5">
+            <div className="flex h-11 w-11 items-center justify-center rounded-none bg-white text-[#53694b]"><Heart className="h-5 w-5" /></div>
             <h2 className="mt-5 text-lg font-semibold tracking-tight">A search built around you.</h2>
             <p className="mt-2 text-sm leading-6 text-[#626b5e]">Share your requirements. A representative can help narrow the options and arrange WhatsApp video previews of suitable homes.</p>
             <div className="mt-6 space-y-4">
-              <div className="flex gap-3"><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white text-[#53694b]"><Search className="h-4 w-4" /></span><div><p className="text-sm font-medium">Relevant homes first</p><p className="mt-1 text-xs leading-5 text-[#687164]">Recommendations use your location and rent range.</p></div></div>
-              <div className="flex gap-3"><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white text-[#53694b]"><MessageCircle className="h-4 w-4" /></span><div><p className="text-sm font-medium">Real human help</p><p className="mt-1 text-xs leading-5 text-[#687164]">Get help shortlisting homes and coordinating video previews.</p></div></div>
-              <div className="flex gap-3"><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white text-[#53694b]"><ShieldCheck className="h-4 w-4" /></span><div><p className="text-sm font-medium">Your details stay private</p><p className="mt-1 text-xs leading-5 text-[#687164]">Your contact details stay private and are used to respond to your request.</p></div></div>
+              <div className="flex gap-3"><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-none bg-white text-[#53694b]"><Search className="h-4 w-4" /></span><div><p className="text-sm font-medium">Relevant homes first</p><p className="mt-1 text-xs leading-5 text-[#687164]">Recommendations use your location and rent range.</p></div></div>
+              <div className="flex gap-3"><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-none bg-white text-[#53694b]"><MessageCircle className="h-4 w-4" /></span><div><p className="text-sm font-medium">Real human help</p><p className="mt-1 text-xs leading-5 text-[#687164]">Get help shortlisting homes and coordinating video previews.</p></div></div>
+              <div className="flex gap-3"><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-none bg-white text-[#53694b]"><ShieldCheck className="h-4 w-4" /></span><div><p className="text-sm font-medium">Your details stay private</p><p className="mt-1 text-xs leading-5 text-[#687164]">Your contact details stay private and are used to respond to your request.</p></div></div>
             </div>
             <div className="mt-7 border-t border-[#dfe4d8] pt-5"><p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#65755c]">Your progress</p><p className="mt-2 text-sm font-medium text-[#303c2c]">{step} of 4 steps complete</p><div className="mt-3 h-1.5 overflow-hidden rounded-full bg-white"><div className="h-full rounded-full bg-[#718568] transition-all" style={{ width: (step / 4) * 100 + "%" }} /></div></div>
           </div>
