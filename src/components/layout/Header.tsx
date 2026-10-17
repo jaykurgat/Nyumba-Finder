@@ -14,7 +14,7 @@ export async function Header() {
     <header className="relative z-50 w-full min-w-0 border-b border-[#d9ded4] bg-[#fbfaf6]">
       <div className="mx-auto flex min-h-[62px] max-w-7xl min-w-0 items-center gap-3 px-4 sm:px-6 lg:min-h-[70px] lg:px-10">
         <Link href="/" className="flex shrink-0 items-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f28c28] focus-visible:ring-offset-2" aria-label="NyumbaFinder home">
-          <img src="/nyumbafinder-logo.svg" alt="NyumbaFinder" className="h-8 w-auto max-w-[138px] sm:h-9 sm:max-w-[158px]" />
+          <img src="/nyumbafinder-logo.svg" alt="NyumbaFinder — Find your next home" className="h-9 w-auto max-w-[190px] sm:h-10 sm:max-w-[225px]" />
         </Link>
 
         <div className="hidden flex-1 justify-center md:flex">

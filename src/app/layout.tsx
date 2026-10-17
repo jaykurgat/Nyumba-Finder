@@ -16,7 +16,8 @@ export const metadata: Metadata = {
   metadataBase: new URL('https://www.nyumba-finder.com'),
   alternates: { canonical: '/' },
   icons: {
-    icon: '/icon.svg',
+    icon: [{ url: '/icon.svg', type: 'image/svg+xml' }],
+    shortcut: '/icon.svg',
     apple: '/nyumbafinder-mark.svg',
   },
 };

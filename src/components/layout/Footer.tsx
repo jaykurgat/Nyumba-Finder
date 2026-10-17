@@ -47,8 +47,8 @@ export function Footer() {
       <div className="mx-auto max-w-7xl px-5 pb-[calc(6rem+env(safe-area-inset-bottom))] pt-9 sm:px-8 md:pb-8 lg:px-10">
         <div className="grid gap-x-8 gap-y-8 sm:grid-cols-2 lg:grid-cols-[1.25fr_1fr_1fr_1fr_1fr]">
           <div className="sm:col-span-2 lg:col-span-1">
-            <Link href="/" aria-label="NyumbaFinder home" className="inline-flex items-center">
-              <img src="/nyumbafinder-logo.svg" alt="NyumbaFinder" className="h-9 w-auto max-w-[165px] brightness-0 invert" />
+            <Link href="/" aria-label="NyumbaFinder home" className="inline-flex items-center bg-[#fbfaf6] p-2">
+              <img src="/nyumbafinder-logo.svg" alt="NyumbaFinder — Find your next home" className="h-auto w-[205px] max-w-full" />
             </Link>
             <p className="mt-3 max-w-xs text-sm leading-6 text-white/65">Find a place that feels like home. Rental homes and local house-hunting support across Kenya.</p>
             <Link href="/properties" className="mt-4 inline-flex items-center border-b border-[#f28c28] pb-1 text-sm font-semibold text-white hover:text-[#f7b15f]">Explore homes <span aria-hidden="true" className="ml-2 text-[#f28c28]">→</span></Link>
