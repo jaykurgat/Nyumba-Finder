@@ -132,7 +132,7 @@ export default async function InfoPage({ params }: { params: Promise<{ slug: str
 
   return (
     <div className="mx-auto max-w-4xl py-10 md:py-14">
-      <div className="mb-8 rounded-2xl border bg-card px-6 py-7 md:px-8">
+      <div className="mb-8 rounded-none border bg-card px-6 py-7 md:px-8">
         <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
           NyumbaFinder
         </p>
@@ -144,10 +144,10 @@ export default async function InfoPage({ params }: { params: Promise<{ slug: str
         {page.sections.map(([heading, body], index) => (
           <section
             key={heading}
-            className="rounded-xl border bg-card px-5 py-5 md:px-6"
+            className="rounded-none border bg-card px-5 py-5 md:px-6"
           >
             <div className="flex gap-4">
-              <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-semibold text-muted-foreground">
+              <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-none bg-muted text-xs font-semibold text-muted-foreground">
                 {index + 1}
               </span>
               <div>
@@ -159,7 +159,7 @@ export default async function InfoPage({ params }: { params: Promise<{ slug: str
         ))}
 
         {slug === 'cookies' && (
-          <section className="rounded-xl border border-dashed bg-muted/30 px-5 py-4 md:px-6">
+          <section className="rounded-none border border-dashed bg-muted/30 px-5 py-4 md:px-6">
             <Link href="/privacy" className="text-sm font-medium text-foreground underline underline-offset-4">
               Read Privacy & Analytics
             </Link>
