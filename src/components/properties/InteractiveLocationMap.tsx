@@ -5,6 +5,13 @@ import { MapPin, Minus, Plus } from "lucide-react";
 
 export type MapPosition = { lat: number; lng: number };
 
+export type PropertyMapMarker = {
+  id: string;
+  position: MapPosition;
+  label: string;
+  title: string;
+};
+
 type InteractiveLocationMapProps = {
   value: MapPosition | null;
   onChange?: (position: MapPosition) => void;
@@ -12,6 +19,8 @@ type InteractiveLocationMapProps = {
   className?: string;
   heightClassName?: string;
   zoom?: number;
+  markers?: PropertyMapMarker[];
+  onMarkerSelect?: (id: string) => void;
 };
 
 const KENYA_CENTER: MapPosition = { lat: -0.0236, lng: 37.9062 };
@@ -57,9 +66,11 @@ export function InteractiveLocationMap({
   className = "",
   heightClassName = "h-64",
   zoom: initialZoom = 15,
+  markers,
+  onMarkerSelect,
 }: InteractiveLocationMapProps) {
-  const [center, setCenter] = useState<MapPosition>(value ?? KENYA_CENTER);
-  const [zoom, setZoom] = useState(value ? initialZoom : 6);
+  const [center, setCenter] = useState<MapPosition>(value ?? markers?.[0]?.position ?? KENYA_CENTER);
+  const [zoom, setZoom] = useState(value ? initialZoom : markers?.length ? 11 : 6);
   const [draggingMarker, setDraggingMarker] = useState(false);
   const [draggingMap, setDraggingMap] = useState(false);
   const dragRef = useRef<{ pointerX: number; pointerY: number; centerPoint: { x: number; y: number } } | null>(null);
@@ -72,6 +83,20 @@ export function InteractiveLocationMap({
       setZoom((current) => Math.max(current, initialZoom));
     }
   }, [value?.lat, value?.lng, initialZoom]);
+
+  useEffect(() => {
+    if (value || !markers?.length) return;
+    const latitudes = markers.map((marker) => marker.position.lat);
+    const longitudes = markers.map((marker) => marker.position.lng);
+    const latSpan = Math.max(...latitudes) - Math.min(...latitudes);
+    const lngSpan = Math.max(...longitudes) - Math.min(...longitudes);
+    setCenter({
+      lat: (Math.min(...latitudes) + Math.max(...latitudes)) / 2,
+      lng: (Math.min(...longitudes) + Math.max(...longitudes)) / 2,
+    });
+    const spread = Math.max(latSpan, lngSpan);
+    setZoom(spread > 4 ? 6 : spread > 1 ? 8 : spread > 0.25 ? 10 : 12);
+  }, [value?.lat, value?.lng, markers]);
 
   const centerPoint = useMemo(() => project(center, zoom), [center, zoom]);
   const markerPosition = value ?? center;
@@ -110,7 +135,7 @@ export function InteractiveLocationMap({
 
   function handlePointerDown(event: React.PointerEvent<HTMLDivElement>) {
     if (!interactive) return;
-    if ((event.target as HTMLElement).closest("button")) return;
+    if ((event.target as HTMLElement).closest("button, a")) return;
     event.currentTarget.setPointerCapture(event.pointerId);
     movedRef.current = false;
 
@@ -202,14 +227,24 @@ export function InteractiveLocationMap({
           />
         ))}
 
-        <div
-          className="pointer-events-none absolute left-1/2 top-1/2"
-          style={{ transform: "translate(calc(-50% + " + markerOffset.x + "px), calc(-100% + " + markerOffset.y + "px))" }}
-        >
-          <div className="relative flex h-10 w-10 items-center justify-center rounded-full bg-primary/15">
-            <MapPin className="h-8 w-8 fill-primary text-primary drop-shadow-md" />
+        {!markers?.length && (
+          <div className="pointer-events-none absolute left-1/2 top-1/2" style={{ transform: "translate(calc(-50% + " + markerOffset.x + "px), calc(-100% + " + markerOffset.y + "px))" }}>
+            <div className="relative flex h-10 w-10 items-center justify-center rounded-full bg-primary/15"><MapPin className="h-8 w-8 fill-primary text-primary drop-shadow-md" /></div>
           </div>
-        </div>
+        )}
+
+        {markers?.map((marker) => {
+          const point = project(marker.position, zoom);
+          const offsetX = point.x - centerPoint.x;
+          const offsetY = point.y - centerPoint.y;
+          return <button key={marker.id} type="button" title={marker.title} aria-label={marker.title + ", " + marker.label}
+            className="absolute left-1/2 top-1/2 z-10 -translate-x-1/2 -translate-y-full whitespace-nowrap rounded-full border border-white bg-[#244c2c] px-3 py-1.5 text-xs font-bold text-white shadow-md transition-transform hover:z-20 hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f28c28]"
+            style={{ transform: "translate(calc(-50% + " + offsetX + "px), calc(-100% + " + offsetY + "px))" }}
+            onPointerDown={(event) => event.stopPropagation()}
+            onClick={(event) => { event.stopPropagation(); onMarkerSelect?.(marker.id); }}>
+            {marker.label}
+          </button>;
+        })}
 
         {interactive && (
           <div className="pointer-events-none absolute left-3 top-3 rounded-lg bg-background/95 px-3 py-2 text-xs font-medium shadow-sm backdrop-blur">
