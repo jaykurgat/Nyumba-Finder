@@ -2,15 +2,16 @@
 
 import { PropertyCard } from "@/components/properties/PropertyCard";
 import type { Property } from "@/types/property";
-import { useCallback, useEffect, useState, Suspense } from "react";
+import { useCallback, useEffect, useMemo, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { PropertySearchForm } from "@/components/properties/PropertySearchForm";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AlertTriangle, SlidersHorizontal } from "lucide-react";
+import { AlertTriangle, SlidersHorizontal, Map as MapIcon, List as ListIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { InteractiveLocationMap } from "@/components/properties/InteractiveLocationMap";
 
 function PropertyListingsSkeleton() {
   return <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">{[1,2,3,4,5,6].map(function (i) {
@@ -24,7 +25,11 @@ function PropertyListingsContent() {
   const [savedPropertyIds, setSavedPropertyIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [mapVisible, setMapVisible] = useState(true);
   const params = useSearchParams();
+  const mapMarkers = useMemo(() => properties
+    .filter((property) => Number.isFinite(property.latitude) && Number.isFinite(property.longitude))
+    .map((property) => ({ id: property.id, position: { lat: property.latitude as number, lng: property.longitude as number }, label: "KSh " + property.price.toLocaleString(), title: property.title + " · " + property.location })), [properties]);
 
   const load = useCallback(async function (signal?: AbortSignal) {
     setLoading(true); setError(null);
@@ -84,7 +89,20 @@ function PropertyListingsContent() {
       </div>
       {active > 0 && <p className="text-sm text-primary">{active} active filter{active === 1 ? "" : "s"}</p>}
     </div>
-    {properties.length ? <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">{properties.map(function (p) { return <PropertyCard key={p.id} property={p} initiallySaved={savedPropertyIds.includes(p.id)} />; })}</div> :
+    {properties.length ? <>
+      <div className="mb-4 flex justify-end"><div className="inline-flex border border-[#d9ded4] bg-white p-1" role="group" aria-label="Property results layout">
+        <Button type="button" size="sm" variant={mapVisible ? "default" : "ghost"} className="rounded-none" onClick={() => setMapVisible(true)}><MapIcon className="mr-2 h-4 w-4" />Map & list</Button>
+        <Button type="button" size="sm" variant={!mapVisible ? "default" : "ghost"} className="rounded-none" onClick={() => setMapVisible(false)}><ListIcon className="mr-2 h-4 w-4" />List</Button>
+      </div></div>
+      {mapVisible ? <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(360px,0.9fr)]">
+        <div className="order-last grid grid-cols-1 gap-5 lg:order-first">{properties.map(function (p) { return <PropertyCard key={p.id} property={p} initiallySaved={savedPropertyIds.includes(p.id)} />; })}</div>
+        <aside className="order-first space-y-2 lg:sticky lg:top-4 lg:order-last lg:self-start">
+          <div className="flex items-center justify-between gap-3"><p className="text-sm font-semibold text-[#20271f]">Explore homes on the map</p><p className="text-xs text-muted-foreground">{mapMarkers.length} mapped</p></div>
+          {mapMarkers.length ? <InteractiveLocationMap value={null} markers={mapMarkers} onMarkerSelect={(id) => { window.location.href = "/properties/" + encodeURIComponent(id); }} interactive={false} heightClassName="h-[360px] sm:h-[460px] lg:h-[calc(100vh-8rem)]" /> : <div className="flex min-h-[260px] items-center justify-center border border-[#d9ded4] bg-white p-6 text-center"><div><MapIcon className="mx-auto h-8 w-8 text-muted-foreground" /><p className="mt-3 text-sm font-medium">Map locations are not available yet</p><p className="mt-1 max-w-xs text-xs leading-5 text-muted-foreground">These listings do not have verified map coordinates. You can still browse the full list.</p></div></div>}
+          <p className="text-[11px] text-muted-foreground">Map tiles © OpenStreetMap contributors. Pin locations depend on listing coordinates.</p>
+        </aside>
+      </div> : <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">{properties.map(function (p) { return <PropertyCard key={p.id} property={p} initiallySaved={savedPropertyIds.includes(p.id)} />; })}</div>}
+    </> :
       <div className="border bg-card px-6 py-16 text-center"><h3 className="text-lg font-semibold">No homes match those filters</h3><p className="mt-2 text-sm text-muted-foreground">Try widening your location or price range, or remove a filter.</p></div>}
   </div>;
 }
