@@ -17,6 +17,17 @@ type GeoapifyFeature = {
   geometry?: { coordinates?: [number, number] };
 };
 
+const CATEGORY_GROUPS = [
+  { category: "Shopping", query: "commercial.supermarket,commercial.shopping_mall,commercial.marketplace,commercial.convenience" },
+  { category: "Schools", query: "education.school,education.college,education.university,childcare" },
+  { category: "Healthcare", query: "healthcare.hospital,healthcare.clinic_or_praxis,healthcare.pharmacy" },
+  { category: "Parks", query: "leisure.park,leisure.playground,leisure.garden,leisure.recreation_ground" },
+  { category: "Fitness", query: "sport,leisure.sports_centre,leisure.fitness_centre" },
+  { category: "Transport", query: "public_transport" },
+  { category: "Food & drink", query: "catering" },
+  { category: "Services", query: "service" },
+] as const;
+
 function distanceKm(lat1: number, lon1: number, lat2: number, lon2: number) {
   const rad = (value: number) => value * Math.PI / 180;
   const dLat = rad(lat2 - lat1);
@@ -25,26 +36,25 @@ function distanceKm(lat1: number, lon1: number, lat2: number, lon2: number) {
   return 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-function category(categories: string[] = []) {
-  const values = categories.join(" ").toLowerCase();
-  if (values.includes("education") || values.includes("childcare")) return "Schools";
-  if (values.includes("healthcare") || values.includes("medical")) return "Healthcare";
-  if (values.includes("commercial") || values.includes("building.marketplace")) return "Shopping";
-  if (values.includes("sport") || values.includes("fitness")) return "Fitness";
-  if (values.includes("leisure.park") || values.includes("leisure.playground") || values.includes("natural")) return "Parks";
-  if (values.includes("public_transport") || values.includes("transport")) return "Transport";
-  if (values.includes("catering") || values.includes("coffee") || values.includes("restaurant")) return "Food & drink";
-  if (values.includes("service") || values.includes("finance") || values.includes("post")) return "Services";
-  return null;
+function category(categories: string[] = [], fallback: string) {
+  const values = categories.map((value) => value.toLowerCase());
+  // Match specific place types before broad parent categories. Grounds and parks must not become gyms.
+  if (values.some((value) => value.startsWith("leisure.park") || value.startsWith("leisure.playground") || value.startsWith("leisure.garden") || value.startsWith("leisure.recreation_ground") || value.startsWith("natural."))) return "Parks";
+  if (values.some((value) => value.startsWith("education.") || value.startsWith("childcare"))) return "Schools";
+  if (values.some((value) => value.startsWith("healthcare.") || value.startsWith("medical."))) return "Healthcare";
+  if (values.some((value) => value.startsWith("commercial."))) return "Shopping";
+  if (values.some((value) => value.startsWith("public_transport") || value.startsWith("transport."))) return "Transport";
+  if (values.some((value) => value.startsWith("catering."))) return "Food & drink";
+  if (values.some((value) => value.startsWith("service.") || value.startsWith("office.") || value.startsWith("finance."))) return "Services";
+  if (values.some((value) => value.startsWith("sport.") || value.includes("fitness"))) return "Fitness";
+  return fallback;
 }
 
 function diversifyPlaces(places: NearbyPlace[]) {
-  // Avoid letting a dense category such as gyms fill the entire customer-facing list.
-  const priority = ["Shopping", "Schools", "Healthcare", "Fitness", "Parks", "Transport", "Food & drink", "Services"];
+  const priority = CATEGORY_GROUPS.map((group) => group.category);
   const groups = new Map(priority.map((name) => [name, places.filter((place) => place.category === name).sort((a, b) => a.distanceKm - b.distanceKm)]));
   const result: NearbyPlace[] = [];
-  const maxPerCategory = 20;
-  for (let index = 0; index < maxPerCategory; index += 1) {
+  for (let index = 0; index < 20; index += 1) {
     for (const name of priority) {
       const place = groups.get(name)?.[index];
       if (place) result.push(place);
@@ -68,47 +78,60 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ message: "Nearby place service is not configured." }, { status: 503, headers: { "Cache-Control": "no-store" } });
   }
 
-  const params = new URLSearchParams({
-    // Request recognizable everyday destinations explicitly instead of relying only on broad parent categories.
-    categories: "commercial.supermarket,commercial.shopping_mall,commercial.marketplace,commercial.convenience,education.school,education.college,education.university,childcare,healthcare.hospital,healthcare.clinic_or_praxis,healthcare.pharmacy,sport,leisure,public_transport,catering,service",
-    filter: `circle:${lng},${lat},${radius}`,
-    bias: `proximity:${lng},${lat}`,
-    limit: "500",
-    lang: "en",
-    apiKey,
-  });
-
   try {
-    const response = await fetch("https://api.geoapify.com/v2/places?" + params.toString(), {
-      method: "GET",
-      signal: AbortSignal.timeout(15000),
-      next: { revalidate: 3600 },
-    });
-    if (!response.ok) {
-      return NextResponse.json({ message: "Nearby place lookup failed." }, { status: 502, headers: { "Cache-Control": "public, s-maxage=300, stale-while-revalidate=900" } });
-    }
-    const payload = await response.json() as { features?: GeoapifyFeature[] };
-    const seen = new Set<string>();
-    const places = (payload.features || []).map((feature) => {
-      const properties = feature.properties || {};
-      const coordinates = feature.geometry?.coordinates;
-      const pointLat = typeof properties.lat === "number" ? properties.lat : coordinates?.[1];
-      const pointLng = typeof properties.lon === "number" ? properties.lon : coordinates?.[0];
-      if (typeof pointLat !== "number" || typeof pointLng !== "number") return null;
-      const group = category(properties.categories);
-      if (!group) return null;
-      const name = properties.name || properties.address_line1 || properties.formatted;
-      if (!name) return null;
-      const id = properties.place_id || group + ":" + name.toLowerCase() + ":" + pointLat.toFixed(5) + ":" + pointLng.toFixed(5);
-      if (seen.has(id)) return null;
-      seen.add(id);
-      return { id, name, category: group, distanceKm: typeof properties.distance === "number" ? properties.distance / 1000 : distanceKm(lat, lng, pointLat, pointLng), lat: pointLat, lng: pointLng, source: "Geoapify" };
-    }).filter((place): place is NearbyPlace => place !== null)
-      .sort((a, b) => a.distanceKm - b.distanceKm);
+    // Query each category family independently so a dense family cannot crowd out every other amenity type.
+    const results = await Promise.all(CATEGORY_GROUPS.map(async (group) => {
+      const params = new URLSearchParams({
+        categories: group.query,
+        filter: `circle:${lng},${lat},${radius}`,
+        bias: `proximity:${lng},${lat}`,
+        limit: "100",
+        lang: "en",
+        apiKey,
+      });
+      const response = await fetch("https://api.geoapify.com/v2/places?" + params.toString(), {
+        method: "GET",
+        signal: AbortSignal.timeout(12000),
+        next: { revalidate: 3600 },
+      });
+      if (!response.ok) throw new Error("Geoapify category query failed");
+      const payload = await response.json() as { features?: GeoapifyFeature[] };
+      return (payload.features || []).map((feature): NearbyPlace | null => {
+        const properties = feature.properties || {};
+        const coordinates = feature.geometry?.coordinates;
+        const pointLat = typeof properties.lat === "number" ? properties.lat : coordinates?.[1];
+        const pointLng = typeof properties.lon === "number" ? properties.lon : coordinates?.[0];
+        if (typeof pointLat !== "number" || typeof pointLng !== "number") return null;
+        const name = properties.name || properties.address_line1 || properties.formatted;
+        if (!name) return null;
+        const id = properties.place_id || name.toLowerCase() + ":" + pointLat.toFixed(5) + ":" + pointLng.toFixed(5);
+        return {
+          id,
+          name,
+          category: category(properties.categories, group.category),
+          distanceKm: typeof properties.distance === "number" ? properties.distance / 1000 : distanceKm(lat, lng, pointLat, pointLng),
+          lat: pointLat,
+          lng: pointLng,
+          source: "Geoapify",
+        };
+      }).filter((place): place is NearbyPlace => place !== null);
+    }));
 
-    const selectedPlaces = diversifyPlaces(places);
-    return NextResponse.json({ places: selectedPlaces, radiusMeters: radius, source: "Geoapify" }, { headers: { "Cache-Control": "public, s-maxage=3600, stale-while-revalidate=86400" } });
+    const unique = new Map<string, NearbyPlace>();
+    for (const place of results.flat()) {
+      const existing = unique.get(place.id);
+      // Prefer the more specific category returned by a dedicated category-family query.
+      if (!existing || existing.category === "Fitness" && place.category !== "Fitness") unique.set(place.id, place);
+    }
+    const places = [...unique.values()].sort((a, b) => a.distanceKm - b.distanceKm);
+    return NextResponse.json(
+      { places: diversifyPlaces(places), radiusMeters: radius, source: "Geoapify" },
+      { headers: { "Cache-Control": "public, s-maxage=900, stale-while-revalidate=3600" } },
+    );
   } catch {
-    return NextResponse.json({ message: "Nearby place lookup failed." }, { status: 502, headers: { "Cache-Control": "public, s-maxage=300, stale-while-revalidate=900" } });
+    return NextResponse.json(
+      { message: "Nearby place lookup failed." },
+      { status: 502, headers: { "Cache-Control": "public, s-maxage=300, stale-while-revalidate=900" } },
+    );
   }
 }
