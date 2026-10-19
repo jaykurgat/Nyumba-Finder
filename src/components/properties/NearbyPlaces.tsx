@@ -63,9 +63,6 @@ export function NearbyPlaces({ latitude, longitude }: { latitude: number; longit
         </div>
       </div>
 
-      {loading ? <div className="flex items-center justify-center gap-2 px-5 py-10 text-sm text-[#788272]"><LoaderCircle className="h-4 w-4 animate-spin" />Finding nearby places…</div> :
-      unavailable ? <div className="px-5 py-8 text-sm leading-6 text-[#687066]">Nearby place information is temporarily unavailable. The property's map location is still available above.</div> :
-      visible.length === 0 ? <div className="px-5 py-8 text-sm leading-6 text-[#687066]">{places.length ? "No mapped places in this category were found within 2 km." : "No named nearby places were found in the available map data. This does not necessarily mean there are no amenities nearby."}</div> :
       <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]">
         <div className="min-h-[320px] border-b border-[#edf0e9] lg:border-b-0 lg:border-r">
           <InteractiveLocationMap
@@ -93,7 +90,10 @@ export function NearbyPlaces({ latitude, longitude }: { latitude: number; longit
           </div>
         </div>
         <div className="max-h-[520px] overflow-y-auto">
-          {visible.slice(0, showAll ? visible.length : 18).map((place) => <button type="button" key={place.id} onClick={() => setSelectedPlaceId(place.id)} className={"flex w-full min-w-0 items-start gap-3 border-b border-[#edf0e9] px-4 py-3.5 text-left transition-colors sm:px-5 " + (selectedPlaceId === place.id ? "bg-[#f1f4ed]" : "bg-white hover:bg-[#fafbf8]")}>
+          {loading ? <div className="flex items-center gap-2 px-5 py-8 text-sm text-[#788272]"><LoaderCircle className="h-4 w-4 animate-spin" />Finding nearby places…</div> :
+           unavailable ? <div className="px-5 py-8 text-sm leading-6 text-[#687066]">Nearby-place data is temporarily unavailable. The map and property pin remain available.</div> :
+           visible.length === 0 ? <div className="px-5 py-8 text-sm leading-6 text-[#687066]">{places.length ? "No mapped places in this category were found within 2 km." : "No named nearby places were found in the available map data. This does not necessarily mean there are no amenities nearby."}</div> :
+           visible.slice(0, showAll ? visible.length : 18).map((place) => <button type="button" key={place.id} onClick={() => setSelectedPlaceId(place.id)} className={"flex w-full min-w-0 items-start gap-3 border-b border-[#edf0e9] px-4 py-3.5 text-left transition-colors sm:px-5 " + (selectedPlaceId === place.id ? "bg-[#f1f4ed]" : "bg-white hover:bg-[#fafbf8]")}>
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#f1f4ed] text-[#526b4c]"><MapPin className="h-4 w-4" /></div>
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-semibold text-[#273126]">{place.name}</p>
@@ -101,9 +101,8 @@ export function NearbyPlaces({ latitude, longitude }: { latitude: number; longit
             </div>
             <a href={"https://www.openstreetmap.org/?mlat=" + place.lat + "&mlon=" + place.lng + "#map=17/" + place.lat + "/" + place.lng} target="_blank" rel="noreferrer" aria-label={"View " + place.name + " on OpenStreetMap"} onClick={(event) => event.stopPropagation()} className="mt-1 shrink-0 text-[#77836f] hover:text-[#244c2c]"><ExternalLink className="h-4 w-4" /></a>
           </button>)}
-          {!visible.length && !loading && !unavailable && <div className="p-6 text-sm text-[#687066]">No places in this category were found within 2 km.</div>}
         </div>
-      </div>}
+      </div>
       <div className="flex flex-wrap items-center justify-between gap-2 bg-[#f8f9f5] px-4 py-3 text-[10px] leading-4 text-[#788272] sm:px-5">
         <span>Nearby-place data © OpenStreetMap contributors. Coverage varies by area.</span>
         {!loading && visible.length > 18 && <button type="button" onClick={() => setShowAll((current) => !current)} className="font-semibold text-[#244c2c] hover:underline">{showAll ? "Show fewer" : "Show all " + visible.length + " places"}</button>}
