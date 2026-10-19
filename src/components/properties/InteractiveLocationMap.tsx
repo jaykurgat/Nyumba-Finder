@@ -10,6 +10,7 @@ export type PropertyMapMarker = {
   position: MapPosition;
   label: string;
   title: string;
+  kind?: "price" | "amenity" | "property";
 };
 
 type InteractiveLocationMapProps = {
@@ -21,6 +22,7 @@ type InteractiveLocationMapProps = {
   zoom?: number;
   markers?: PropertyMapMarker[];
   onMarkerSelect?: (id: string) => void;
+  selectedMarkerId?: string | null;
   onViewportChange?: (viewport: { north: number; south: number; east: number; west: number; center: MapPosition; zoom: number }) => void;
 };
 
@@ -69,6 +71,7 @@ export function InteractiveLocationMap({
   zoom: initialZoom = 15,
   markers,
   onMarkerSelect,
+  selectedMarkerId,
   onViewportChange,
 }: InteractiveLocationMapProps) {
   const [center, setCenter] = useState<MapPosition>(value ?? markers?.[0]?.position ?? KENYA_CENTER);
@@ -78,6 +81,7 @@ export function InteractiveLocationMap({
   const dragRef = useRef<{ pointerX: number; pointerY: number; centerPoint: { x: number; y: number } } | null>(null);
   const markerDragRef = useRef(false);
   const movedRef = useRef(false);
+  const lastSelectedMarkerRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (value && !markerDragRef.current) {
@@ -99,6 +103,16 @@ export function InteractiveLocationMap({
     const spread = Math.max(latSpan, lngSpan);
     setZoom(spread > 4 ? 6 : spread > 1 ? 8 : spread > 0.25 ? 10 : 12);
   }, [value?.lat, value?.lng, markers]);
+
+  useEffect(() => {
+    if (!selectedMarkerId || selectedMarkerId === lastSelectedMarkerRef.current) return;
+    const selectedMarker = markers?.find((marker) => marker.id === selectedMarkerId);
+    lastSelectedMarkerRef.current = selectedMarkerId;
+    if (selectedMarker) {
+      setCenter(selectedMarker.position);
+      setZoom((current) => Math.max(current, 14));
+    }
+  }, [selectedMarkerId, markers]);
 
   const centerPoint = useMemo(() => project(center, zoom), [center, zoom]);
   const markerPosition = value ?? center;
@@ -251,12 +265,15 @@ export function InteractiveLocationMap({
           const point = project(marker.position, zoom);
           const offsetX = point.x - centerPoint.x;
           const offsetY = point.y - centerPoint.y;
+          const isSelected = selectedMarkerId === marker.id;
+          const isAmenity = marker.kind === "amenity";
+          const isProperty = marker.kind === "property";
           return <button key={marker.id} type="button" title={marker.title} aria-label={marker.title + ", " + marker.label}
-            className="absolute left-1/2 top-1/2 z-10 -translate-x-1/2 -translate-y-full whitespace-nowrap rounded-full border border-white/90 bg-[#244c2c] px-2.5 py-1 text-[11px] font-semibold leading-none tracking-tight text-white shadow-[0_2px_6px_rgba(20,45,28,0.22)] ring-1 ring-[#244c2c]/10 transition-transform hover:z-20 hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f28c28]"
+            className={"absolute left-1/2 top-1/2 z-10 flex items-center justify-center transition-transform hover:z-20 hover:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f28c28] " + (isAmenity ? "h-7 w-7 rounded-full border-2 border-white bg-white text-[#244c2c] shadow-[0_2px_8px_rgba(20,45,28,0.25)] ring-1 ring-[#244c2c]/20 " : isProperty ? "h-9 w-9 rounded-full border-2 border-white bg-[#244c2c] text-white shadow-md " : "rounded-full border border-white/90 bg-[#244c2c] px-2.5 py-1 text-[11px] font-semibold leading-none tracking-tight text-white shadow-[0_2px_6px_rgba(20,45,28,0.22)] ring-1 ring-[#244c2c]/10 ") + (isSelected ? "scale-125 ring-2 ring-[#f28c28] " : "")}
             style={{ transform: "translate(calc(-50% + " + offsetX + "px), calc(-100% + " + offsetY + "px))" }}
             onPointerDown={(event) => event.stopPropagation()}
             onClick={(event) => { event.stopPropagation(); onMarkerSelect?.(marker.id); }}>
-            {marker.label}
+            {isAmenity ? <MapPin className="h-3.5 w-3.5" /> : isProperty ? <MapPin className="h-5 w-5 fill-current" /> : marker.label}
           </button>;
         })}
 
