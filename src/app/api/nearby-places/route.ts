@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
+type NearbyPlace = { id: string; name: string; category: string; distanceKm: number; lat: number; lng: number; source: string };
+
 type OSMElement = {
   type: string;
   id: number;
@@ -63,7 +65,7 @@ export async function GET(request: NextRequest) {
       if (seen.has(key)) return null;
       seen.add(key);
       return { id: element.type + "-" + element.id, name, category: group, distanceKm: distanceKm(lat, lng, point.lat, point.lng), lat: point.lat, lng: point.lng, source: "OpenStreetMap" };
-    }).filter((place): place is NonNullable<typeof place> => Boolean(place))
+    }).filter((place): place is NearbyPlace => place !== null)
       .filter((place) => place.distanceKm * 1000 <= radius)
       .sort((a, b) => a.distanceKm - b.distanceKm)
       .slice(0, 80);
