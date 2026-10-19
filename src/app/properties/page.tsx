@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { InteractiveLocationMap } from "@/components/properties/InteractiveLocationMap";
+import { CompareTray } from "@/components/properties/CompareTray";
 
 function PropertyListingsSkeleton() {
   return <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">{[1,2,3,4,5,6].map(function (i) {
@@ -26,6 +27,7 @@ function PropertyListingsContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [mapVisible, setMapVisible] = useState(true);
+  const [mapBounds, setMapBounds] = useState<{ north: number; south: number; east: number; west: number } | null>(null);
   const params = useSearchParams();
   const mapMarkers = useMemo(() => properties
     .filter((property) => Number.isFinite(property.latitude) && Number.isFinite(property.longitude))
@@ -98,8 +100,9 @@ function PropertyListingsContent() {
         <div className="order-last grid grid-cols-1 gap-5 lg:order-first">{properties.map(function (p) { return <PropertyCard key={p.id} property={p} initiallySaved={savedPropertyIds.includes(p.id)} />; })}</div>
         <aside className="order-first space-y-2 lg:sticky lg:top-4 lg:order-last lg:self-start">
           <div className="flex items-center justify-between gap-3"><p className="text-sm font-semibold text-[#20271f]">Explore homes on the map</p><p className="text-xs text-muted-foreground">{mapMarkers.length} mapped</p></div>
-          {mapMarkers.length ? <InteractiveLocationMap value={null} markers={mapMarkers} onMarkerSelect={(id) => { window.location.href = "/properties/" + encodeURIComponent(id); }} interactive={false} heightClassName="h-[360px] sm:h-[460px] lg:h-[calc(100vh-8rem)]" /> : <div className="flex min-h-[260px] items-center justify-center border border-[#d9ded4] bg-white p-6 text-center"><div><MapIcon className="mx-auto h-8 w-8 text-muted-foreground" /><p className="mt-3 text-sm font-medium">Map locations are not available yet</p><p className="mt-1 max-w-xs text-xs leading-5 text-muted-foreground">These listings do not have verified map coordinates. You can still browse the full list.</p></div></div>}
-          <p className="text-[11px] text-muted-foreground">Map tiles © OpenStreetMap contributors. Pin locations depend on listing coordinates.</p>
+          {mapMarkers.length ? <InteractiveLocationMap value={null} markers={mapMarkers} onMarkerSelect={(id) => { window.location.href = "/properties/" + encodeURIComponent(id); }} interactive onViewportChange={(viewport) => setMapBounds({ north: viewport.north, south: viewport.south, east: viewport.east, west: viewport.west })} heightClassName="h-[360px] sm:h-[460px] lg:h-[calc(100vh-8rem)]" /> : <div className="flex min-h-[260px] items-center justify-center border border-[#d9ded4] bg-white p-6 text-center"><div><MapIcon className="mx-auto h-8 w-8 text-muted-foreground" /><p className="mt-3 text-sm font-medium">Map locations are not available yet</p><p className="mt-1 max-w-xs text-xs leading-5 text-muted-foreground">These listings do not have verified map coordinates. You can still browse the full list.</p></div></div>}
+          {mapMarkers.length > 0 && <Button type="button" className="w-full rounded-lg bg-[#244c2c] text-white hover:bg-[#193b21]" disabled={!mapBounds} onClick={() => { if (!mapBounds) return; const next = new URLSearchParams(params.toString()); next.set("north", String(mapBounds.north)); next.set("south", String(mapBounds.south)); next.set("east", String(mapBounds.east)); next.set("west", String(mapBounds.west)); next.delete("location"); next.delete("radiusKm"); window.location.href = "/properties?" + next.toString(); }}>Search this area</Button>}
+          <p className="text-[11px] text-muted-foreground">Map tiles © OpenStreetMap contributors. Drag the map, then search this area to update results. Pin locations depend on listing coordinates.</p>
         </aside>
       </div> : <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">{properties.map(function (p) { return <PropertyCard key={p.id} property={p} initiallySaved={savedPropertyIds.includes(p.id)} />; })}</div>}
     </> :
@@ -132,5 +135,6 @@ export default function PropertiesPage() {
 
       <Suspense fallback={<PropertyListingsSkeleton />}><PropertyListingsContent /></Suspense>
     </div>
+    <CompareTray />
   </div>;
 }

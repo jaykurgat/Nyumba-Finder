@@ -230,9 +230,23 @@ function Panel({ title, description, children }: { title: string; description: s
 }
 
 function PriceFields({ form }: { form: any }) {
-  return <div className="grid grid-cols-2 gap-3">
-    <FormField control={form.control} name="minPrice" render={function ({ field }: any) { return <FormItem><label className="mb-1 block text-xs font-medium text-muted-foreground">Minimum</label><FormControl><Input type="number" inputMode="numeric" placeholder="Any" {...field} value={field.value || ""} /></FormControl><FormMessage /></FormItem>; }} />
-    <FormField control={form.control} name="maxPrice" render={function ({ field }: any) { return <FormItem><label className="mb-1 block text-xs font-medium text-muted-foreground">Maximum</label><FormControl><Input type="number" inputMode="numeric" placeholder="Any" {...field} value={field.value || ""} /></FormControl><FormMessage /></FormItem>; }} />
+  const listingType = form.watch("listingType");
+  const presets = listingType === "FOR_RENT"
+    ? [{ label: "Up to 15k", min: "", max: 15000 }, { label: "15–30k", min: 15000, max: 30000 }, { label: "30–50k", min: 30000, max: 50000 }, { label: "50k+", min: 50000, max: "" }]
+    : listingType === "FOR_SALE"
+      ? [{ label: "Up to 5M", min: "", max: 5000000 }, { label: "5–10M", min: 5000000, max: 10000000 }, { label: "10–20M", min: 10000000, max: 20000000 }, { label: "20M+", min: 20000000, max: "" }]
+      : listingType === "SHORT_STAY"
+        ? [{ label: "Up to 3k", min: "", max: 3000 }, { label: "3–6k", min: 3000, max: 6000 }, { label: "6–10k", min: 6000, max: 10000 }, { label: "10k+", min: 10000, max: "" }]
+        : [];
+  return <div className="space-y-3">
+    <div className="grid grid-cols-2 gap-3">
+      <FormField control={form.control} name="minPrice" render={function ({ field }: any) { return <FormItem><label className="mb-1 block text-xs font-medium text-muted-foreground">Minimum (KSh)</label><FormControl><Input type="number" inputMode="numeric" placeholder="Any" {...field} value={field.value || ""} /></FormControl><FormMessage /></FormItem>; }} />
+      <FormField control={form.control} name="maxPrice" render={function ({ field }: any) { return <FormItem><label className="mb-1 block text-xs font-medium text-muted-foreground">Maximum (KSh)</label><FormControl><Input type="number" inputMode="numeric" placeholder="Any" {...field} value={field.value || ""} /></FormControl><FormMessage /></FormItem>; }} />
+    </div>
+    {presets.length > 0 && <div><p className="mb-2 text-[11px] font-medium text-muted-foreground">{listingType === "FOR_RENT" ? "Quick monthly rent ranges" : listingType === "FOR_SALE" ? "Quick purchase price ranges" : "Quick nightly budget ranges"}</p><div className="grid grid-cols-2 gap-2">{presets.map((preset) => {
+      const active = String(form.getValues("minPrice") || "") === String(preset.min) && String(form.getValues("maxPrice") || "") === String(preset.max);
+      return <button key={preset.label} type="button" onClick={() => { form.setValue("minPrice", preset.min, { shouldDirty: true, shouldValidate: true }); form.setValue("maxPrice", preset.max, { shouldDirty: true, shouldValidate: true }); }} className={"rounded-lg border px-3 py-2.5 text-xs font-semibold transition-colors " + (active ? "border-[#244c2c] bg-[#edf2e9] text-[#244c2c]" : "border-border bg-background text-foreground hover:border-[#aab9a1] hover:bg-[#f8f9f5]")}>{preset.label}</button>;
+    })}</div></div>}
   </div>;
 }
 
