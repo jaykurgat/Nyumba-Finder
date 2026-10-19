@@ -392,67 +392,16 @@ export default function PropertyDetailPage({ params: paramsProp }: { params: Pro
             </section>
             )}
 
-            <section className="rounded-none border bg-background shadow-sm">
-              <div className="border-b px-4 py-3 md:px-5">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-none bg-primary/10 text-primary">
-                    <MapPin className="h-4 w-4" />
-                  </div>
-                  <div>
-                    <h2 className="text-sm font-semibold">Property location</h2>
-                    <p className="text-xs text-muted-foreground">Approximate map location</p>
-                  </div>
-                </div>
-              </div>
-              <div className="p-3 md:p-4">
-                {property.latitude != null && property.longitude != null ? (
-                  <InteractiveLocationMap
-                    value={{ lat: property.latitude, lng: property.longitude }}
-                    interactive={false}
-                    heightClassName="h-72 md:h-80"
-                  />
-                ) : (
-                  <div className="flex h-72 items-center justify-center rounded-none bg-muted text-sm text-muted-foreground">
-                    Map location not available for this listing.
-                  </div>
-                )}
-                <div className="mt-2 flex items-start gap-2 text-xs text-muted-foreground">
-                  <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                  <span>{property.location}</span>
-                </div>
-              </div>
-            </section>
-            {property.latitude != null && property.longitude != null && (
+            {property.latitude != null && property.longitude != null ? (
               <NearbyPlaces latitude={property.latitude} longitude={property.longitude} />
+            ) : (
+              <section className="border bg-background p-5">
+                <h2 className="text-base font-semibold">Neighbourhood map</h2>
+                <p className="mt-2 text-sm text-muted-foreground">A map and nearby amenities will appear when this listing has a usable location pin. The landlord can add or correct the property location.</p>
+                <p className="mt-1 text-xs text-muted-foreground">{property.location}</p>
+              </section>
             )}
-          </div>
 
-          <aside className="space-y-4">
-            <Card className="overflow-hidden rounded-none border shadow-sm">
-              <div className="border-b bg-primary/[0.04] px-4 py-4">
-                <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">{property.listingType === 'FOR_SALE' ? 'Sale price' : property.listingType === 'SHORT_STAY' ? 'Short-stay price' : 'Monthly rent'}</p>
-                <p className="mt-1 text-2xl font-semibold tracking-tight">
-                  Ksh {property.price.toLocaleString()}
-                  {property.listingType !== 'FOR_SALE' && <span className="ml-1 text-sm font-medium text-muted-foreground">{pricePeriodLabel}</span>}
-                </p>
-              </div>
-              <CardContent className="space-y-3 p-4">
-                <div className="rounded-none border bg-[#fbfaf6] p-3">
-                  <div className="flex items-start gap-3">
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-none bg-background text-primary shadow-sm">
-                      <Phone className="h-4 w-4" />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold">Contact landlord</p>
-                      <p className="mt-1 text-xs text-muted-foreground">Reach out about availability and viewing.</p>
-                    </div>
-                  </div>
-
-                  {property.phoneNumber ? (
-                    showPhoneNumber ? (
-                      <a
-                        href={'tel:' + property.phoneNumber}
-                        onClick={() => trackContactEvent('click_to_call')}
                         className="mt-3 flex h-10 items-center justify-center rounded-none bg-accent px-4 text-sm font-semibold text-accent-foreground transition-colors hover:bg-accent/90"
                       >
                         <Phone className="mr-2 h-4 w-4" />
