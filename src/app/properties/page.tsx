@@ -14,6 +14,12 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { InteractiveLocationMap } from "@/components/properties/InteractiveLocationMap";
 import { CompareTray } from "@/components/properties/CompareTray";
 
+function compactMapPrice(price: number) {
+  if (price >= 1000000) return "KSh " + (price / 1000000).toLocaleString("en-KE", { maximumFractionDigits: 1 }) + "M";
+  if (price >= 1000) return "KSh " + (price / 1000).toLocaleString("en-KE", { maximumFractionDigits: price >= 10000 ? 0 : 1 }) + "k";
+  return "KSh " + price.toLocaleString("en-KE");
+}
+
 function PropertyListingsSkeleton() {
   return <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">{[1,2,3,4,5,6].map(function (i) {
     return <div key={i} className="overflow-hidden border bg-card"><Skeleton className="h-52 w-full" /><div className="space-y-3 p-4"><Skeleton className="h-5 w-3/4" /><Skeleton className="h-4 w-1/2" /><Skeleton className="h-4 w-full" /><Skeleton className="h-9 w-full" /></div></div>;
@@ -31,7 +37,7 @@ function PropertyListingsContent() {
   const params = useSearchParams();
   const mapMarkers = useMemo(() => properties
     .filter((property) => Number.isFinite(property.latitude) && Number.isFinite(property.longitude))
-    .map((property) => ({ id: property.id, position: { lat: property.latitude as number, lng: property.longitude as number }, label: "KSh " + property.price.toLocaleString(), title: property.title + " · " + property.location })), [properties]);
+    .map((property) => ({ id: property.id, position: { lat: property.latitude as number, lng: property.longitude as number }, label: compactMapPrice(property.price), title: property.title + " · KSh " + property.price.toLocaleString("en-KE") + " · " + property.location })), [properties]);
 
   const load = useCallback(async function (signal?: AbortSignal) {
     setLoading(true); setError(null);
