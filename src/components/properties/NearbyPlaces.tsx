@@ -91,7 +91,7 @@ export function NearbyPlaces({ latitude, longitude }: { latitude: number; longit
         </div>
         <div className="max-h-[520px] overflow-y-auto">
           {loading ? <div className="flex items-center gap-2 px-5 py-8 text-sm text-[#788272]"><LoaderCircle className="h-4 w-4 animate-spin" />Finding nearby places…</div> :
-           unavailable ? <div className="px-5 py-8 text-sm leading-6 text-[#687066]">Nearby-place data is temporarily unavailable. The map and property pin remain available.</div> :
+           unavailable ? null :
            visible.length === 0 ? <div className="px-5 py-8 text-sm leading-6 text-[#687066]">{places.length ? "No mapped places found in this category." : "No named places were returned by the map data source."}</div> :
            visible.slice(0, showAll ? visible.length : 18).map((place) => <button type="button" key={place.id} onClick={() => setSelectedPlaceId(place.id)} className={"flex w-full min-w-0 items-start gap-3 border-b border-[#edf0e9] px-4 py-3.5 text-left transition-colors sm:px-5 " + (selectedPlaceId === place.id ? "bg-[#f1f4ed]" : "bg-white hover:bg-[#fafbf8]")}>
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#f1f4ed] text-[#526b4c]"><MapPin className="h-4 w-4" /></div>
