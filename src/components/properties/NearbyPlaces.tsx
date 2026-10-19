@@ -75,14 +75,16 @@ export function NearbyPlaces({ latitude, longitude }: { latitude: number; longit
             heightClassName="h-[320px] sm:h-[420px] lg:h-[520px]"
             className="h-full rounded-none border-0"
             markers={[
-              { id: "property-home", position: { lat: latitude, lng: longitude }, label: "Property", title: "Property location" },
+              { id: "property-home", kind: "property" as const, position: { lat: latitude, lng: longitude }, label: "Home", title: "Property location" },
               ...visible.slice(0, 80).map((place) => ({
                 id: place.id,
+                kind: "amenity" as const,
                 position: { lat: place.lat, lng: place.lng },
-                label: place.category,
-                title: place.name + " · " + distanceLabel(place.distanceKm),
+                label: place.name,
+                title: place.name + " · " + place.category + " · " + distanceLabel(place.distanceKm),
               })),
             ]}
+            selectedMarkerId={selectedPlaceId}
             onMarkerSelect={(id) => { if (id !== "property-home") setSelectedPlaceId(id); }}
           />
           <div className="flex items-center gap-2 border-t border-[#edf0e9] bg-[#f8f9f5] px-4 py-3 text-[11px] text-[#788272]">
