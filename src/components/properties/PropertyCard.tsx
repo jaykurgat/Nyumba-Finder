@@ -163,7 +163,7 @@ export function PropertyCard({ property, initiallySaved = false }: PropertyCardP
         >
           <Heart className={"h-5 w-5 " + (isSaved ? "fill-current text-primary" : "")} />
         </button>
-        <Badge variant="secondary" className="absolute bottom-3 left-3 right-3 max-w-[calc(100%-1.5rem)] truncate rounded-lg bg-white/95 px-2 py-1 text-xs font-bold text-[#244c2c] shadow-sm backdrop-blur sm:text-sm">
+        <Badge variant="secondary" className="absolute bottom-3 left-3 z-10 inline-flex max-w-[calc(100%-1.5rem)] items-center rounded-md border border-white/80 bg-white/95 px-2.5 py-1.5 text-xs font-bold leading-none text-[#244c2c] shadow-sm backdrop-blur">
           Ksh {property.price.toLocaleString()}{priceLabel}
         </Badge>
         {property.isSponsored && (
