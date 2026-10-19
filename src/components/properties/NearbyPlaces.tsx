@@ -23,6 +23,7 @@ export function NearbyPlaces({ latitude, longitude }: { latitude: number; longit
   const [selected, setSelected] = useState("All");
   const [loading, setLoading] = useState(true);
   const [unavailable, setUnavailable] = useState(false);
+  const [showAll, setShowAll] = useState(false);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -54,7 +55,7 @@ export function NearbyPlaces({ latitude, longitude }: { latitude: number; longit
 
       <div className="border-b border-[#edf0e9] px-3 py-3 sm:px-4">
         <div className="flex gap-2 overflow-x-auto pb-0.5">
-          {filters.map(({ label, icon: Icon }) => <button key={label} type="button" onClick={() => setSelected(label)} className={"inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-2 text-xs font-medium transition-colors " + (selected === label ? "border-[#244c2c] bg-[#244c2c] text-white" : "border-[#e1e6dc] bg-white text-[#5d6957] hover:border-[#aab9a1]")}>
+          {filters.map(({ label, icon: Icon }) => <button key={label} type="button" onClick={() => { setSelected(label); setShowAll(false); }} className={"inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-2 text-xs font-medium transition-colors " + (selected === label ? "border-[#244c2c] bg-[#244c2c] text-white" : "border-[#e1e6dc] bg-white text-[#5d6957] hover:border-[#aab9a1]")}>
             <Icon className="h-3.5 w-3.5" />{label}{label !== "All" && counts[label] ? <span className={selected === label ? "text-white/80" : "text-[#889282]"}>{counts[label]}</span> : null}
           </button>)}
         </div>
@@ -64,7 +65,7 @@ export function NearbyPlaces({ latitude, longitude }: { latitude: number; longit
       unavailable ? <div className="px-5 py-8 text-sm leading-6 text-[#687066]">Nearby place information is temporarily unavailable. The property's map location is still available above.</div> :
       visible.length === 0 ? <div className="px-5 py-8 text-sm leading-6 text-[#687066]">{places.length ? "No mapped places in this category were found within 2 km." : "No named nearby places were found in the available map data. This does not necessarily mean there are no amenities nearby."}</div> :
       <div className="grid grid-cols-1 sm:grid-cols-2">
-        {visible.slice(0, 18).map((place, index) => <div key={place.id} className={"flex min-w-0 items-start gap-3 px-4 py-3.5 sm:px-5 " + (index % 2 === 0 ? "sm:border-r sm:border-[#edf0e9]" : "") + " border-b border-[#edf0e9]"}>
+        {visible.slice(0, showAll ? visible.length : 18).map((place, index) => <div key={place.id} className={"flex min-w-0 items-start gap-3 px-4 py-3.5 sm:px-5 " + (index % 2 === 0 ? "sm:border-r sm:border-[#edf0e9]" : "") + " border-b border-[#edf0e9]"}>
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#f1f4ed] text-[#526b4c]"><MapPin className="h-4 w-4" /></div>
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-semibold text-[#273126]">{place.name}</p>
@@ -75,7 +76,7 @@ export function NearbyPlaces({ latitude, longitude }: { latitude: number; longit
       </div>}
       <div className="flex flex-wrap items-center justify-between gap-2 bg-[#f8f9f5] px-4 py-3 text-[10px] leading-4 text-[#788272] sm:px-5">
         <span>Nearby-place data © OpenStreetMap contributors. Coverage varies by area.</span>
-        {!loading && visible.length > 18 && <span>Showing 18 of {visible.length} places in this category</span>}
+        {!loading && visible.length > 18 && <button type="button" onClick={() => setShowAll((current) => !current)} className="font-semibold text-[#244c2c] hover:underline">{showAll ? "Show fewer" : "Show all " + visible.length + " places"}</button>}
       </div>
     </section>
   );
