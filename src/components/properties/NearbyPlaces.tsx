@@ -32,7 +32,7 @@ export function NearbyPlaces({ latitude, longitude }: { latitude: number; longit
     const controller = new AbortController();
     setLoading(true);
     setUnavailable(false);
-    fetch("/api/nearby-places?lat=" + encodeURIComponent(latitude) + "&lng=" + encodeURIComponent(longitude) + "&radius=5000", { cache: "force-cache", signal: controller.signal })
+    fetch("/api/nearby-places?lat=" + encodeURIComponent(latitude) + "&lng=" + encodeURIComponent(longitude) + "&radius=5000", { cache: "no-store", signal: controller.signal })
       .then(async (response) => {
         if (!response.ok) throw new Error("Nearby places unavailable");
         const data = await response.json();
