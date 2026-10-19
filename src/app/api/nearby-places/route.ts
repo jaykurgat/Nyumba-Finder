@@ -22,12 +22,14 @@ function distanceKm(lat1: number, lon1: number, lat2: number, lon2: number) {
 }
 
 function category(tags: Record<string, string>) {
-  if (tags.amenity === "school" || tags.amenity === "kindergarten" || tags.amenity === "college" || tags.amenity === "university") return "Schools";
-  if (["hospital", "clinic", "doctors", "pharmacy", "dentist"].includes(tags.amenity || "")) return "Healthcare";
-  if (tags.shop === "supermarket" || tags.shop === "convenience" || tags.amenity === "marketplace") return "Shopping";
+  if (["school", "kindergarten", "college", "university"].includes(tags.amenity || "")) return "Schools";
+  if (["hospital", "clinic", "doctors", "pharmacy", "dentist", "veterinary"].includes(tags.amenity || "")) return "Healthcare";
+  if (["supermarket", "convenience", "mall", "department_store", "general", "greengrocer", "bakery"].includes(tags.shop || "") || tags.amenity === "marketplace") return "Shopping";
   if (tags.leisure === "fitness_centre" || tags.amenity === "gym" || tags.sport === "fitness") return "Fitness";
-  if (tags.leisure === "park" || tags.leisure === "garden") return "Parks";
-  if (["bus_station", "bus_stop", "taxi"].includes(tags.amenity || "") || tags.public_transport) return "Transport";
+  if (["park", "garden", "playground"].includes(tags.leisure || "")) return "Parks";
+  if (["bus_station", "bus_stop", "taxi", "car_sharing", "bicycle_rental"].includes(tags.amenity || "") || tags.public_transport || tags.highway === "bus_stop") return "Transport";
+  if (["restaurant", "cafe", "fast_food", "food_court", "bar"].includes(tags.amenity || "")) return "Food & drink";
+  if (["bank", "atm", "post_office", "police", "fire_station", "library", "community_centre"].includes(tags.amenity || "")) return "Services";
   return null;
 }
 
@@ -41,7 +43,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ message: "A valid property latitude and longitude are required." }, { status: 400 });
   }
 
-  const query = `[out:json][timeout:20];(node(around:${radius},${lat},${lng})[amenity~"^(school|kindergarten|college|university|hospital|clinic|doctors|pharmacy|dentist|gym|marketplace|bus_station|bus_stop|taxi)$"];way(around:${radius},${lat},${lng})[amenity~"^(school|kindergarten|college|university|hospital|clinic|doctors|pharmacy|dentist|gym|marketplace|bus_station|taxi)$"];relation(around:${radius},${lat},${lng})[amenity~"^(school|kindergarten|college|university|hospital|clinic|doctors|pharmacy|dentist|gym|marketplace)$"];node(around:${radius},${lat},${lng})[shop~"^(supermarket|convenience)$"];way(around:${radius},${lat},${lng})[shop~"^(supermarket|convenience)$"];node(around:${radius},${lat},${lng})[leisure~"^(fitness_centre|park|garden)$"];way(around:${radius},${lat},${lng})[leisure~"^(fitness_centre|park|garden)$"];node(around:${radius},${lat},${lng})[public_transport];);out center tags;`;
+  const query = `[out:json][timeout:20];(node(around:${radius},${lat},${lng})[amenity~"^(school|kindergarten|college|university|hospital|clinic|doctors|pharmacy|dentist|veterinary|gym|marketplace|bus_station|bus_stop|taxi|car_sharing|bicycle_rental|restaurant|cafe|fast_food|food_court|bar|bank|atm|post_office|police|fire_station|library|community_centre)$"];way(around:${radius},${lat},${lng})[amenity~"^(school|kindergarten|college|university|hospital|clinic|doctors|pharmacy|dentist|gym|marketplace|bus_station|taxi)$"];relation(around:${radius},${lat},${lng})[amenity~"^(school|kindergarten|college|university|hospital|clinic|doctors|pharmacy|dentist|gym|marketplace)$"];node(around:${radius},${lat},${lng})[shop~"^(supermarket|convenience|mall|department_store|general|greengrocer|bakery)$"];way(around:${radius},${lat},${lng})[shop~"^(supermarket|convenience|mall|department_store|general|greengrocer|bakery)$"];node(around:${radius},${lat},${lng})[leisure~"^(fitness_centre|park|garden|playground)$"];way(around:${radius},${lat},${lng})[leisure~"^(fitness_centre|park|garden|playground)$"];node(around:${radius},${lat},${lng})[public_transport];way(around:${radius},${lat},${lng})[public_transport];);out center tags;`;
 
   try {
     const response = await fetch("https://overpass-api.de/api/interpreter", {

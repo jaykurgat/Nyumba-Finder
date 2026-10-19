@@ -31,7 +31,7 @@ export function NearbyPlaces({ latitude, longitude }: { latitude: number; longit
     const controller = new AbortController();
     setLoading(true);
     setUnavailable(false);
-    fetch("/api/nearby-places?lat=" + encodeURIComponent(latitude) + "&lng=" + encodeURIComponent(longitude) + "&radius=2000", { cache: "force-cache", signal: controller.signal })
+    fetch("/api/nearby-places?lat=" + encodeURIComponent(latitude) + "&lng=" + encodeURIComponent(longitude) + "&radius=5000", { cache: "force-cache", signal: controller.signal })
       .then(async (response) => {
         if (!response.ok) throw new Error("Nearby places unavailable");
         const data = await response.json();
@@ -50,7 +50,7 @@ export function NearbyPlaces({ latitude, longitude }: { latitude: number; longit
       <div className="border-b border-[#edf0e9] px-4 py-4 sm:px-5">
         <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#74856b]">The neighbourhood</p>
         <div className="mt-1 flex flex-wrap items-end justify-between gap-2">
-          <div><h2 className="text-lg font-semibold tracking-tight text-[#20271f]">What's nearby</h2><p className="mt-1 text-xs text-[#788272]">Places mapped within 2 km of this property</p></div>
+          <div><h2 className="text-lg font-semibold tracking-tight text-[#20271f]">What's nearby</h2></div>
           {!loading && !unavailable && <span className="rounded-full bg-[#edf2e9] px-2.5 py-1 text-xs font-semibold text-[#244c2c]">{places.length} places</span>}
         </div>
       </div>
@@ -92,7 +92,7 @@ export function NearbyPlaces({ latitude, longitude }: { latitude: number; longit
         <div className="max-h-[520px] overflow-y-auto">
           {loading ? <div className="flex items-center gap-2 px-5 py-8 text-sm text-[#788272]"><LoaderCircle className="h-4 w-4 animate-spin" />Finding nearby places…</div> :
            unavailable ? <div className="px-5 py-8 text-sm leading-6 text-[#687066]">Nearby-place data is temporarily unavailable. The map and property pin remain available.</div> :
-           visible.length === 0 ? <div className="px-5 py-8 text-sm leading-6 text-[#687066]">{places.length ? "No mapped places in this category were found within 2 km." : "No named nearby places were found in the available map data. This does not necessarily mean there are no amenities nearby."}</div> :
+           visible.length === 0 ? <div className="px-5 py-8 text-sm leading-6 text-[#687066]">{places.length ? "No mapped places found in this category." : "No named places were returned by the map data source."}</div> :
            visible.slice(0, showAll ? visible.length : 18).map((place) => <button type="button" key={place.id} onClick={() => setSelectedPlaceId(place.id)} className={"flex w-full min-w-0 items-start gap-3 border-b border-[#edf0e9] px-4 py-3.5 text-left transition-colors sm:px-5 " + (selectedPlaceId === place.id ? "bg-[#f1f4ed]" : "bg-white hover:bg-[#fafbf8]")}>
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#f1f4ed] text-[#526b4c]"><MapPin className="h-4 w-4" /></div>
             <div className="min-w-0 flex-1">
