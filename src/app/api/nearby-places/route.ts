@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
+export const maxDuration = 30;
+
 type NearbyPlace = { id: string; name: string; category: string; distanceKm: number; lat: number; lng: number; source: string };
 
 type OSMElement = {
@@ -39,14 +41,14 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ message: "A valid property latitude and longitude are required." }, { status: 400 });
   }
 
-  const query = `[out:json][timeout:15];(node(around:${radius},${lat},${lng})[amenity~"^(school|kindergarten|college|university|hospital|clinic|doctors|pharmacy|dentist|gym|marketplace|bus_station|bus_stop|taxi)$"];way(around:${radius},${lat},${lng})[amenity~"^(school|kindergarten|college|university|hospital|clinic|doctors|pharmacy|dentist|gym|marketplace|bus_station|taxi)$"];relation(around:${radius},${lat},${lng})[amenity~"^(school|kindergarten|college|university|hospital|clinic|doctors|pharmacy|dentist|gym|marketplace)$"];node(around:${radius},${lat},${lng})[shop~"^(supermarket|convenience)$"];way(around:${radius},${lat},${lng})[shop~"^(supermarket|convenience)$"];node(around:${radius},${lat},${lng})[leisure~"^(fitness_centre|park|garden)$"];way(around:${radius},${lat},${lng})[leisure~"^(fitness_centre|park|garden)$"];node(around:${radius},${lat},${lng})[public_transport];);out center tags;`;
+  const query = `[out:json][timeout:20];(node(around:${radius},${lat},${lng})[amenity~"^(school|kindergarten|college|university|hospital|clinic|doctors|pharmacy|dentist|gym|marketplace|bus_station|bus_stop|taxi)$"];way(around:${radius},${lat},${lng})[amenity~"^(school|kindergarten|college|university|hospital|clinic|doctors|pharmacy|dentist|gym|marketplace|bus_station|taxi)$"];relation(around:${radius},${lat},${lng})[amenity~"^(school|kindergarten|college|university|hospital|clinic|doctors|pharmacy|dentist|gym|marketplace)$"];node(around:${radius},${lat},${lng})[shop~"^(supermarket|convenience)$"];way(around:${radius},${lat},${lng})[shop~"^(supermarket|convenience)$"];node(around:${radius},${lat},${lng})[leisure~"^(fitness_centre|park|garden)$"];way(around:${radius},${lat},${lng})[leisure~"^(fitness_centre|park|garden)$"];node(around:${radius},${lat},${lng})[public_transport];);out center tags;`;
 
   try {
     const response = await fetch("https://overpass-api.de/api/interpreter", {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8", "User-Agent": "NyumbaFinder/1.0 (nearby places lookup)" },
       body: "data=" + encodeURIComponent(query),
-      signal: AbortSignal.timeout(18000),
+      signal: AbortSignal.timeout(27000),
       next: { revalidate: 3600 },
     });
     if (!response.ok) {
