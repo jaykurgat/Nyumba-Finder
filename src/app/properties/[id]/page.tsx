@@ -2,6 +2,7 @@
 
 import { PropertyImage } from '@/components/properties/PropertyImage';
 import { InteractiveLocationMap } from '@/components/properties/InteractiveLocationMap';
+import { NearbyPlaces } from '@/components/properties/NearbyPlaces';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import type { Property } from '@/types/property';
@@ -421,6 +422,9 @@ export default function PropertyDetailPage({ params: paramsProp }: { params: Pro
                 </div>
               </div>
             </section>
+            {property.latitude != null && property.longitude != null && (
+              <NearbyPlaces latitude={property.latitude} longitude={property.longitude} />
+            )}
           </div>
 
           <aside className="space-y-4">
