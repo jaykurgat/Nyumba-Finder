@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Activity, Bus, GraduationCap, Hospital, MapPin, Trees, ShoppingBasket, LoaderCircle, ExternalLink } from "lucide-react";
+import { Activity, Bus, GraduationCap, Hospital, MapPin, Trees, ShoppingBasket, LoaderCircle, ExternalLink, Home } from "lucide-react";
+import { InteractiveLocationMap } from "@/components/properties/InteractiveLocationMap";
 
 type Place = { id: string; name: string; category: string; distanceKm: number; lat: number; lng: number; source: string };
 const filters = [
@@ -24,6 +25,7 @@ export function NearbyPlaces({ latitude, longitude }: { latitude: number; longit
   const [loading, setLoading] = useState(true);
   const [unavailable, setUnavailable] = useState(false);
   const [showAll, setShowAll] = useState(false);
+  const [selectedPlaceId, setSelectedPlaceId] = useState<string | null>(null);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -64,15 +66,41 @@ export function NearbyPlaces({ latitude, longitude }: { latitude: number; longit
       {loading ? <div className="flex items-center justify-center gap-2 px-5 py-10 text-sm text-[#788272]"><LoaderCircle className="h-4 w-4 animate-spin" />Finding nearby places…</div> :
       unavailable ? <div className="px-5 py-8 text-sm leading-6 text-[#687066]">Nearby place information is temporarily unavailable. The property's map location is still available above.</div> :
       visible.length === 0 ? <div className="px-5 py-8 text-sm leading-6 text-[#687066]">{places.length ? "No mapped places in this category were found within 2 km." : "No named nearby places were found in the available map data. This does not necessarily mean there are no amenities nearby."}</div> :
-      <div className="grid grid-cols-1 sm:grid-cols-2">
-        {visible.slice(0, showAll ? visible.length : 18).map((place, index) => <div key={place.id} className={"flex min-w-0 items-start gap-3 px-4 py-3.5 sm:px-5 " + (index % 2 === 0 ? "sm:border-r sm:border-[#edf0e9]" : "") + " border-b border-[#edf0e9]"}>
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#f1f4ed] text-[#526b4c]"><MapPin className="h-4 w-4" /></div>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold text-[#273126]">{place.name}</p>
-            <p className="mt-0.5 text-xs text-[#788272]">{place.category} · {distanceLabel(place.distanceKm)}</p>
+      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]">
+        <div className="min-h-[320px] border-b border-[#edf0e9] lg:border-b-0 lg:border-r">
+          <InteractiveLocationMap
+            value={{ lat: latitude, lng: longitude }}
+            interactive
+            zoom={14}
+            heightClassName="h-[320px] sm:h-[420px] lg:h-[520px]"
+            className="h-full rounded-none border-0"
+            markers={[
+              { id: "property-home", position: { lat: latitude, lng: longitude }, label: "Property", title: "Property location" },
+              ...visible.slice(0, 80).map((place) => ({
+                id: place.id,
+                position: { lat: place.lat, lng: place.lng },
+                label: place.category,
+                title: place.name + " · " + distanceLabel(place.distanceKm),
+              })),
+            ]}
+            onMarkerSelect={(id) => { if (id !== "property-home") setSelectedPlaceId(id); }}
+          />
+          <div className="flex items-center gap-2 border-t border-[#edf0e9] bg-[#f8f9f5] px-4 py-3 text-[11px] text-[#788272]">
+            <Home className="h-3.5 w-3.5 text-[#244c2c]" />
+            <span>Property location is approximate. Nearby places are based on available OpenStreetMap data.</span>
           </div>
-          <a href={"https://www.openstreetmap.org/?mlat=" + place.lat + "&mlon=" + place.lng + "#map=17/" + place.lat + "/" + place.lng} target="_blank" rel="noreferrer" aria-label={"View " + place.name + " on OpenStreetMap"} className="mt-1 shrink-0 text-[#77836f] hover:text-[#244c2c]"><ExternalLink className="h-4 w-4" /></a>
-        </div>)}
+        </div>
+        <div className="max-h-[520px] overflow-y-auto">
+          {visible.slice(0, showAll ? visible.length : 18).map((place) => <button type="button" key={place.id} onClick={() => setSelectedPlaceId(place.id)} className={"flex w-full min-w-0 items-start gap-3 border-b border-[#edf0e9] px-4 py-3.5 text-left transition-colors sm:px-5 " + (selectedPlaceId === place.id ? "bg-[#f1f4ed]" : "bg-white hover:bg-[#fafbf8]")}>
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#f1f4ed] text-[#526b4c]"><MapPin className="h-4 w-4" /></div>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-semibold text-[#273126]">{place.name}</p>
+              <p className="mt-0.5 text-xs text-[#788272]">{place.category} · {distanceLabel(place.distanceKm)}</p>
+            </div>
+            <a href={"https://www.openstreetmap.org/?mlat=" + place.lat + "&mlon=" + place.lng + "#map=17/" + place.lat + "/" + place.lng} target="_blank" rel="noreferrer" aria-label={"View " + place.name + " on OpenStreetMap"} onClick={(event) => event.stopPropagation()} className="mt-1 shrink-0 text-[#77836f] hover:text-[#244c2c]"><ExternalLink className="h-4 w-4" /></a>
+          </button>)}
+          {!visible.length && !loading && !unavailable && <div className="p-6 text-sm text-[#687066]">No places in this category were found within 2 km.</div>}
+        </div>
       </div>}
       <div className="flex flex-wrap items-center justify-between gap-2 bg-[#f8f9f5] px-4 py-3 text-[10px] leading-4 text-[#788272] sm:px-5">
         <span>Nearby-place data © OpenStreetMap contributors. Coverage varies by area.</span>
