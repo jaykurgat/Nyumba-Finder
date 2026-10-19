@@ -23,6 +23,7 @@ type InteractiveLocationMapProps = {
   markers?: PropertyMapMarker[];
   onMarkerSelect?: (id: string) => void;
   selectedMarkerId?: string | null;
+  showPinInstructions?: boolean;
   onViewportChange?: (viewport: { north: number; south: number; east: number; west: number; center: MapPosition; zoom: number }) => void;
 };
 
@@ -72,6 +73,7 @@ export function InteractiveLocationMap({
   markers,
   onMarkerSelect,
   selectedMarkerId,
+  showPinInstructions = true,
   onViewportChange,
 }: InteractiveLocationMapProps) {
   const [center, setCenter] = useState<MapPosition>(value ?? markers?.[0]?.position ?? KENYA_CENTER);
@@ -277,7 +279,7 @@ export function InteractiveLocationMap({
           </button>;
         })}
 
-        {interactive && (
+        {interactive && showPinInstructions && (
           <div className="pointer-events-none absolute left-3 top-3 rounded-lg bg-background/95 px-3 py-2 text-xs font-medium shadow-sm backdrop-blur">
             {value ? "Drag the pin to adjust the location" : "Drag the pin or tap the map to place it"}
           </div>
