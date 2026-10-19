@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Activity, Bus, GraduationCap, Hospital, MapPin, Trees, ShoppingBasket, LoaderCircle, ExternalLink, Home } from "lucide-react";
+import { Activity, Bus, GraduationCap, Hospital, MapPin, Trees, ShoppingBasket, LoaderCircle, ExternalLink } from "lucide-react";
 import { InteractiveLocationMap } from "@/components/properties/InteractiveLocationMap";
 
 type Place = { id: string; name: string; category: string; distanceKm: number; lat: number; lng: number; source: string };
@@ -84,15 +84,11 @@ export function NearbyPlaces({ latitude, longitude }: { latitude: number; longit
             selectedMarkerId={selectedPlaceId}
             onMarkerSelect={(id) => { if (id !== "property-home") setSelectedPlaceId(id); }}
           />
-          <div className="flex items-center gap-2 border-t border-[#edf0e9] bg-[#f8f9f5] px-4 py-3 text-[11px] text-[#788272]">
-            <Home className="h-3.5 w-3.5 text-[#244c2c]" />
-            <span>Property location is approximate. Nearby places are sourced from Geoapify.</span>
-          </div>
         </div>
         <div className="max-h-[520px] overflow-y-auto">
           {loading ? <div className="flex items-center gap-2 px-5 py-8 text-sm text-[#788272]"><LoaderCircle className="h-4 w-4 animate-spin" />Finding nearby places…</div> :
            unavailable ? null :
-           visible.length === 0 ? <div className="px-5 py-8 text-sm leading-6 text-[#687066]">{places.length ? "No mapped places found in this category." : "No named places were returned by the map data source."}</div> :
+           visible.length === 0 ? <div className="px-5 py-8 text-sm leading-6 text-[#687066]">{places.length ? "No nearby places found for this category." : "No nearby places found."}</div> :
            visible.slice(0, showAll ? visible.length : 18).map((place) => <button type="button" key={place.id} onClick={() => setSelectedPlaceId(place.id)} className={"flex w-full min-w-0 items-start gap-3 border-b border-[#edf0e9] px-4 py-3.5 text-left transition-colors sm:px-5 " + (selectedPlaceId === place.id ? "bg-[#f1f4ed]" : "bg-white hover:bg-[#fafbf8]")}>
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#f1f4ed] text-[#526b4c]"><MapPin className="h-4 w-4" /></div>
             <div className="min-w-0 flex-1">
@@ -103,10 +99,7 @@ export function NearbyPlaces({ latitude, longitude }: { latitude: number; longit
           </button>)}
         </div>
       </div>
-      <div className="flex flex-wrap items-center justify-between gap-2 bg-[#f8f9f5] px-4 py-3 text-[10px] leading-4 text-[#788272] sm:px-5">
-        <span>Place data © Geoapify. Coverage varies by area.</span>
-        {!loading && visible.length > 18 && <button type="button" onClick={() => setShowAll((current) => !current)} className="font-semibold text-[#244c2c] hover:underline">{showAll ? "Show fewer" : "Show all " + visible.length + " places"}</button>}
-      </div>
+      {!loading && visible.length > 18 && <div className="flex justify-end bg-[#f8f9f5] px-4 py-3 sm:px-5"><button type="button" onClick={() => setShowAll((current) => !current)} className="text-xs font-semibold text-[#244c2c] hover:underline">{showAll ? "Show fewer" : "Show all " + visible.length + " places"}</button></div>}
     </section>
   );
 }
