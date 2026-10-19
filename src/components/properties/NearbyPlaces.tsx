@@ -86,7 +86,7 @@ export function NearbyPlaces({ latitude, longitude }: { latitude: number; longit
           />
           <div className="flex items-center gap-2 border-t border-[#edf0e9] bg-[#f8f9f5] px-4 py-3 text-[11px] text-[#788272]">
             <Home className="h-3.5 w-3.5 text-[#244c2c]" />
-            <span>Property location is approximate. Nearby places are based on available OpenStreetMap data.</span>
+            <span>Property location is approximate. Nearby places are sourced from Geoapify.</span>
           </div>
         </div>
         <div className="max-h-[520px] overflow-y-auto">
@@ -104,7 +104,7 @@ export function NearbyPlaces({ latitude, longitude }: { latitude: number; longit
         </div>
       </div>
       <div className="flex flex-wrap items-center justify-between gap-2 bg-[#f8f9f5] px-4 py-3 text-[10px] leading-4 text-[#788272] sm:px-5">
-        <span>Nearby-place data © OpenStreetMap contributors. Coverage varies by area.</span>
+        <span>Place data © Geoapify. Coverage varies by area.</span>
         {!loading && visible.length > 18 && <button type="button" onClick={() => setShowAll((current) => !current)} className="font-semibold text-[#244c2c] hover:underline">{showAll ? "Show fewer" : "Show all " + visible.length + " places"}</button>}
       </div>
     </section>
