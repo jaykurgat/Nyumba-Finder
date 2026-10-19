@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 export const maxDuration = 20;
+export const dynamic = "force-dynamic";
 
 type NearbyPlace = { id: string; name: string; category: string; distanceKm: number; lat: number; lng: number; source: string };
 type GeoapifyFeature = {
@@ -126,12 +127,12 @@ export async function GET(request: NextRequest) {
     const places = [...unique.values()].sort((a, b) => a.distanceKm - b.distanceKm);
     return NextResponse.json(
       { places: diversifyPlaces(places), radiusMeters: radius, source: "Geoapify" },
-      { headers: { "Cache-Control": "public, s-maxage=900, stale-while-revalidate=3600" } },
+      { headers: { "Cache-Control": "no-store, max-age=0, must-revalidate" } },
     );
   } catch {
     return NextResponse.json(
       { message: "Nearby place lookup failed." },
-      { status: 502, headers: { "Cache-Control": "public, s-maxage=300, stale-while-revalidate=900" } },
+      { status: 502, headers: { "Cache-Control": "no-store" } },
     );
   }
 }
