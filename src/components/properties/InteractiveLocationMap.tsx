@@ -252,7 +252,7 @@ export function InteractiveLocationMap({
           const offsetX = point.x - centerPoint.x;
           const offsetY = point.y - centerPoint.y;
           return <button key={marker.id} type="button" title={marker.title} aria-label={marker.title + ", " + marker.label}
-            className="absolute left-1/2 top-1/2 z-10 -translate-x-1/2 -translate-y-full whitespace-nowrap rounded-full border border-white bg-[#244c2c] px-3 py-1.5 text-xs font-bold text-white shadow-md transition-transform hover:z-20 hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f28c28]"
+            className="absolute left-1/2 top-1/2 z-10 -translate-x-1/2 -translate-y-full whitespace-nowrap rounded-full border border-white/90 bg-[#244c2c] px-2.5 py-1 text-[11px] font-semibold leading-none tracking-tight text-white shadow-[0_2px_6px_rgba(20,45,28,0.22)] ring-1 ring-[#244c2c]/10 transition-transform hover:z-20 hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f28c28]"
             style={{ transform: "translate(calc(-50% + " + offsetX + "px), calc(-100% + " + offsetY + "px))" }}
             onPointerDown={(event) => event.stopPropagation()}
             onClick={(event) => { event.stopPropagation(); onMarkerSelect?.(marker.id); }}>
