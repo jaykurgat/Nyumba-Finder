@@ -21,6 +21,7 @@ type InteractiveLocationMapProps = {
   zoom?: number;
   markers?: PropertyMapMarker[];
   onMarkerSelect?: (id: string) => void;
+  onViewportChange?: (viewport: { north: number; south: number; east: number; west: number; center: MapPosition; zoom: number }) => void;
 };
 
 const KENYA_CENTER: MapPosition = { lat: -0.0236, lng: 37.9062 };
@@ -68,6 +69,7 @@ export function InteractiveLocationMap({
   zoom: initialZoom = 15,
   markers,
   onMarkerSelect,
+  onViewportChange,
 }: InteractiveLocationMapProps) {
   const [center, setCenter] = useState<MapPosition>(value ?? markers?.[0]?.position ?? KENYA_CENTER);
   const [zoom, setZoom] = useState(value ? initialZoom : markers?.length ? 11 : 6);
@@ -126,7 +128,17 @@ export function InteractiveLocationMap({
     return { x: event.clientX - rect.left, y: event.clientY - rect.top };
   }
 
-  function finishPointer() {
+  function reportViewport(element: HTMLDivElement, nextZoom = zoom, nextCenter = center) {
+    if (!onViewportChange) return;
+    const rect = element.getBoundingClientRect();
+    const world = project(nextCenter, nextZoom);
+    const northWest = unproject({ x: world.x - rect.width / 2, y: world.y - rect.height / 2 }, nextZoom);
+    const southEast = unproject({ x: world.x + rect.width / 2, y: world.y + rect.height / 2 }, nextZoom);
+    onViewportChange({ north: northWest.lat, south: southEast.lat, west: northWest.lng, east: southEast.lng, center: nextCenter, zoom: nextZoom });
+  }
+
+  function finishPointer(event?: React.PointerEvent<HTMLDivElement>) {
+    if (event && dragRef.current && movedRef.current) reportViewport(event.currentTarget);
     markerDragRef.current = false;
     dragRef.current = null;
     setDraggingMarker(false);
@@ -144,7 +156,7 @@ export function InteractiveLocationMap({
     const markerScreenX = rect.width / 2 + markerOffset.x;
     const markerScreenY = rect.height / 2 + markerOffset.y;
 
-    if (Math.hypot(point.x - markerScreenX, point.y - markerScreenY) < 30) {
+    if (!markers?.length && onChange && Math.hypot(point.x - markerScreenX, point.y - markerScreenY) < 30) {
       markerDragRef.current = true;
       setDraggingMarker(true);
       return;
@@ -199,16 +211,18 @@ export function InteractiveLocationMap({
     const nextZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, zoom + delta));
     if (nextZoom === zoom) return;
     setZoom(nextZoom);
+    reportViewport(document.getElementById("nyumba-map-viewport") as HTMLDivElement, nextZoom);
   }
 
   return (
     <div className={"relative overflow-hidden rounded-xl border bg-muted " + heightClassName + " " + className}>
       <div
+        id="nyumba-map-viewport"
         className={"absolute inset-0 touch-none select-none " + (interactive ? (draggingMarker || draggingMap ? "cursor-grabbing" : "cursor-grab") : "")}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={finishPointer}
-        onPointerCancel={finishPointer}
+        onPointerCancel={() => finishPointer() }
         onClick={handleMapClick}
         role={interactive ? "application" : undefined}
         aria-label={interactive ? "Interactive property location map" : "Property location map"}
