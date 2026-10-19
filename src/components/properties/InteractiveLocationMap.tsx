@@ -59,7 +59,9 @@ function tileUrl(x: number, y: number, z: number) {
   const count = Math.pow(2, z);
   const wrappedX = ((x % count) + count) % count;
   if (y < 0 || y >= count) return null;
-  return "https://tile.openstreetmap.org/" + z + "/" + wrappedX + "/" + y + ".png";
+  const apiKey = process.env.NEXT_PUBLIC_GEOAPIFY_API_KEY;
+  if (!apiKey) return null;
+  return "https://maps.geoapify.com/v1/tile/osm-bright-smooth/" + z + "/" + wrappedX + "/" + y + ".png?apiKey=" + encodeURIComponent(apiKey);
 }
 
 export function InteractiveLocationMap({
@@ -293,7 +295,7 @@ export function InteractiveLocationMap({
         </div>
 
         <div className="pointer-events-none absolute bottom-1 left-1 rounded bg-background/80 px-1.5 py-0.5 text-[9px] text-muted-foreground">
-          © OpenStreetMap contributors
+          © Geoapify · © OpenStreetMap contributors
         </div>
       </div>
     </div>
