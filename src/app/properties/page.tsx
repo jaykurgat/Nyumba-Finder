@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { InteractiveLocationMap } from "@/components/properties/InteractiveLocationMap";
+import { CompareTray } from "@/components/properties/CompareTray";
 
 function PropertyListingsSkeleton() {
   return <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">{[1,2,3,4,5,6].map(function (i) {
@@ -134,5 +135,6 @@ export default function PropertiesPage() {
 
       <Suspense fallback={<PropertyListingsSkeleton />}><PropertyListingsContent /></Suspense>
     </div>
+    <CompareTray />
   </div>;
 }
