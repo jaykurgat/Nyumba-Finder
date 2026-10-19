@@ -27,7 +27,7 @@ function distanceKm(lat1: number, lon1: number, lat2: number, lon2: number) {
 
 function category(categories: string[] = []) {
   const values = categories.join(" ").toLowerCase();
-  if (values.includes("education") || values.includes("childcare.kindergarten")) return "Schools";
+  if (values.includes("education") || values.includes("childcare")) return "Schools";
   if (values.includes("healthcare") || values.includes("medical")) return "Healthcare";
   if (values.includes("commercial") || values.includes("building.marketplace")) return "Shopping";
   if (values.includes("sport") || values.includes("fitness")) return "Fitness";
@@ -36,6 +36,22 @@ function category(categories: string[] = []) {
   if (values.includes("catering") || values.includes("coffee") || values.includes("restaurant")) return "Food & drink";
   if (values.includes("service") || values.includes("finance") || values.includes("post")) return "Services";
   return null;
+}
+
+function diversifyPlaces(places: NearbyPlace[]) {
+  // Avoid letting a dense category such as gyms fill the entire customer-facing list.
+  const priority = ["Shopping", "Schools", "Healthcare", "Fitness", "Parks", "Transport", "Food & drink", "Services"];
+  const groups = new Map(priority.map((name) => [name, places.filter((place) => place.category === name).sort((a, b) => a.distanceKm - b.distanceKm)]));
+  const result: NearbyPlace[] = [];
+  const maxPerCategory = 20;
+  for (let index = 0; index < maxPerCategory; index += 1) {
+    for (const name of priority) {
+      const place = groups.get(name)?.[index];
+      if (place) result.push(place);
+      if (result.length >= 80) return result;
+    }
+  }
+  return result;
 }
 
 export async function GET(request: NextRequest) {
@@ -53,7 +69,8 @@ export async function GET(request: NextRequest) {
   }
 
   const params = new URLSearchParams({
-    categories: "education,childcare,healthcare,commercial,sport,leisure,public_transport,catering,service",
+    // Request recognizable everyday destinations explicitly instead of relying only on broad parent categories.
+    categories: "commercial.supermarket,commercial.shopping_mall,commercial.marketplace,commercial.convenience,education.school,education.college,education.university,childcare,healthcare.hospital,healthcare.clinic_or_praxis,healthcare.pharmacy,sport,leisure,public_transport,catering,service",
     filter: `circle:${lng},${lat},${radius}`,
     bias: `proximity:${lng},${lat}`,
     limit: "500",
@@ -87,10 +104,10 @@ export async function GET(request: NextRequest) {
       seen.add(id);
       return { id, name, category: group, distanceKm: typeof properties.distance === "number" ? properties.distance / 1000 : distanceKm(lat, lng, pointLat, pointLng), lat: pointLat, lng: pointLng, source: "Geoapify" };
     }).filter((place): place is NearbyPlace => place !== null)
-      .sort((a, b) => a.distanceKm - b.distanceKm)
-      .slice(0, 80);
+      .sort((a, b) => a.distanceKm - b.distanceKm);
 
-    return NextResponse.json({ places, radiusMeters: radius, source: "Geoapify" }, { headers: { "Cache-Control": "public, s-maxage=3600, stale-while-revalidate=86400" } });
+    const selectedPlaces = diversifyPlaces(places);
+    return NextResponse.json({ places: selectedPlaces, radiusMeters: radius, source: "Geoapify" }, { headers: { "Cache-Control": "public, s-maxage=3600, stale-while-revalidate=86400" } });
   } catch {
     return NextResponse.json({ message: "Nearby place lookup failed." }, { status: 502, headers: { "Cache-Control": "public, s-maxage=300, stale-while-revalidate=900" } });
   }
