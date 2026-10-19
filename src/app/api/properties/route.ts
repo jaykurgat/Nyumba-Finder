@@ -58,6 +58,12 @@ const toProperty = (data: {
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
+    const requestedIds = [...new Set((searchParams.get('ids') || '').split(',').map((id) => id.trim()).filter(Boolean))].slice(0, 4);
+    const north = getOptionalNumber(searchParams.get('north'));
+    const south = getOptionalNumber(searchParams.get('south'));
+    const east = getOptionalNumber(searchParams.get('east'));
+    const west = getOptionalNumber(searchParams.get('west'));
+    const hasViewportBounds = north !== undefined && south !== undefined && east !== undefined && west !== undefined && north >= south && east >= west;
     const generalQueryTerm = searchParams.get('q')?.trim().toLowerCase();
     const propertyTypeQuery = searchParams.get('propertyType')?.trim();
     const listingTypeQuery = searchParams.get('listingType')?.trim() || 'ALL';
@@ -100,6 +106,8 @@ export async function GET(request: NextRequest) {
 
     const baseWhere: Prisma.PropertyWhereInput = {
       status: 'ACTIVE' as const,
+      ...(requestedIds.length ? { id: { in: requestedIds } } : {}),
+      ...(hasViewportBounds ? { latitude: { gte: south, lte: north }, longitude: { gte: west, lte: east } } : {}),
       ...(listingTypeQuery && listingTypeQuery !== 'ALL' ? { listingType: listingTypeQuery } : {}),
       ...(propertyTypeQuery && propertyTypeQuery !== 'Any type' ? { propertyType: propertyTypeQuery } : {}),
       ...(minPrice !== undefined || maxPrice !== undefined
