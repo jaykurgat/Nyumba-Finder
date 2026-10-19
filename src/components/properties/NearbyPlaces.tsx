@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Activity, Bus, GraduationCap, Hospital, MapPin, Trees, ShoppingBasket, LoaderCircle, ExternalLink } from "lucide-react";
-import { Button } from "@/components/ui/button";
 
 type Place = { id: string; name: string; category: string; distanceKm: number; lat: number; lng: number; source: string };
 const filters = [
@@ -76,7 +75,7 @@ export function NearbyPlaces({ latitude, longitude }: { latitude: number; longit
       </div>}
       <div className="flex flex-wrap items-center justify-between gap-2 bg-[#f8f9f5] px-4 py-3 text-[10px] leading-4 text-[#788272] sm:px-5">
         <span>Nearby-place data © OpenStreetMap contributors. Coverage varies by area.</span>
-        {!loading && visible.length > 18 && <Button variant="ghost" size="sm" onClick={() => setSelected(selected)} className="h-auto p-0 text-[10px] text-[#244c2c]">Showing 18 of {visible.length}</Button>}
+        {!loading && visible.length > 18 && <span>Showing 18 of {visible.length} places in this category</span>}
       </div>
     </section>
   );
