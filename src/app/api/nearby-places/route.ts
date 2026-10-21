@@ -141,9 +141,10 @@ export async function GET(request: NextRequest) {
       { headers: { "Cache-Control": "no-store, max-age=0, must-revalidate" } },
     );
   } catch {
+    // Keep admin-curated places visible if the external places provider fails.
     return NextResponse.json(
-      { message: "Nearby place lookup failed." },
-      { status: 502, headers: { "Cache-Control": "no-store" } },
+      { places: diversifyPlaces(manualPlaces), radiusMeters: radius },
+      { headers: { "Cache-Control": "no-store, max-age=0, must-revalidate" } },
     );
   }
 }
