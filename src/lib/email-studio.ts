@@ -31,12 +31,6 @@ function mergeTemplates(saved: unknown): EmailTemplate[] {
   return DEFAULT_TEMPLATES.map((template) => byKey.get(template.key) || template);
 }
 
-function mergeTemplates(saved: unknown): EmailTemplate[] {
-  const existing = Array.isArray(saved) ? saved.filter((item): item is EmailTemplate => Boolean(item && typeof item === "object" && typeof (item as EmailTemplate).key === "string")) : [];
-  const byKey = new Map(existing.map((item) => [item.key, item]));
-  return DEFAULT_TEMPLATES.map((template) => byKey.get(template.key) || template);
-}
-
 export async function getEmailStudioState(): Promise<EmailStudioState> {
   const row = await prisma.siteSetting.findUnique({ where: { key: SETTING_KEY }, select: { value: true } });
   if (!row) return { drafts: DEFAULT_TEMPLATES, published: DEFAULT_TEMPLATES, publishedAt: null };
