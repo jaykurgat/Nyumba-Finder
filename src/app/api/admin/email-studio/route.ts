@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { requireAdmin } from "@/lib/require-admin";
-import { DEFAULT_TEMPLATES, getEmailStudioState, saveEmailStudioState, renderPremiumEmail, type EmailTemplate } from "@/lib/email-studio";
+import { getEmailStudioState, saveEmailStudioState, renderPremiumEmail, type EmailTemplate } from "@/lib/email-studio";
 import { sendAuthEmail } from "@/lib/auth-email";
 import { prisma } from "@/lib/prisma";
 
