@@ -22,6 +22,7 @@ const groups = [
   { title: "Locations", description: "Maintain location data and review suggested additions.", items: [
     { label: "Location directory", href: "/admin/locations", description: "Manage the locations used in property searches." },
     { label: "Location submissions", href: "/admin/location-submissions", description: "Approve or reject user-submitted locations." },
+    { label: "Map places & amenities", href: "/admin/map-amenities", description: "Manually pin schools, hospitals, malls, parks and other places on property maps." },
   ]},
   { title: "Communication & system", description: "Configure customer communications and review admin activity.", items: [
     { label: "Email Studio", href: "/admin/email-studio", description: "Draft, preview, test and publish House Hunt email templates." },

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
 
 export const maxDuration = 20;
 export const dynamic = "force-dynamic";
@@ -71,12 +72,20 @@ export async function GET(request: NextRequest) {
   const lng = Number(searchParams.get("lng"));
   const radius = Math.max(250, Math.min(5000, Number(searchParams.get("radius")) || 5000));
   const apiKey = process.env.GEOAPIFY_API_KEY;
+  let manualPlaces: NearbyPlace[] = [];
+  try {
+    const row = await prisma.siteSetting.findUnique({ where: { key: "manual_map_amenities_v1" }, select: { value: true } });
+    const saved = row ? JSON.parse(row.value) : [];
+    if (Array.isArray(saved)) manualPlaces = saved.filter((item) => item && typeof item.id === "string" && typeof item.name === "string" && typeof item.lat === "number" && typeof item.lng === "number")
+      .map((item) => ({ id: "manual:" + item.id, name: item.name, category: item.category, distanceKm: distanceKm(lat, lng, item.lat, item.lng), lat: item.lat, lng: item.lng, source: "NyumbaFinder" }))
+      .filter((place) => place.distanceKm <= radius / 1000);
+  } catch { manualPlaces = []; }
 
   if (!Number.isFinite(lat) || !Number.isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180) {
     return NextResponse.json({ message: "A valid property latitude and longitude are required." }, { status: 400 });
   }
   if (!apiKey) {
-    return NextResponse.json({ message: "Nearby place service is not configured." }, { status: 503, headers: { "Cache-Control": "no-store" } });
+    return NextResponse.json({ places: diversifyPlaces(manualPlaces), radiusMeters: radius }, { headers: { "Cache-Control": "no-store, max-age=0, must-revalidate" } });
   }
 
   try {
@@ -124,7 +133,9 @@ export async function GET(request: NextRequest) {
       // Prefer the more specific category returned by a dedicated category-family query.
       if (!existing || existing.category === "Fitness" && place.category !== "Fitness") unique.set(place.id, place);
     }
-    const places = [...unique.values()].sort((a, b) => a.distanceKm - b.distanceKm);
+    // Manually curated places remain available even when provider coverage is incomplete.
+    const allPlaces = [...unique.values(), ...manualPlaces];
+    const places = [...new Map(allPlaces.map((place) => [place.id, place])).values()].sort((a, b) => a.distanceKm - b.distanceKm);
     return NextResponse.json(
       { places: diversifyPlaces(places), radiusMeters: radius, source: "Geoapify" },
       { headers: { "Cache-Control": "no-store, max-age=0, must-revalidate" } },
