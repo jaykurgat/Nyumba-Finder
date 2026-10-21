@@ -7,7 +7,7 @@ import { prisma } from "@/lib/prisma";
 
 export const runtime = "nodejs";
 const templateSchema = z.object({
-  key: z.enum(["house_request_client", "house_request_admin"]),
+  key: z.enum(["house_request_client", "house_request_admin", "account_welcome", "account_password_reset", "account_password_changed", "agent_application", "agent_application_admin", "agent_status"]),
   name: z.string().trim().min(3).max(100),
   description: z.string().trim().max(240),
   subject: z.string().trim().min(3).max(180),
@@ -17,7 +17,7 @@ const templateSchema = z.object({
   buttonLabel: z.string().trim().min(2).max(50),
   buttonUrl: z.string().max(500).refine((value) => value === "{{resetUrl}}" || /^https:\/\//i.test(value), "Use an HTTPS URL or the resetUrl merge field."),
 });
-const sample = { name:"Amina", reference:"NF-2048", phone:"+254 712 345 678", email:"amina@example.com", propertyType:"Apartment", bedrooms:"2", locations:"Kilimani, Nairobi", budget:"KSh 25,000 – KSh 40,000 per month", moveIn:"Next month", mustHaves:"Reliable water, security", notes:"Near public transport" };
+const sample = { name:"Amina", reference:"NF-2048", phone:"+254 712 345 678", email:"amina@example.com", propertyType:"Apartment", bedrooms:"2", locations:"Kilimani, Nairobi", budget:"KSh 25,000 – KSh 40,000 per month", moveIn:"Next month", mustHaves:"Reliable water, security", notes:"Near public transport", resetUrl:"https://www.nyumba-finder.com/account?mode=reset&token=preview-token", statusMessage:"Your application has been approved." };
 
 export async function GET() {
   try { await requireAdmin(); return NextResponse.json(await getEmailStudioState()); }
@@ -30,13 +30,13 @@ export async function POST(request: NextRequest) {
     const action = body.action;
     const state = await getEmailStudioState();
     if (action === "save" || action === "publish") {
-      const parsed = z.array(templateSchema).length(2).safeParse(body.templates);
+      const parsed = z.array(templateSchema).length(8).safeParse(body.templates);
       if (!parsed.success || new Set(parsed.data?.map(t=>t.key)).size !== 2) return NextResponse.json({message:"Check each template and its required fields."},{status:400});
       const templates = parsed.data as EmailTemplate[];
       const next = { ...state, drafts: templates, ...(action === "publish" ? { published: templates, publishedAt: new Date().toISOString() } : {}) };
       await saveEmailStudioState(next);
       await prisma.auditLog.create({data:{action: action === "publish" ? "EMAIL_TEMPLATES_PUBLISHED" : "EMAIL_TEMPLATES_SAVED",entityType:"EmailTemplate",details:{keys:templates.map(t=>t.key)}}}).catch(()=>undefined);
-      return NextResponse.json({message: action === "publish" ? "Templates published. New House Hunt emails will use this design." : "Drafts saved.", state:next});
+      return NextResponse.json({message: action === "publish" ? "Templates published. New emails for the published templates will use this design." : "Drafts saved.", state:next});
     }
     if (action === "test") {
       const parsed = templateSchema.safeParse(body.template);
