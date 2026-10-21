@@ -48,6 +48,7 @@ export default function AdminDashboard() {
             <Link href="/admin/locations">Locations</Link>
             <Link href="/admin/location-submissions">Location submissions</Link>
             <Link href="/admin/settings">Settings</Link>
+            <Link href="/admin/email-studio">Email Studio</Link>
             <Link href="/admin/activity">Activity</Link>
           </nav>
           <button onClick={logout} className="ml-auto border px-3 py-2 text-sm">Sign out</button>
