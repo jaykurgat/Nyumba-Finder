@@ -4,6 +4,7 @@ import { promisify } from 'node:util';
 import { prisma } from '@/lib/prisma';
 import { createUserSessionToken, randomToken, verifyUserSessionToken, USER_COOKIE, USER_SESSION_TTL } from '@/lib/user-auth';
 import { sendAuthEmail } from '@/lib/auth-email';
+import { getEmailStudioState, renderPremiumEmail } from '@/lib/email-studio';
 import { allowRateLimitedRequest, hasValidRequestOrigin } from '@/lib/security';
 
 const scrypt = promisify(scryptCallback);
@@ -66,11 +67,14 @@ export async function POST(request: NextRequest, context: Context) {
         data: { email, passwordHash: await hashPassword(password), profile: { create: { displayName, firstName, lastName } } },
         select: { id: true },
       });
+      const welcomeState = await getEmailStudioState().catch(() => null);
+      const welcomeTemplate = welcomeState?.published.find((item) => item.key === "account_welcome");
+      const welcomeEmail = welcomeTemplate ? renderPremiumEmail(welcomeTemplate, { name: displayName }) : null;
       const emailSent = await sendAuthEmail({
         to: email,
-        subject: 'Welcome to NyumbaFinder',
-        html: '<div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;color:#24332b"><h2>Welcome to NyumbaFinder</h2><p>Your account has been created successfully.</p><p>You can now sign in to manage your NyumbaFinder account and continue your house search.</p><p><a href="' + baseUrl(request) + '/account" style="display:inline-block;padding:12px 18px;background:#287b46;color:#fff;text-decoration:none;border-radius:8px">Open your account</a></p><p>If you did not create this account, please contact NyumbaFinder support.</p></div>',
-        text: 'Welcome to NyumbaFinder. Your account has been created successfully. Open your account: ' + baseUrl(request) + '/account. If you did not create this account, please contact NyumbaFinder support.',
+        subject: welcomeEmail?.subject || 'Welcome to NyumbaFinder',
+        html: welcomeEmail?.html || '<div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;color:#24332b"><h2>Welcome to NyumbaFinder</h2><p>Your account has been created successfully.</p><p>You can now sign in to manage your NyumbaFinder account and continue your house search.</p><p><a href="' + baseUrl(request) + '/account" style="display:inline-block;padding:12px 18px;background:#287b46;color:#fff;text-decoration:none;border-radius:8px">Open your account</a></p><p>If you did not create this account, please contact NyumbaFinder support.</p></div>',
+        text: welcomeEmail?.text || 'Welcome to NyumbaFinder. Your account has been created successfully. Open your account: ' + baseUrl(request) + '/account. If you did not create this account, please contact NyumbaFinder support.',
       }).then(() => true).catch((error) => { console.error('ACCOUNT_WELCOME_EMAIL_FAILED', error); return false; });
       const message = emailSent
         ? 'Account created successfully. A welcome email has been sent.'
@@ -123,11 +127,14 @@ export async function POST(request: NextRequest, context: Context) {
       });
       const url = baseUrl(request) + '/account?mode=reset&token=' + encodeURIComponent(token);
       try {
+        const resetState = await getEmailStudioState().catch(() => null);
+        const resetTemplate = resetState?.published.find((item) => item.key === "account_password_reset");
+        const resetEmail = resetTemplate ? renderPremiumEmail(resetTemplate, { resetUrl: url }) : null;
         await sendAuthEmail({
           to: user.email,
-          subject: 'Reset your NyumbaFinder password',
-          html: '<div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;color:#24332b"><h2>Reset your password</h2><p>We received a request to reset your NyumbaFinder password.</p><p><a href="' + url + '" style="display:inline-block;padding:12px 18px;background:#287b46;color:#fff;text-decoration:none;border-radius:8px">Reset password</a></p><p>This link expires in 30 minutes and can only be used once. If you did not request this, ignore this email.</p></div>',
-          text: 'We received a request to reset your NyumbaFinder password. Use this link within 30 minutes: ' + url + '. The link can only be used once. If you did not request this, ignore this email.',
+          subject: resetEmail?.subject || 'Reset your NyumbaFinder password',
+          html: resetEmail?.html || '<div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;color:#24332b"><h2>Reset your password</h2><p>We received a request to reset your NyumbaFinder password.</p><p><a href="' + url + '" style="display:inline-block;padding:12px 18px;background:#287b46;color:#fff;text-decoration:none;border-radius:8px">Reset password</a></p><p>This link expires in 30 minutes and can only be used once. If you did not request this, ignore this email.</p></div>',
+          text: resetEmail?.text || 'We received a request to reset your NyumbaFinder password. Use this link within 30 minutes: ' + url + '. The link can only be used once. If you did not request this, ignore this email.',
         });
       } catch (error) {
         await prisma.passwordResetToken.delete({ where: { id: record.id } }).catch(() => undefined);
@@ -165,11 +172,14 @@ export async function POST(request: NextRequest, context: Context) {
     if (!resetSucceeded) return json('This reset link is invalid or expired. Request a new one.', 400);
     let notificationSent = true;
     if (record.user.email) {
+      const changedState = await getEmailStudioState().catch(() => null);
+      const changedTemplate = changedState?.published.find((item) => item.key === "account_password_changed");
+      const changedEmail = changedTemplate ? renderPremiumEmail(changedTemplate) : null;
       notificationSent = await sendAuthEmail({
         to: record.user.email,
-        subject: 'Your NyumbaFinder password was changed',
-        html: '<div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;color:#24332b"><h2>Password changed</h2><p>Your NyumbaFinder password has been changed successfully.</p><p>If you did not make this change, contact NyumbaFinder support immediately.</p><p><a href="' + baseUrl(request) + '/account" style="color:#287b46">Go to NyumbaFinder</a></p></div>',
-        text: 'Your NyumbaFinder password has been changed successfully. If you did not make this change, contact NyumbaFinder support immediately. Sign in: ' + baseUrl(request) + '/account',
+        subject: changedEmail?.subject || 'Your NyumbaFinder password was changed',
+        html: changedEmail?.html || '<div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;color:#24332b"><h2>Password changed</h2><p>Your NyumbaFinder password has been changed successfully.</p><p>If you did not make this change, contact NyumbaFinder support immediately.</p><p><a href="' + baseUrl(request) + '/account" style="color:#287b46">Go to NyumbaFinder</a></p></div>',
+        text: changedEmail?.text || 'Your NyumbaFinder password has been changed successfully. If you did not make this change, contact NyumbaFinder support immediately. Sign in: ' + baseUrl(request) + '/account',
       }).then(() => true).catch((error) => { console.error('PASSWORD_CHANGED_EMAIL_FAILED', error); return false; });
     }
     return json(notificationSent

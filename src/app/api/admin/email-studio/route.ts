@@ -15,7 +15,7 @@ const templateSchema = z.object({
   headline: z.string().trim().min(2).max(140),
   body: z.string().trim().min(5).max(6000),
   buttonLabel: z.string().trim().min(2).max(50),
-  buttonUrl: z.string().url().max(500),
+  buttonUrl: z.string().max(500).refine((value) => value === "{{resetUrl}}" || /^https:\/\//i.test(value), "Use an HTTPS URL or the resetUrl merge field."),
 });
 const sample = { name:"Amina", reference:"NF-2048", phone:"+254 712 345 678", email:"amina@example.com", propertyType:"Apartment", bedrooms:"2", locations:"Kilimani, Nairobi", budget:"KSh 25,000 – KSh 40,000 per month", moveIn:"Next month", mustHaves:"Reliable water, security", notes:"Near public transport" };
 

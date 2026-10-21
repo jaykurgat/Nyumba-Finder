@@ -1,3 +1,4 @@
+import { getEmailStudioState, renderPremiumEmail } from "@/lib/email-studio";
 import { prisma } from "@/lib/prisma";
 
 export function normalizeAgentMatch(value: string) {
@@ -10,21 +11,23 @@ export function escapeAgentHtml(value: string) {
   })[char] as string);
 }
 
-export async function sendNetworkEmail(to: string, subject: string, text: string) {
+export async function sendNetworkEmail(to: string, subject: string, text: string, templateKey?: "agent_application" | "agent_application_admin" | "agent_status", variables: Record<string, string> = {}) {
   const apiKey = process.env.RESEND_API_KEY;
   const from = process.env.RESEND_FROM_EMAIL;
   if (!apiKey || !from) return { configured: false, sent: false };
   try {
+    let email = { subject, text, html: "<div style=\"font-family:Arial,sans-serif;line-height:1.65;color:#263326;white-space:pre-line\">" + escapeAgentHtml(text) + "</div>" };
+    if (templateKey) {
+      try {
+        const state = await getEmailStudioState();
+        const template = state.published.find((item) => item.key === templateKey);
+        if (template) email = renderPremiumEmail(template, variables);
+      } catch (error) { console.error("EMAIL_STUDIO_RENDER_FAILED", error); }
+    }
     const response = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: { Authorization: "Bearer " + apiKey, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        from,
-        to: [to],
-        subject,
-        text,
-        html: "<div style=\"font-family:Arial,sans-serif;line-height:1.65;color:#263326;white-space:pre-line\">" + escapeAgentHtml(text) + "</div>",
-      }),
+      body: JSON.stringify({ from, to: [to], subject: email.subject, text: email.text, html: email.html }),
     });
     if (!response.ok) {
       console.error("AGENT_NETWORK_EMAIL_FAILED", response.status, (await response.text().catch(() => "")).slice(0, 300));
@@ -40,9 +43,9 @@ export async function sendNetworkEmail(to: string, subject: string, text: string
 export async function notifyAgentApplication(name: string, email: string) {
   const admin = process.env.ADMIN_NOTIFICATION_EMAIL?.trim() || process.env.ADMIN_EMAIL?.trim();
   const tasks = [
-    sendNetworkEmail(email, "We received your NyumbaFinder agent application", "Hi " + name + ",\n\nThank you for applying to join the NyumbaFinder Agent Network. Your application is pending review. We will email you when its status changes.\n\nNyumbaFinder"),
+    sendNetworkEmail(email, "We received your NyumbaFinder agent application", "Hi " + name + ",\n\nThank you for applying to join the NyumbaFinder Agent Network. Your application is pending review. We will email you when its status changes.\n\nNyumbaFinder", "agent_application", { name, email }),
   ];
-  if (admin) tasks.push(sendNetworkEmail(admin, "New NyumbaFinder agent application", "A new agent application needs review.\n\nName: " + name + "\nEmail: " + email + "\n\nReview applications: " + (process.env.NEXT_PUBLIC_SITE_URL || "https://www.nyumba-finder.com") + "/admin/agents"));
+  if (admin) tasks.push(sendNetworkEmail(admin, "New NyumbaFinder agent application", "A new agent application needs review.\n\nName: " + name + "\nEmail: " + email, "agent_application_admin", { name, email }));
   await Promise.all(tasks);
 }
 
@@ -54,7 +57,7 @@ export async function notifyAgentStatus(email: string, name: string, status: str
       : status === "SUSPENDED"
         ? "Your NyumbaFinder Agent Network profile has been paused. Please contact NyumbaFinder if you believe this is a mistake."
         : "Your NyumbaFinder Agent Network application status has been updated to " + status.toLowerCase() + ".";
-  await sendNetworkEmail(email, "NyumbaFinder agent application update", "Hi " + name + ",\n\n" + message + "\n\nNyumbaFinder");
+  await sendNetworkEmail(email, "NyumbaFinder agent application update", "Hi " + name + ",\n\n" + message + "\n\nNyumbaFinder", "agent_status", { name, email, statusMessage: message });
 }
 
 export async function getMatchingAgents(requestId: string) {

@@ -19,14 +19,20 @@ export const DEFAULT_TEMPLATES: EmailTemplate[] = [
   { key: "house_request_admin", name: "House Hunt — admin alert", description: "Sent to the admin team when a new House Hunt request arrives.", subject: "New House Hunt request · {{reference}}", preheader: "A new renter request is ready for review.", headline: "A new request needs your attention.", body: "A new House Hunt request has been submitted.\n\nReference: {{reference}}\nName: {{name}}\nPhone: {{phone}}\nEmail: {{email}}\nProperty: {{propertyType}} · {{bedrooms}} bedroom(s)\nLocations: {{locations}}\nBudget: {{budget}}\nMove-in: {{moveIn}}\nMust-haves: {{mustHaves}}\nNotes: {{notes}}", buttonLabel: "Review requests", buttonUrl: "https://www.nyumba-finder.com/admin/house-requests" },
 ];
 
+function mergeTemplates(saved: unknown): EmailTemplate[] {
+  const existing = Array.isArray(saved) ? saved.filter((item): item is EmailTemplate => Boolean(item && typeof item === "object" && typeof (item as EmailTemplate).key === "string")) : [];
+  const byKey = new Map(existing.map((item) => [item.key, item]));
+  return DEFAULT_TEMPLATES.map((template) => byKey.get(template.key) || template);
+}
+
 export async function getEmailStudioState(): Promise<EmailStudioState> {
   const row = await prisma.siteSetting.findUnique({ where: { key: SETTING_KEY }, select: { value: true } });
   if (!row) return { drafts: DEFAULT_TEMPLATES, published: DEFAULT_TEMPLATES, publishedAt: null };
   try {
     const parsed = JSON.parse(row.value) as Partial<EmailStudioState>;
     return {
-      drafts: Array.isArray(parsed.drafts) ? parsed.drafts : DEFAULT_TEMPLATES,
-      published: Array.isArray(parsed.published) ? parsed.published : DEFAULT_TEMPLATES,
+      drafts: mergeTemplates(parsed.drafts),
+      published: mergeTemplates(parsed.published),
       publishedAt: typeof parsed.publishedAt === "string" ? parsed.publishedAt : null,
     };
   } catch { return { drafts: DEFAULT_TEMPLATES, published: DEFAULT_TEMPLATES, publishedAt: null }; }
