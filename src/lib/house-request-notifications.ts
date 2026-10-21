@@ -1,3 +1,4 @@
+import { getEmailStudioState, renderPremiumEmail } from "@/lib/email-studio";
 type HouseRequestNotice = {
   reference: string; name: string; phone: string; email?: string | null;
   contactPreference: string; propertyType: string; bedrooms: number;
@@ -14,6 +15,11 @@ function escapeHtml(value: string) {
 function formatRent(value: number) {
   return "KSh " + Math.round(value).toLocaleString("en-KE");
 }
+function emailVariables(request: HouseRequestNotice): Record<string, string> {
+  const locations = request.preferredLocations?.length ? request.preferredLocations.map((item) => item.label).join(", ") : [request.countyName, request.townName, ...request.preferredAreas].filter(Boolean).join(", ");
+  return { name: request.name, reference: request.reference, phone: request.phone, email: request.email || "Not provided", propertyType: request.propertyType, bedrooms: String(request.bedrooms), locations: locations || "Not specified", budget: (request.minRent != null ? formatRent(request.minRent) + " – " : "Up to ") + formatRent(request.maxRent) + " per month", moveIn: request.moveIn, mustHaves: request.mustHaves.join(", ") || "Not specified", notes: request.notes || "None", matchesCount: String(request.matchesCount) };
+}
+
 function requestSummary(request: HouseRequestNotice) {
   return [
     "Service: House Hunt assistance (KSh 2,500; up to five WhatsApp video previews subject to availability)",
@@ -27,17 +33,22 @@ function requestSummary(request: HouseRequestNotice) {
   ].join("\n");
 }
 
-async function sendEmail(to: string, subject: string, text: string) {
+async function sendEmail(to: string, subject: string, text: string, templateKey?: "house_request_client" | "house_request_admin", variables: Record<string, string> = {}) {
   const apiKey = process.env.RESEND_API_KEY;
   const from = process.env.RESEND_FROM_EMAIL;
   if (!apiKey || !from) return { configured: false, sent: false };
+  let email = { subject, text, html: "<div style=\"font-family:Arial,sans-serif;white-space:pre-line;line-height:1.65;color:#253126\">" + escapeHtml(text) + "</div>" };
+  if (templateKey) {
+    try {
+      const state = await getEmailStudioState();
+      const published = state.published.find((item) => item.key === templateKey);
+      if (published) email = renderPremiumEmail(published, variables);
+    } catch (error) { console.error("EMAIL_STUDIO_RENDER_FAILED", error); }
+  }
   const response = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: { Authorization: "Bearer " + apiKey, "Content-Type": "application/json" },
-    body: JSON.stringify({
-      from, to: [to], subject, text,
-      html: "<div style=\"font-family:Arial,sans-serif;white-space:pre-line;line-height:1.65;color:#253126\">" + escapeHtml(text) + "</div>",
-    }),
+    body: JSON.stringify({ from, to: [to], subject: email.subject, text: email.text, html: email.html }),
   });
   if (!response.ok) {
     console.error("HOUSE_REQUEST_EMAIL_FAILED", response.status, (await response.text().catch(() => "")).slice(0, 500));
@@ -84,13 +95,14 @@ export async function notifyHouseRequest(request: HouseRequestNotice) {
   const budget = (request.minRent ? formatRent(request.minRent) + "–" : "Up to ") + formatRent(request.maxRent) + " monthly";
 
   const emailTasks: Promise<{ configured: boolean; sent: boolean }>[] = [];
-  if (adminEmail) emailTasks.push(sendEmail(adminEmail, "New house-finding request · " + request.reference, details));
+  if (adminEmail) emailTasks.push(sendEmail(adminEmail, "New house-finding request · " + request.reference, details, "house_request_admin", emailVariables(request)));
   if (request.email) {
     emailTasks.push(sendEmail(
       request.email,
       "We've received your NyumbaFinder house request · " + request.reference,
       "Hi " + request.name + ",\n\nThank you for telling NyumbaFinder what you're looking for. Your House Hunt request has been received. The service fee is KSh 2,500 and includes up to five WhatsApp video previews of suitable properties, subject to availability, plus help coordinating viewings. No payment has been taken through the form. A representative will contact you about next steps.\n\n" +
       details + "\n\nYou can browse your suggested matches on the confirmation page. Property availability must be confirmed before any viewing. Premium viewing assistance and transport, if requested, are discussed separately.\n\nNyumbaFinder",
+      "house_request_client", emailVariables(request),
     ));
   }
 
