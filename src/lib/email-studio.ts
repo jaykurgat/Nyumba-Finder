@@ -17,7 +17,25 @@ const SETTING_KEY = "email_studio_v1";
 export const DEFAULT_TEMPLATES: EmailTemplate[] = [
   { key: "house_request_client", name: "House Hunt — customer confirmation", description: "Sent to a renter after submitting a House Hunt request.", subject: "Your house search is in motion · {{reference}}", preheader: "We've received your preferences and will be in touch about next steps.", headline: "Your search starts here.", body: "Hi {{name}},\n\nThank you for sharing what you are looking for. Your House Hunt request {{reference}} has been received. Our team will review your preferences and contact you about next steps.\n\nYour search: {{propertyType}} · {{bedrooms}} bedroom(s)\nPreferred locations: {{locations}}\nBudget: {{budget}}\nMove-in: {{moveIn}}\n\nProperty availability is confirmed before any viewing. We look forward to helping you find a place that feels right.", buttonLabel: "Explore homes", buttonUrl: "https://www.nyumba-finder.com/find-a-house" },
   { key: "house_request_admin", name: "House Hunt — admin alert", description: "Sent to the admin team when a new House Hunt request arrives.", subject: "New House Hunt request · {{reference}}", preheader: "A new renter request is ready for review.", headline: "A new request needs your attention.", body: "A new House Hunt request has been submitted.\n\nReference: {{reference}}\nName: {{name}}\nPhone: {{phone}}\nEmail: {{email}}\nProperty: {{propertyType}} · {{bedrooms}} bedroom(s)\nLocations: {{locations}}\nBudget: {{budget}}\nMove-in: {{moveIn}}\nMust-haves: {{mustHaves}}\nNotes: {{notes}}", buttonLabel: "Review requests", buttonUrl: "https://www.nyumba-finder.com/admin/house-requests" },
+  {"key":"account_welcome","name":"Account — welcome","description":"Sent after a user creates an account.","subject":"Welcome to NyumbaFinder","preheader":"Your account is ready.","headline":"Welcome to NyumbaFinder.","body":"Hi {{name}},\n\nYour account has been created successfully. You can now sign in to manage your account and continue your house search.","buttonLabel":"Open your account","buttonUrl":"https://www.nyumba-finder.com/account"},
+  {"key":"account_password_reset","name":"Account — password reset","description":"Security email. The live reset link is inserted only at send time.","subject":"Reset your NyumbaFinder password","preheader":"Use your secure link to choose a new password.","headline":"Let's get you back in.","body":"We received a request to reset your NyumbaFinder password.\n\nThis link expires in 30 minutes and can only be used once. If you did not request this, ignore this email.","buttonLabel":"Reset password","buttonUrl":"{{resetUrl}}"},
+  {"key":"account_password_changed","name":"Account — password changed","description":"Sent after a password reset succeeds.","subject":"Your NyumbaFinder password was changed","preheader":"A confirmation that your password was updated.","headline":"Your password has been updated.","body":"Your NyumbaFinder password has been changed successfully.\n\nIf you did not make this change, contact NyumbaFinder support immediately.","buttonLabel":"Go to your account","buttonUrl":"https://www.nyumba-finder.com/account"},
+  {"key":"agent_application","name":"Agent Network — application received","description":"Confirmation sent to an agent after applying.","subject":"We received your NyumbaFinder agent application","preheader":"Your application is pending review.","headline":"Thank you for applying.","body":"Hi {{name}},\n\nThank you for applying to join the NyumbaFinder Agent Network. Your application is pending review. We will email you when its status changes.","buttonLabel":"Visit NyumbaFinder","buttonUrl":"https://www.nyumba-finder.com"},
+  {"key":"agent_application_admin","name":"Agent Network — admin alert","description":"Admin notification when a new agent applies.","subject":"New NyumbaFinder agent application","preheader":"A new agent application needs review.","headline":"A new agent application is ready.","body":"A new agent application needs review.\n\nName: {{name}}\nEmail: {{email}}","buttonLabel":"Review applications","buttonUrl":"https://www.nyumba-finder.com/admin/agents"},
+  {"key":"agent_status","name":"Agent Network — status update","description":"Sent when an agent application is approved, rejected or paused.","subject":"NyumbaFinder agent application update","preheader":"There is an update to your Agent Network application.","headline":"An update on your application.","body":"Hi {{name}},\n\n{{statusMessage}}","buttonLabel":"Visit NyumbaFinder","buttonUrl":"https://www.nyumba-finder.com"}
 ];
+
+function mergeTemplates(saved: unknown): EmailTemplate[] {
+  const existing = Array.isArray(saved) ? saved.filter((item): item is EmailTemplate => Boolean(item && typeof item === "object" && typeof (item as EmailTemplate).key === "string")) : [];
+  const byKey = new Map(existing.map((item) => [item.key, item]));
+  return DEFAULT_TEMPLATES.map((template) => byKey.get(template.key) || template);
+}
+
+function mergeTemplates(saved: unknown): EmailTemplate[] {
+  const existing = Array.isArray(saved) ? saved.filter((item): item is EmailTemplate => Boolean(item && typeof item === "object" && typeof (item as EmailTemplate).key === "string")) : [];
+  const byKey = new Map(existing.map((item) => [item.key, item]));
+  return DEFAULT_TEMPLATES.map((template) => byKey.get(template.key) || template);
+}
 
 export async function getEmailStudioState(): Promise<EmailStudioState> {
   const row = await prisma.siteSetting.findUnique({ where: { key: SETTING_KEY }, select: { value: true } });
@@ -25,8 +43,8 @@ export async function getEmailStudioState(): Promise<EmailStudioState> {
   try {
     const parsed = JSON.parse(row.value) as Partial<EmailStudioState>;
     return {
-      drafts: Array.isArray(parsed.drafts) ? parsed.drafts : DEFAULT_TEMPLATES,
-      published: Array.isArray(parsed.published) ? parsed.published : DEFAULT_TEMPLATES,
+      drafts: mergeTemplates(parsed.drafts),
+      published: mergeTemplates(parsed.published),
       publishedAt: typeof parsed.publishedAt === "string" ? parsed.publishedAt : null,
     };
   } catch { return { drafts: DEFAULT_TEMPLATES, published: DEFAULT_TEMPLATES, publishedAt: null }; }

@@ -9,7 +9,7 @@ const fields: {key:keyof EmailTemplate; label:string; multiline?:boolean}[] = [
   {key:"headline",label:"Main headline"},{key:"body",label:"Email content",multiline:true},
   {key:"buttonLabel",label:"Button label"},{key:"buttonUrl",label:"Button destination"},
 ];
-const sample = {name:"Amina",reference:"NF-2048",phone:"+254 712 345 678",email:"amina@example.com",propertyType:"Apartment",bedrooms:"2",locations:"Kilimani, Nairobi",budget:"KSh 25,000 – KSh 40,000 per month",moveIn:"Next month",mustHaves:"Reliable water, security",notes:"Near public transport"};
+const sample = {name:"Amina",reference:"NF-2048",phone:"+254 712 345 678",email:"amina@example.com",propertyType:"Apartment",bedrooms:"2",locations:"Kilimani, Nairobi",budget:"KSh 25,000 – KSh 40,000 per month",moveIn:"Next month",mustHaves:"Reliable water, security",notes:"Near public transport",resetUrl:"https://www.nyumba-finder.com/account?mode=reset&token=preview-token",statusMessage:"Your application has been approved."};
 function interpolate(value:string){return value.replace(/\{\{([a-zA-Z][a-zA-Z0-9_]*)\}\}/g,(_,key:string)=>sample[key as keyof typeof sample] ?? "");}
 export default function EmailStudio(){
  const [state,setState]=useState<EmailStudioState|null>(null),[selected,setSelected]=useState("house_request_client"),[mode,setMode]=useState<"edit"|"preview">("edit"),[recipient,setRecipient]=useState(""),[busy,setBusy]=useState(false),[notice,setNotice]=useState(""),[error,setError]=useState("");
