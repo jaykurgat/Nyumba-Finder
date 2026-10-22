@@ -340,25 +340,59 @@ export default function ListPropertyPage() {
       reader.readAsDataURL(file);
     });
 
+  const processImageFiles = async (selectedFiles: File[]) => {
+    const imageFiles = selectedFiles.filter((file) => file.type.startsWith('image/'));
+    if (!imageFiles.length) return;
+
+    const currentImages = form.getValues('images') || [];
+    const remainingSlots = 10 - currentImages.length;
+    if (remainingSlots <= 0) {
+      toast({ title: "Maximum images reached", description: "A property can have up to 10 photos.", variant: "destructive" });
+      return;
+    }
+
+    const filesToProcess = imageFiles.slice(0, remainingSlots);
+    if (filesToProcess.length < imageFiles.length) {
+      toast({ title: "Photo limit", description: `Only ${remainingSlots} more photo(s) can be added. The first ${remainingSlots} selected image(s) will be used.` });
+    }
+
+    setIsUploading(true);
+    try {
+      const dataUris = await Promise.all(filesToProcess.map(compressImage));
+      form.setValue('images', [...(form.getValues('images') || []), ...dataUris].slice(0, 10), { shouldValidate: true, shouldDirty: true });
+    } catch (error) {
+      console.error("Error processing images:", error);
+      toast({ title: "Image Processing Error", description: "Could not process the selected image(s). Please try again.", variant: "destructive" });
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   const handleImageChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = event.target.files;
-    if (files && files.length > 0) {
-      setIsUploading(true);
-      try {
-        const currentImages = form.getValues('images') || [];
-        const dataUris = await Promise.all(Array.from(files).map(compressImage));
-        form.setValue('images', [...currentImages, ...dataUris].slice(0, 10), { shouldValidate: true, shouldDirty: true });
-      } catch (error) {
-        console.error("Error processing files:", error);
-        toast({
-          title: "Image Processing Error",
-          description: "Could not process the selected image(s). Please try again.",
-          variant: "destructive",
-        });
-      } finally {
-        setIsUploading(false);
-        event.target.value = '';
-      }
+    const files = Array.from(event.target.files || []);
+    await processImageFiles(files);
+    event.target.value = '';
+  };
+
+  const moveImage = (fromIndex: number, toIndex: number) => {
+    const images = [...(form.getValues('images') || [])];
+    if (toIndex < 0 || toIndex >= images.length || fromIndex === toIndex) return;
+    const [moved] = images.splice(fromIndex, 1);
+    images.splice(toIndex, 0, moved);
+    form.setValue('images', images, { shouldValidate: true, shouldDirty: true });
+  };
+
+  const handleImageDrop = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    const files = Array.from(event.dataTransfer.files || []);
+    if (files.length) {
+      void processImageFiles(files);
+      return;
+    }
+    const fromIndex = Number(event.dataTransfer.getData('text/plain'));
+    const targetIndex = Number(event.currentTarget.dataset.imageIndex);
+    if (Number.isInteger(fromIndex) && Number.isInteger(targetIndex) && event.dataTransfer.getData('application/x-nyumbafinder-image-order') === 'true') {
+      moveImage(fromIndex, targetIndex);
     }
   };
 
@@ -854,18 +888,41 @@ export default function ListPropertyPage() {
                           <FormItem>
                             <FormLabel>Property Images</FormLabel>
                             <FormControl>
-                              <Input
-                                type="file"
-                                multiple
-                                accept="image/*"
-                                onChange={handleImageChange}
-                                className="block w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-none file:border file:border-input file:bg-background file:text-sm file:font-medium file:text-foreground hover:file:bg-accent hover:file:text-accent-foreground disabled:opacity-50"
-                                disabled={isUploading || (watchedImages && watchedImages.length >= 10)}
-                                suppressHydrationWarning
-                              />
+                              <div
+                                tabIndex={0}
+                                onDragOver={(event) => { event.preventDefault(); event.dataTransfer.dropEffect = 'copy'; }}
+                                onDrop={(event) => { event.preventDefault(); void processImageFiles(Array.from(event.dataTransfer.files || [])); }}
+                                onPaste={(event) => {
+                                  const pastedFiles = Array.from(event.clipboardData.items)
+                                    .filter((item) => item.kind === 'file' && item.type.startsWith('image/'))
+                                    .map((item) => item.getAsFile())
+                                    .filter((file): file is File => Boolean(file));
+                                  if (pastedFiles.length) {
+                                    event.preventDefault();
+                                    void processImageFiles(pastedFiles);
+                                  }
+                                }}
+                                className="rounded-xl border-2 border-dashed border-muted-foreground/30 bg-muted/20 p-6 text-center outline-none transition-colors focus:border-primary hover:border-primary/60"
+                              >
+                                <div className="mx-auto flex max-w-xl flex-col items-center gap-2">
+                                  <div className="rounded-full bg-primary/10 p-3 text-primary"><Home className="h-6 w-6" /></div>
+                                  <p className="font-medium">Drop property photos here</p>
+                                  <p className="text-sm text-muted-foreground">Or paste a copied image here with Ctrl+V / ⌘V</p>
+                                  <p className="text-xs text-muted-foreground">Up to 10 photos · JPG, PNG, WebP and other image formats</p>
+                                  <Input
+                                    type="file"
+                                    multiple
+                                    accept="image/*"
+                                    onChange={handleImageChange}
+                                    disabled={isUploading || (watchedImages && watchedImages.length >= 10)}
+                                    className="mt-2 max-w-xs"
+                                    suppressHydrationWarning
+                                  />
+                                </div>
+                              </div>
                             </FormControl>
-                             <FormDescription>
-                              Upload up to 10 photos. NyumbaFinder automatically resizes and compresses them without cropping, so you don't need to edit them first.
+                            <FormDescription>
+                              Photos are resized and compressed without cropping. Drag thumbnails below to reorder them; the first photo is the main image.
                               {watchedImages && watchedImages.length >= 10 && " Maximum images reached."}
                             </FormDescription>
                             <FormMessage />
@@ -887,16 +944,34 @@ export default function ListPropertyPage() {
                             <Trash2 className="mr-2 h-4 w-4" /> Clear All Images
                           </Button>
                         </div>
-                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
                           {watchedImages.map((uri, index) => (
-                            <div key={uri + index} className="relative overflow-hidden rounded-none border shadow-sm">
+                            <div
+                              key={uri + index}
+                              draggable
+                              data-image-index={index}
+                              onDragStart={(event) => {
+                                event.dataTransfer.setData('text/plain', String(index));
+                                event.dataTransfer.setData('application/x-nyumbafinder-image-order', 'true');
+                                event.dataTransfer.effectAllowed = 'move';
+                              }}
+                              onDragOver={(event) => { event.preventDefault(); event.dataTransfer.dropEffect = 'move'; }}
+                              onDrop={handleImageDrop}
+                              className="relative cursor-grab overflow-hidden rounded-lg border bg-background shadow-sm active:cursor-grabbing"
+                              aria-label={`Photo ${index + 1}; drag to reorder`}
+                            >
                               <PropertyImage
                                 src={uri}
-                                alt={`Preview ${index + 1}`}
+                                alt={`Property photo ${index + 1}`}
                                 sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, 25vw"
                                 minHeightClassName="min-h-[150px]"
                                 maxHeightClassName="max-h-[240px]"
                               />
+                              {index === 0 && (
+                                <span className="absolute left-2 top-2 rounded-full bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground shadow">
+                                  Main photo
+                                </span>
+                              )}
                               <Button
                                 type="button"
                                 variant="destructive"
@@ -906,10 +981,22 @@ export default function ListPropertyPage() {
                                   const nextImages = (form.getValues('images') || []).filter((_, imageIndex) => imageIndex !== index);
                                   form.setValue('images', nextImages, { shouldValidate: true, shouldDirty: true });
                                 }}
-                                aria-label={`Remove image ${index + 1}`}
+                                aria-label={`Remove photo ${index + 1}`}
                               >
                                 <Trash2 className="h-4 w-4" />
                               </Button>
+                              {index !== 0 && (
+                                <Button
+                                  type="button"
+                                  variant="secondary"
+                                  size="sm"
+                                  className="absolute bottom-2 left-2 right-2 h-8 text-xs"
+                                  onClick={() => moveImage(index, 0)}
+                                >
+                                  Set as main
+                                </Button>
+                              )}
+                              <div className="absolute bottom-2 right-2 rounded-full bg-black/70 px-2 py-1 text-xs text-white">{index + 1}</div>
                             </div>
                           ))}
                         </div>
