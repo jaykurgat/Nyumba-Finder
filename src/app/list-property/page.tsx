@@ -347,7 +347,7 @@ export default function ListPropertyPage() {
       try {
         const currentImages = form.getValues('images') || [];
         const dataUris = await Promise.all(Array.from(files).map(compressImage));
-        form.setValue('images', [...currentImages, ...dataUris].slice(0, 5), { shouldValidate: true, shouldDirty: true });
+        form.setValue('images', [...currentImages, ...dataUris].slice(0, 10), { shouldValidate: true, shouldDirty: true });
       } catch (error) {
         console.error("Error processing files:", error);
         toast({
@@ -860,13 +860,13 @@ export default function ListPropertyPage() {
                                 accept="image/*"
                                 onChange={handleImageChange}
                                 className="block w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-none file:border file:border-input file:bg-background file:text-sm file:font-medium file:text-foreground hover:file:bg-accent hover:file:text-accent-foreground disabled:opacity-50"
-                                disabled={isUploading || (watchedImages && watchedImages.length >= 5)}
+                                disabled={isUploading || (watchedImages && watchedImages.length >= 10)}
                                 suppressHydrationWarning
                               />
                             </FormControl>
                              <FormDescription>
-                              Upload up to 5 photos. NyumbaFinder automatically resizes and compresses them without cropping, so you don't need to edit them first.
-                              {watchedImages && watchedImages.length >= 5 && " Maximum images reached."}
+                              Upload up to 10 photos. NyumbaFinder automatically resizes and compresses them without cropping, so you don't need to edit them first.
+                              {watchedImages && watchedImages.length >= 10 && " Maximum images reached."}
                             </FormDescription>
                             <FormMessage />
                              {isUploading && (
