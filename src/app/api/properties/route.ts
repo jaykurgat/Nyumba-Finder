@@ -358,8 +358,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: 'Missing or invalid required fields: title, price, and location must be valid.' }, { status: 400 });
     }
 
-    if (uploadedImages.length > 5) {
-      return NextResponse.json({ message: 'You can upload a maximum of 5 images.' }, { status: 400 });
+    if (uploadedImages.length > 10) {
+      return NextResponse.json({ message: 'You can upload a maximum of 10 images.' }, { status: 400 });
     }
 
     const result = await prisma.$transaction(async (tx) => {
