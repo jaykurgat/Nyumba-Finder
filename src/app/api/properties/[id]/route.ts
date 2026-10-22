@@ -92,14 +92,27 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       select: { id: true, url: true },
       orderBy: { createdAt: 'asc' },
     });
+    const imageUrl = (imageId: string) => '/api/properties/' + id + '?image=' + imageId;
+    const imageByStoredUrl = new Map(images.filter((image) => image.url).map((image) => [image.url as string, image]));
+    const imageById = new Map(images.map((image) => [image.id, image]));
+    const orderedImages = (property.images ?? [])
+      .map((storedUrl) => {
+        const match = storedUrl.match(/[?&]image=([^&]+)/);
+        return (match ? imageById.get(match[1]) : imageByStoredUrl.get(storedUrl)) ?? null;
+      })
+      .filter((image, index, list): image is (typeof images)[number] =>
+        Boolean(image) && list.findIndex((candidate) => candidate?.id === image?.id) === index
+      );
+    for (const image of images) {
+      if (!orderedImages.some((ordered) => ordered.id === image.id)) orderedImages.push(image);
+    }
 
     return NextResponse.json({
       ...toProperty({
       ...property,
-      // PropertyImage is the source of truth for uploaded images.
-      // Do not append property.images here or every edit would return duplicates.
+      // Keep the saved property.images order so the chosen main photo remains first.
       images: images.length
-        ? images.map((image) => '/api/properties/' + id + '?image=' + image.id)
+        ? orderedImages.map((image) => imageUrl(image.id))
         : (property.externalListings[0]?.imageUrls ?? []),
       }),
       canEdit: canManage,
@@ -282,31 +295,36 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         });
       }
 
+      const newImageIds: string[] = [];
       if (uploadedImages.length) {
         for (const image of uploadedImages) {
           const blobUrl = await storePropertyImage(id, image.data, image.mimeType);
-          await tx.propertyImage.create({
+          const stored = await tx.propertyImage.create({
             data: {
               propertyId: id,
               data: null,
               url: blobUrl,
               mimeType: image.mimeType,
             },
+            select: { id: true },
           });
+          newImageIds.push(stored.id);
         }
       }
 
-      const storedImages = await tx.propertyImage.findMany({
-        where: { propertyId: id },
-        select: { id: true },
-        orderBy: { createdAt: 'asc' },
-      });
-
+      const orderedRetainedUrls = retainedImageUrls
+        ? retainedImageUrls.filter((url) => {
+            const match = url.match(/[?&]image=([^&]+)/);
+            return Boolean(match && retainedImageIds.has(match[1]));
+          })
+        : currentImages.map((image) => imageUrl(image.id));
+      const orderedImageUrls = [
+        ...orderedRetainedUrls,
+        ...newImageIds.map((imageId) => imageUrl(imageId)),
+      ];
       await tx.property.update({
         where: { id },
-        data: {
-          images: storedImages.map((image) => imageUrl(image.id)),
-        },
+        data: { images: orderedImageUrls },
       });
     });
 
