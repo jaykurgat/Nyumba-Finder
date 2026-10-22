@@ -236,8 +236,8 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     if ('title' in data && !data.title) return NextResponse.json({ message: 'Title is required.' }, { status: 400 });
     if ('location' in data && !data.location) return NextResponse.json({ message: 'Location is required.' }, { status: 400 });
 
-    if (uploadedImages.length > 5) {
-      return NextResponse.json({ message: 'You can upload a maximum of 5 images.' }, { status: 400 });
+    if (uploadedImages.length > 10) {
+      return NextResponse.json({ message: 'You can upload a maximum of 10 images.' }, { status: 400 });
     }
 
     const currentImages = await prisma.propertyImage.findMany({
@@ -259,8 +259,8 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       : new Set(currentImages.map((image) => image.id));
 
     const finalImageCount = retainedImageIds.size + uploadedImages.length;
-    if (finalImageCount > 5) {
-      return NextResponse.json({ message: 'A property can have a maximum of 5 images.' }, { status: 400 });
+    if (finalImageCount > 10) {
+      return NextResponse.json({ message: 'A property can have a maximum of 10 images.' }, { status: 400 });
     }
 
     const removedImageUrls = retainedImageUrls
