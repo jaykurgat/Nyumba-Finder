@@ -197,12 +197,30 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     if ('images' in rawData && !uploadedImages.length) data.images = getStringArray(rawData.images);
 
     let retainedImageUrls: string[] | null = null;
+    let requestedImageOrder: ({ type: 'existing'; url: string } | { type: 'upload'; index: number })[] | null = null;
     if ('existingImages' in rawData) {
       try {
         retainedImageUrls = getStringArray(JSON.parse(String(rawData.existingImages)));
         data.images = retainedImageUrls;
       } catch {
         return NextResponse.json({ message: 'Invalid existing image data.' }, { status: 400 });
+      }
+    }
+    if ('imageOrder' in rawData) {
+      try {
+        const parsedOrder = JSON.parse(String(rawData.imageOrder));
+        if (!Array.isArray(parsedOrder) || parsedOrder.some((item) =>
+          !item || (item.type === 'existing'
+            ? typeof item.url !== 'string'
+            : item.type === 'upload'
+              ? !Number.isInteger(item.index) || item.index < 0
+              : true)
+        )) {
+          return NextResponse.json({ message: 'Invalid photo order.' }, { status: 400 });
+        }
+        requestedImageOrder = parsedOrder;
+      } catch {
+        return NextResponse.json({ message: 'Invalid photo order.' }, { status: 400 });
       }
     }
 
@@ -315,13 +333,24 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       const orderedRetainedUrls = retainedImageUrls
         ? retainedImageUrls.filter((url) => {
             const match = url.match(/[?&]image=([^&]+)/);
-            return Boolean(match && retainedImageIds.has(match[1]));
+            return !match || retainedImageIds.has(match[1]);
           })
         : currentImages.map((image) => imageUrl(image.id));
-      const orderedImageUrls = [
+      const fallbackImageOrder = [
         ...orderedRetainedUrls,
         ...newImageIds.map((imageId) => imageUrl(imageId)),
       ];
+      const orderedImageUrls = requestedImageOrder
+        ? requestedImageOrder
+            .map((entry) => {
+              if (entry.type === 'existing') {
+                return orderedRetainedUrls.includes(entry.url) ? entry.url : null;
+              }
+              return entry.index < newImageIds.length ? imageUrl(newImageIds[entry.index]) : null;
+            })
+            .filter((url): url is string => Boolean(url))
+            .filter((url, index, list) => list.indexOf(url) === index)
+        : fallbackImageOrder;
       await tx.property.update({
         where: { id },
         data: { images: orderedImageUrls },
