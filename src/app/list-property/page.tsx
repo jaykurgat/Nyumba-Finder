@@ -431,6 +431,8 @@ export default function ListPropertyPage() {
       formData.append('amenities', JSON.stringify(values.amenities || []));
 
       const existingImages: string[] = [];
+      const imageOrder: ({ type: 'existing'; url: string } | { type: 'upload'; index: number })[] = [];
+      let uploadIndex = 0;
       for (const image of values.images || []) {
         if (image.startsWith('data:')) {
           const [meta, base64] = image.split(',');
@@ -438,14 +440,18 @@ export default function ListPropertyPage() {
           const binary = atob(base64);
           const bytes = new Uint8Array(binary.length);
           for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-          formData.append('images', new File([bytes], `property-image-${Date.now()}-${existingImages.length}.jpg`, { type: mimeType }));
+          formData.append('images', new File([bytes], `property-image-${Date.now()}-${uploadIndex}.jpg`, { type: mimeType }));
+          imageOrder.push({ type: 'upload', index: uploadIndex });
+          uploadIndex += 1;
         } else if (image) {
           existingImages.push(image);
+          imageOrder.push({ type: 'existing', url: image });
         }
       }
 
       if (isEditMode) {
         formData.append('existingImages', JSON.stringify(existingImages));
+        formData.append('imageOrder', JSON.stringify(imageOrder));
       }
 
       const response = await fetch(apiUrl, {
