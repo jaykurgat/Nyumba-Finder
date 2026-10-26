@@ -45,8 +45,7 @@ export default function AdminProperties() {
     });
     const data = await response.json();
     if (!response.ok) { setError(data.message || 'Could not update partner association.'); return; }
-    const selected = partners.find(partner => partner.id === partnerContactId) || null;
-    setRows(current => current.map(row => row.id === id ? { ...row, partnerContactId: partnerContactId || null, partnerContact: selected ? { ...selected, phone: null, whatsapp: null, email: null } : null } : row));
+    await load();
   }
 
   async function remove(id: string) {
