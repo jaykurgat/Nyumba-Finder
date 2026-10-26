@@ -335,7 +335,7 @@ export async function POST(request: NextRequest) {
     const canSetPartnerContact = admin || (!!user && new Set([
       'jaykurgat1@gmail.com',
       'jaykurgat@gmail.com',
-    ]).has(user.email.trim().toLowerCase()));
+    ]).has((user.email ?? '').trim().toLowerCase()));
     if (requestedPartnerContactId && !canSetPartnerContact) return NextResponse.json({ message: 'You are not allowed to associate a partner contact.' }, { status: 403 });
     if (requestedPartnerContactId) {
       const contact = await prisma.partnerContact.findUnique({ where: { id: requestedPartnerContactId }, select: { id: true } });
