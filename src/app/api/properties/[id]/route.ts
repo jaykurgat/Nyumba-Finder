@@ -54,6 +54,10 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     const isLegacyManager = user?.email?.trim().toLowerCase() === 'info@nyumba-finder.com';
     // Legacy rows have no trustworthy historical owner. Keep them manageable by admin and the reserved management account only.
     const canManage = admin || (!!user && accessRecord.ownerId === user.id) || (accessRecord.ownerId === null && isLegacyManager);
+    const canManagePartnerContact = admin || (!!user && new Set([
+      '5eef6f49-0836-44a5-bac4-c955b217cc3f',
+      '7e448ea8-9424-453b-b912-a55cebbf9441',
+    ]).has(user.id));
     if (accessRecord.status !== 'ACTIVE' && !canManage) {
       return NextResponse.json({ message: 'Property not found' }, { status: 404 });
     }
@@ -116,6 +120,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         : (property.externalListings[0]?.imageUrls ?? []),
       }),
       canEdit: canManage,
+      ...(canManage && canManagePartnerContact ? { partnerContactId: property.partnerContactId ?? null } : {}),
     });
   } catch (error) {
     console.error('API_ROUTE_ERROR: [GET /api/properties/:id]', error);
@@ -178,6 +183,21 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     }
 
     const data: Record<string, unknown> = {};
+    const canManagePartnerContact = admin || (!!user && new Set([
+      '5eef6f49-0836-44a5-bac4-c955b217cc3f',
+      '7e448ea8-9424-453b-b912-a55cebbf9441',
+    ]).has(user.id));
+    const requestedPartnerContactId = getOptionalString(rawData.partnerContactId);
+    if (requestedPartnerContactId && !canManagePartnerContact) {
+      return NextResponse.json({ message: 'You are not allowed to associate a partner contact.' }, { status: 403 });
+    }
+    if (canManagePartnerContact && 'partnerContactId' in rawData) {
+      if (requestedPartnerContactId) {
+        const contact = await prisma.partnerContact.findUnique({ where: { id: requestedPartnerContactId }, select: { id: true } });
+        if (!contact) return NextResponse.json({ message: 'Selected partner contact was not found.' }, { status: 400 });
+      }
+      data.partnerContactId = requestedPartnerContactId ?? null;
+    }
     if ('title' in rawData) data.title = getString(rawData.title);
     if ('description' in rawData) data.description = getString(rawData.description);
     if ('location' in rawData) data.location = getString(rawData.location);
