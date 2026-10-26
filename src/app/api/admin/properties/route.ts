@@ -15,6 +15,7 @@ export async function GET(request: NextRequest) {
         ],
       } : undefined,
       include: {
+        partnerContact: { select: { id: true, companyName: true, contactName: true, phone: true, whatsapp: true, email: true } },
         propertyImages: { select: { id: true }, orderBy: { createdAt: 'asc' } },
         promotions: { orderBy: { createdAt: 'desc' }, take: 1 },
       },
@@ -29,6 +30,8 @@ export async function GET(request: NextRequest) {
       bedrooms: property.bedrooms,
       propertyType: property.propertyType,
       status: property.status,
+      partnerContactId: property.partnerContactId,
+      partnerContact: property.partnerContact,
       images: property.propertyImages.map((image) => '/api/properties/' + property.id + '?image=' + image.id),
       promotion: property.promotions[0] ? {
         id: property.promotions[0].id,
@@ -54,12 +57,21 @@ export async function PATCH(request: NextRequest) {
     const body = await request.json();
     const id = typeof body.id === 'string' ? body.id : '';
     const status = typeof body.status === 'string' ? body.status : '';
+    const hasPartnerContact = Object.prototype.hasOwnProperty.call(body, 'partnerContactId');
+    const partnerContactId = typeof body.partnerContactId === 'string' && body.partnerContactId ? body.partnerContactId : null;
     const allowed = ['DRAFT', 'PENDING_REVIEW', 'ACTIVE', 'REJECTED', 'SUSPENDED', 'EXPIRED'];
-    if (!id || !allowed.includes(status)) return NextResponse.json({ message: 'Invalid property status update.' }, { status: 400 });
+    if (!id || (!allowed.includes(status) && !hasPartnerContact)) return NextResponse.json({ message: 'Invalid property update.' }, { status: 400 });
+    if (hasPartnerContact && partnerContactId) {
+      const contact = await prisma.partnerContact.findUnique({ where: { id: partnerContactId }, select: { id: true } });
+      if (!contact) return NextResponse.json({ message: 'Selected partner contact was not found.' }, { status: 400 });
+    }
 
-    const property = await prisma.property.update({ where: { id }, data: { status: status as never } });
+    const updateData: Record<string, unknown> = {};
+    if (allowed.includes(status)) updateData.status = status;
+    if (hasPartnerContact) updateData.partnerContactId = partnerContactId;
+    const property = await prisma.property.update({ where: { id }, data: updateData as never });
     await prisma.auditLog.create({
-      data: { action: 'PROPERTY_STATUS_CHANGED', entityType: 'Property', entityId: id, details: { status } },
+      data: { action: 'PROPERTY_STATUS_CHANGED', entityType: 'Property', entityId: id, details: { ...(allowed.includes(status) ? { status } : {}), ...(hasPartnerContact ? { partnerContactId } : {}) } },
     });
     return NextResponse.json({ propertyId: property.id, status: property.status });
   } catch (error: any) {
