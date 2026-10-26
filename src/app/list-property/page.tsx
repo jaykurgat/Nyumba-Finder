@@ -90,6 +90,8 @@ export default function ListPropertyPage() {
   const [partnerContacts, setPartnerContacts] = useState<{id:string; companyName:string; contactName:string; phone:string|null; whatsapp:string|null; email:string|null}[]>([]);
   const [canManagePartnerContacts, setCanManagePartnerContacts] = useState(false);
   const [selectedPartnerContactId, setSelectedPartnerContactId] = useState("");
+  const [partnerMode, setPartnerMode] = useState<"none" | "existing" | "new">("none");
+  const [partnerDetails, setPartnerDetails] = useState({ companyName: "", contactName: "", phone: "", whatsapp: "", email: "" });
 
   const form = useForm<FormSchemaType>({
     resolver: zodResolver(formSchema),
@@ -253,6 +255,9 @@ export default function ListPropertyPage() {
           });
           setSelectedTownId(data.locationNodeId || "");
           setSelectedPartnerContactId(typeof (data as any).partnerContactId === "string" ? (data as any).partnerContactId : "");
+          const savedPartner = (data as any).partnerContact;
+          setPartnerMode(savedPartner ? "existing" : "none");
+          setPartnerDetails({ companyName: savedPartner?.companyName || "", contactName: savedPartner?.contactName || "", phone: savedPartner?.phone || "", whatsapp: savedPartner?.whatsapp || "", email: savedPartner?.email || "" });
           setMapPosition(data.latitude != null && data.longitude != null ? { lat: data.latitude, lng: data.longitude } : null);
           setLocationSource("USER_SELECTED");
         } catch (error) {
@@ -272,6 +277,8 @@ export default function ListPropertyPage() {
         setIsEditMode(false);
         setPropertyIdToEdit(null);
         setSelectedPartnerContactId("");
+        setPartnerMode("none");
+        setPartnerDetails({ companyName: "", contactName: "", phone: "", whatsapp: "", email: "" });
         setPageTitle("List Your Property");
         form.reset({ // Reset to default empty values if not in edit mode
              title: "",
@@ -442,7 +449,9 @@ export default function ListPropertyPage() {
       if (values.maxGuests !== '' && values.maxGuests !== undefined) formData.append('maxGuests', String(Number(values.maxGuests)));
       if (values.area !== undefined && values.area !== null && String(values.area) !== '') formData.append('area', String(Number(values.area)));
       formData.append('phoneNumber', values.phoneNumber || '');
-      formData.append('partnerContactId', selectedPartnerContactId);
+      formData.append('partnerContactId', partnerMode === "existing" ? selectedPartnerContactId : "");
+      formData.append('partnerMode', partnerMode);
+      if (partnerMode === "new" || (partnerMode === "existing" && selectedPartnerContactId)) formData.append('partnerContact', JSON.stringify(partnerDetails));
       formData.append('amenities', JSON.stringify(values.amenities || []));
 
       const existingImages: string[] = [];
@@ -771,31 +780,20 @@ export default function ListPropertyPage() {
                   />
 
                   {canManagePartnerContacts && (
-                    <section className="relative overflow-hidden rounded-2xl border-2 border-[#b38b43] bg-gradient-to-br from-[#fff8e8] via-[#fffdf7] to-[#f1e7d2] p-5 shadow-[0_12px_35px_rgba(91,65,25,0.13)] ring-1 ring-[#b38b43]/25 md:p-7">
+                    <section className="relative overflow-hidden rounded-2xl border-2 border-[#b38b43] bg-gradient-to-br from-[#fff8e8] via-[#fffdf7] to-[#f1e7d2] p-5 shadow-[0_12px_35px_rgba(91,65,25,0.13)] md:p-7">
                       <div className="absolute inset-y-0 left-0 w-1.5 bg-gradient-to-b from-[#d9b96e] via-[#a87c32] to-[#725020]" />
-                      <div className="flex items-start gap-4">
-                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-[#c8a45c]/60 bg-[#f1e2bf] text-[#684b1d] shadow-sm"><Home className="h-5 w-5" /></div>
-                        <div className="min-w-0">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <h2 className="text-lg font-semibold tracking-tight text-[#382b18]">Property partner details</h2>
-                            <span className="rounded-full border border-[#b38b43]/50 bg-white/80 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-[#76551e]">Optional · Internal</span>
-                          </div>
-                          <p className="mt-1 text-sm leading-6 text-[#6b5b42]">Record the agency or contact who sourced this property. These details are private to Nyumba-Finder and never appear on the public listing.</p>
-                        </div>
+                      <h2 className="text-lg font-semibold text-[#382b18]">Property partner details <span className="text-xs uppercase tracking-widest text-[#76551e]">Optional · Internal</span></h2>
+                      <p className="mt-2 text-sm leading-6 text-[#6b5b42]">Private to Nyumba-Finder and never shown on public listings.</p>
+                      <div className="mt-5 grid gap-3 sm:grid-cols-3">
+                        <button type="button" onClick={() => { setPartnerMode("none"); setSelectedPartnerContactId(""); }} className="rounded-xl border border-[#d9c9a9] bg-white p-3 text-left text-sm text-[#44351e]">No partner<span className="block text-xs">Leave blank</span></button>
+                        <button type="button" onClick={() => setPartnerMode("existing")} className="rounded-xl border border-[#d9c9a9] bg-white p-3 text-left text-sm text-[#44351e]">Use existing<span className="block text-xs">Reuse or update</span></button>
+                        <button type="button" onClick={() => { setPartnerMode("new"); setSelectedPartnerContactId(""); setPartnerDetails({ companyName: "", contactName: "", phone: "", whatsapp: "", email: "" }); }} className="rounded-xl border border-[#d9c9a9] bg-white p-3 text-left text-sm text-[#44351e]">Add new contact<span className="block text-xs">Enter details here</span></button>
                       </div>
-                      <div className="mt-5">
-                        <label className="mb-2 block text-sm font-semibold text-[#44351e]">Saved partner contact</label>
-                        <select value={selectedPartnerContactId} onChange={(event) => setSelectedPartnerContactId(event.target.value)} className="h-11 w-full rounded-lg border border-[#d4c29d] bg-white px-3 text-sm text-[#302719] outline-none transition focus:border-[#9a712f] focus:ring-2 focus:ring-[#b38b43]/25">
-                          <option value="">No partner selected</option>
-                          {partnerContacts.map((contact) => <option key={contact.id} value={contact.id}>{contact.companyName}{contact.contactName ? " — " + contact.contactName : ""}</option>)}
-                        </select>
-                        {partnerContacts.length === 0 && <p className="mt-2 text-sm text-[#796342]">No saved partner contacts yet. Partner details can be added here once inline entry is enabled.</p>}
-                      </div>
-                      <div className="mt-4 flex items-start gap-2 rounded-lg border border-[#c7b07f]/60 bg-[#f7edd7]/80 px-3 py-2.5 text-xs leading-5 text-[#6d5937]"><span className="mt-0.5">🔒</span><p>Private internal information. Partner phone, WhatsApp, and email are not displayed to tenants or included in public listing details.</p></div>
+                      {partnerMode === "existing" && <div className="mt-4"><label className="mb-2 block text-sm font-medium text-[#44351e]">Saved partner contact</label><select value={selectedPartnerContactId} onChange={(event) => { const id = event.target.value; setSelectedPartnerContactId(id); const contact = partnerContacts.find((item) => item.id === id); if (contact) setPartnerDetails({ companyName: contact.companyName || "", contactName: contact.contactName || "", phone: contact.phone || "", whatsapp: contact.whatsapp || "", email: contact.email || "" }); }} className="h-11 w-full rounded-lg border border-[#d4c29d] bg-white px-3 text-sm"><option value="">Choose a contact</option>{partnerContacts.map((contact) => <option key={contact.id} value={contact.id}>{contact.companyName}{contact.contactName ? " — " + contact.contactName : ""}</option>)}</select>{partnerContacts.length === 0 && <p className="mt-2 text-sm text-[#796342]">No saved contacts yet. Choose Add new contact to create one here.</p>}</div>}
+                      {(partnerMode === "new" || (partnerMode === "existing" && selectedPartnerContactId)) && <div className="mt-4 grid gap-4 rounded-xl border border-[#d8c49a] bg-white/90 p-4 sm:grid-cols-2">{([{key:"companyName",label:"Agency / company name",required:true},{key:"contactName",label:"Contact person"},{key:"phone",label:"Phone number"},{key:"whatsapp",label:"WhatsApp number"},{key:"email",label:"Email address"}] as const).map((field) => <label key={field.key} className="block space-y-1.5 text-sm font-medium text-[#44351e]">{field.label}{field.required && " *"}<input required={!!field.required} type={field.key === "email" ? "email" : "text"} value={partnerDetails[field.key]} onChange={(event) => setPartnerDetails((current) => ({ ...current, [field.key]: event.target.value }))} className="h-11 w-full rounded-lg border border-[#d4c29d] bg-white px-3 text-sm" /></label>)}</div>}
+                      <p className="mt-4 rounded-lg border border-[#c7b07f]/60 bg-[#f7edd7]/80 px-3 py-2.5 text-xs leading-5 text-[#6d5937]">🔒 Private internal information — never shown to tenants.</p>
                     </section>
                   )}
-
-
                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                        <FormField
                         control={form.control}
