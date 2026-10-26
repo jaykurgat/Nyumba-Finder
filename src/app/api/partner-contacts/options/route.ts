@@ -12,7 +12,7 @@ export async function GET() {
   try {
     const user = await getCurrentUser();
     const admin = await isAdminSession();
-    if (!admin && (!user || !PARTNER_ACCESS_EMAILS.has(user.email.trim().toLowerCase()))) {
+    if (!admin && (!user || !PARTNER_ACCESS_EMAILS.has((user.email ?? '').trim().toLowerCase()))) {
       return NextResponse.json({ contacts: [] }, { status: 200, headers: { "Cache-Control": "private, no-store" } });
     }
 
