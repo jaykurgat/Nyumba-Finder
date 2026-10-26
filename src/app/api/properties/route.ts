@@ -331,6 +331,13 @@ export async function POST(request: NextRequest) {
     const sizeSqm = getOptionalNumber(rawData.area);
     const amenities = getStringArray(rawData.amenities);
     const phoneNumber = getOptionalString(rawData.phoneNumber);
+    const requestedPartnerContactId = getOptionalString(rawData.partnerContactId);
+    const canSetPartnerContact = admin || user?.email?.trim().toLowerCase() === 'jaykurgat1@gmail.com';
+    if (requestedPartnerContactId && !canSetPartnerContact) return NextResponse.json({ message: 'You are not allowed to associate a partner contact.' }, { status: 403 });
+    if (requestedPartnerContactId) {
+      const contact = await prisma.partnerContact.findUnique({ where: { id: requestedPartnerContactId }, select: { id: true } });
+      if (!contact) return NextResponse.json({ message: 'Selected partner contact was not found.' }, { status: 400 });
+    }
     const propertyType = getString(rawData.propertyType, 'Apartment');
     const listingType = getString(rawData.listingType, 'FOR_RENT');
     const pricePeriod = getString(rawData.pricePeriod, listingType === 'FOR_SALE' ? 'ONE_TIME' : listingType === 'SHORT_STAY' ? 'NIGHT' : 'MONTH');
@@ -406,6 +413,7 @@ export async function POST(request: NextRequest) {
         data: {
           ownerId: user?.id ?? null,
           title, description, location, price, listingType, pricePeriod, shortStayMinNights, shortStayMaxNights, cleaningFee, securityDeposit, maxGuests, bedrooms, bathrooms, sizeSqm, amenities, images: [], phoneNumber, propertyType, status: 'ACTIVE',
+          ...(canSetPartnerContact ? { partnerContactId: requestedPartnerContactId ?? null } : {}),
           latitude,
           longitude,
           countyId,
