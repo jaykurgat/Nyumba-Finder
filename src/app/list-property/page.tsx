@@ -88,6 +88,7 @@ export default function ListPropertyPage() {
   const [mapPosition, setMapPosition] = useState<{ lat: number; lng: number } | null>(null);
   const [locationSource, setLocationSource] = useState<"USER_SELECTED" | "BROWSER_GEOLOCATION">("USER_SELECTED");
   const [partnerContacts, setPartnerContacts] = useState<{id:string; companyName:string; contactName:string; phone:string|null; whatsapp:string|null; email:string|null}[]>([]);
+  const [canManagePartnerContacts, setCanManagePartnerContacts] = useState(false);
   const [selectedPartnerContactId, setSelectedPartnerContactId] = useState("");
 
   const form = useForm<FormSchemaType>({
@@ -122,8 +123,8 @@ export default function ListPropertyPage() {
     let cancelled = false;
     fetch("/api/partner-contacts/options", { cache: "no-store" })
       .then(async (response) => response.ok ? response.json() : { contacts: [] })
-      .then((data) => { if (!cancelled) setPartnerContacts(Array.isArray(data.contacts) ? data.contacts : []); })
-      .catch(() => { if (!cancelled) setPartnerContacts([]); });
+      .then((data) => { if (!cancelled) { setCanManagePartnerContacts(data.authorized === true); setPartnerContacts(Array.isArray(data.contacts) ? data.contacts : []); } })
+      .catch(() => { if (!cancelled) { setCanManagePartnerContacts(false); setPartnerContacts([]); } });
     return () => { cancelled = true; };
   }, []);
 
@@ -769,7 +770,7 @@ export default function ListPropertyPage() {
                     )}
                   />
 
-                  {partnerContacts.length > 0 && (
+                  {canManagePartnerContacts && (
                     <div className="space-y-3 rounded-none border bg-card p-5 shadow-sm md:p-6">
                       <div>
                         <h2 className="text-base font-semibold">Property partner (optional)</h2>
@@ -785,6 +786,7 @@ export default function ListPropertyPage() {
                           <option key={contact.id} value={contact.id}>{contact.companyName}{contact.contactName ? " — " + contact.contactName : ""}</option>
                         ))}
                       </select>
+                      {partnerContacts.length === 0 && <p className="text-sm text-muted-foreground">No partner contacts have been added yet. Add contacts under Admin → Partner Contacts to make them available here.</p>}
                     </div>
                   )}
 
