@@ -55,9 +55,9 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     // Legacy rows have no trustworthy historical owner. Keep them manageable by admin and the reserved management account only.
     const canManage = admin || (!!user && accessRecord.ownerId === user.id) || (accessRecord.ownerId === null && isLegacyManager);
     const canManagePartnerContact = admin || (!!user && new Set([
-      '5eef6f49-0836-44a5-bac4-c955b217cc3f',
-      '7e448ea8-9424-453b-b912-a55cebbf9441',
-    ]).has(user.id));
+      'jaykurgat1@gmail.com',
+      'jaykurgat@gmail.com',
+    ]).has(user.email.trim().toLowerCase()));
     if (accessRecord.status !== 'ACTIVE' && !canManage) {
       return NextResponse.json({ message: 'Property not found' }, { status: 404 });
     }
@@ -184,9 +184,9 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
     const data: Record<string, unknown> = {};
     const canManagePartnerContact = admin || (!!user && new Set([
-      '5eef6f49-0836-44a5-bac4-c955b217cc3f',
-      '7e448ea8-9424-453b-b912-a55cebbf9441',
-    ]).has(user.id));
+      'jaykurgat1@gmail.com',
+      'jaykurgat@gmail.com',
+    ]).has(user.email.trim().toLowerCase()));
     const requestedPartnerContactId = getOptionalString(rawData.partnerContactId);
     if (requestedPartnerContactId && !canManagePartnerContact) {
       return NextResponse.json({ message: 'You are not allowed to associate a partner contact.' }, { status: 403 });
