@@ -771,23 +771,28 @@ export default function ListPropertyPage() {
                   />
 
                   {canManagePartnerContacts && (
-                    <div className="space-y-3 rounded-none border bg-card p-5 shadow-sm md:p-6">
-                      <div>
-                        <h2 className="text-base font-semibold">Property partner (optional)</h2>
-                        <p className="mt-1 text-sm text-muted-foreground">If this property came through a real estate partner, select their contact so the Nyumba-Finder team can reach them quickly when tenants enquire. This information is for internal coordination and is not shown on the public listing.</p>
+                    <section className="relative overflow-hidden rounded-2xl border-2 border-[#b38b43] bg-gradient-to-br from-[#fff8e8] via-[#fffdf7] to-[#f1e7d2] p-5 shadow-[0_12px_35px_rgba(91,65,25,0.13)] ring-1 ring-[#b38b43]/25 md:p-7">
+                      <div className="absolute inset-y-0 left-0 w-1.5 bg-gradient-to-b from-[#d9b96e] via-[#a87c32] to-[#725020]" />
+                      <div className="flex items-start gap-4">
+                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-[#c8a45c]/60 bg-[#f1e2bf] text-[#684b1d] shadow-sm"><Home className="h-5 w-5" /></div>
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <h2 className="text-lg font-semibold tracking-tight text-[#382b18]">Property partner details</h2>
+                            <span className="rounded-full border border-[#b38b43]/50 bg-white/80 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-[#76551e]">Optional · Internal</span>
+                          </div>
+                          <p className="mt-1 text-sm leading-6 text-[#6b5b42]">Record the agency or contact who sourced this property. These details are private to Nyumba-Finder and never appear on the public listing.</p>
+                        </div>
                       </div>
-                      <select
-                        value={selectedPartnerContactId}
-                        onChange={(event) => setSelectedPartnerContactId(event.target.value)}
-                        className="h-11 w-full rounded-none border bg-background px-3 text-sm"
-                      >
-                        <option value="">No partner selected</option>
-                        {partnerContacts.map((contact) => (
-                          <option key={contact.id} value={contact.id}>{contact.companyName}{contact.contactName ? " — " + contact.contactName : ""}</option>
-                        ))}
-                      </select>
-                      {partnerContacts.length === 0 && <p className="text-sm text-muted-foreground">No partner contacts have been added yet. Add contacts under Admin → Partner Contacts to make them available here.</p>}
-                    </div>
+                      <div className="mt-5">
+                        <label className="mb-2 block text-sm font-semibold text-[#44351e]">Saved partner contact</label>
+                        <select value={selectedPartnerContactId} onChange={(event) => setSelectedPartnerContactId(event.target.value)} className="h-11 w-full rounded-lg border border-[#d4c29d] bg-white px-3 text-sm text-[#302719] outline-none transition focus:border-[#9a712f] focus:ring-2 focus:ring-[#b38b43]/25">
+                          <option value="">No partner selected</option>
+                          {partnerContacts.map((contact) => <option key={contact.id} value={contact.id}>{contact.companyName}{contact.contactName ? " — " + contact.contactName : ""}</option>)}
+                        </select>
+                        {partnerContacts.length === 0 && <p className="mt-2 text-sm text-[#796342]">No saved partner contacts yet. Partner details can be added here once inline entry is enabled.</p>}
+                      </div>
+                      <div className="mt-4 flex items-start gap-2 rounded-lg border border-[#c7b07f]/60 bg-[#f7edd7]/80 px-3 py-2.5 text-xs leading-5 text-[#6d5937]"><span className="mt-0.5">🔒</span><p>Private internal information. Partner phone, WhatsApp, and email are not displayed to tenants or included in public listing details.</p></div>
+                    </section>
                   )}
 
 
