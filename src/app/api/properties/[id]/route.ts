@@ -120,7 +120,10 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         : (property.externalListings[0]?.imageUrls ?? []),
       }),
       canEdit: canManage,
-      ...(canManage && canManagePartnerContact ? { partnerContactId: property.partnerContactId ?? null } : {}),
+      ...(canManage && canManagePartnerContact ? {
+        partnerContactId: property.partnerContactId ?? null,
+        partnerContact: property.partnerContactId ? await prisma.partnerContact.findUnique({ where: { id: property.partnerContactId }, select: { id: true, companyName: true, contactName: true, phone: true, whatsapp: true, email: true } }) : null,
+      } : {}),
     });
   } catch (error) {
     console.error('API_ROUTE_ERROR: [GET /api/properties/:id]', error);
@@ -191,12 +194,32 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     if (requestedPartnerContactId && !canManagePartnerContact) {
       return NextResponse.json({ message: 'You are not allowed to associate a partner contact.' }, { status: 403 });
     }
-    if (canManagePartnerContact && 'partnerContactId' in rawData) {
+    if (canManagePartnerContact && ('partnerContactId' in rawData || 'partnerMode' in rawData)) {
+      let resolvedPartnerContactId = requestedPartnerContactId;
+      if (rawData.partnerMode === 'new' || (rawData.partnerMode === 'existing' && requestedPartnerContactId && rawData.partnerContact)) {
+        let details: any = {};
+        try { details = JSON.parse(String(rawData.partnerContact || '{}')); } catch { return NextResponse.json({ message: 'Invalid partner contact details.' }, { status: 400 }); }
+        const companyName = typeof details.companyName === 'string' ? details.companyName.trim() : '';
+        if (!companyName) return NextResponse.json({ message: 'Agency / company name is required for a partner.' }, { status: 400 });
+        const contactData = {
+          companyName: companyName.slice(0, 200),
+          contactName: typeof details.contactName === 'string' ? details.contactName.trim().slice(0, 200) || null : null,
+          phone: typeof details.phone === 'string' ? details.phone.trim().slice(0, 80) || null : null,
+          whatsapp: typeof details.whatsapp === 'string' ? details.whatsapp.trim().slice(0, 80) || null : null,
+          email: typeof details.email === 'string' ? details.email.trim().slice(0, 200) || null : null,
+        };
+        if (rawData.partnerMode === 'new') {
+          const createdContact = await prisma.partnerContact.create({ data: contactData });
+          resolvedPartnerContactId = createdContact.id;
+        } else if (requestedPartnerContactId) {
+          await prisma.partnerContact.update({ where: { id: requestedPartnerContactId }, data: contactData });
+        }
+      }
       if (requestedPartnerContactId) {
         const contact = await prisma.partnerContact.findUnique({ where: { id: requestedPartnerContactId }, select: { id: true } });
-        if (!contact) return NextResponse.json({ message: 'Selected partner contact was not found.' }, { status: 400 });
+        if (!contact && rawData.partnerMode !== 'new') return NextResponse.json({ message: 'Selected partner contact was not found.' }, { status: 400 });
       }
-      data.partnerContactId = requestedPartnerContactId ?? null;
+      data.partnerContactId = rawData.partnerMode === 'none' ? null : (resolvedPartnerContactId ?? null);
     }
     if ('title' in rawData) data.title = getString(rawData.title);
     if ('description' in rawData) data.description = getString(rawData.description);
