@@ -71,7 +71,7 @@ export async function PATCH(request: NextRequest) {
     if (hasPartnerContact) updateData.partnerContactId = partnerContactId;
     const property = await prisma.property.update({ where: { id }, data: updateData as never });
     await prisma.auditLog.create({
-      data: { action: 'PROPERTY_STATUS_CHANGED', entityType: 'Property', entityId: id, details: { ...(allowed.includes(status) ? { status } : {}), ...(hasPartnerContact ? { partnerContactId } : {}) } },
+      data: { action: hasPartnerContact && !allowed.includes(status) ? 'PROPERTY_PARTNER_SOURCE_CHANGED' : 'PROPERTY_UPDATED', entityType: 'Property', entityId: id, details: { ...(allowed.includes(status) ? { status } : {}), ...(hasPartnerContact ? { partnerContactId } : {}) } },
     });
     return NextResponse.json({ propertyId: property.id, status: property.status });
   } catch (error: any) {
