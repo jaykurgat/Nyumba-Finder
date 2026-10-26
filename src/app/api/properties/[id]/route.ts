@@ -57,7 +57,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     const canManagePartnerContact = admin || (!!user && new Set([
       'jaykurgat1@gmail.com',
       'jaykurgat@gmail.com',
-    ]).has(user.email.trim().toLowerCase()));
+    ]).has((user.email ?? '').trim().toLowerCase()));
     if (accessRecord.status !== 'ACTIVE' && !canManage) {
       return NextResponse.json({ message: 'Property not found' }, { status: 404 });
     }
@@ -186,7 +186,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     const canManagePartnerContact = admin || (!!user && new Set([
       'jaykurgat1@gmail.com',
       'jaykurgat@gmail.com',
-    ]).has(user.email.trim().toLowerCase()));
+    ]).has((user.email ?? '').trim().toLowerCase()));
     const requestedPartnerContactId = getOptionalString(rawData.partnerContactId);
     if (requestedPartnerContactId && !canManagePartnerContact) {
       return NextResponse.json({ message: 'You are not allowed to associate a partner contact.' }, { status: 403 });
