@@ -87,6 +87,8 @@ export default function ListPropertyPage() {
   const [areasLoading, setAreasLoading] = useState(false);
   const [mapPosition, setMapPosition] = useState<{ lat: number; lng: number } | null>(null);
   const [locationSource, setLocationSource] = useState<"USER_SELECTED" | "BROWSER_GEOLOCATION">("USER_SELECTED");
+  const [partnerContacts, setPartnerContacts] = useState<{id:string; companyName:string; contactName:string; phone:string|null; whatsapp:string|null; email:string|null}[]>([]);
+  const [selectedPartnerContactId, setSelectedPartnerContactId] = useState("");
 
   const form = useForm<FormSchemaType>({
     resolver: zodResolver(formSchema),
@@ -115,6 +117,15 @@ export default function ListPropertyPage() {
   const watchedLocation = form.watch('location');
   const watchedCountyId = form.watch('countyId');
   const watchedListingType = form.watch('listingType');
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/partner-contacts/options", { cache: "no-store" })
+      .then(async (response) => response.ok ? response.json() : { contacts: [] })
+      .then((data) => { if (!cancelled) setPartnerContacts(Array.isArray(data.contacts) ? data.contacts : []); })
+      .catch(() => { if (!cancelled) setPartnerContacts([]); });
+    return () => { cancelled = true; };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -240,6 +251,7 @@ export default function ListPropertyPage() {
             locationNodeId: data.locationNodeId || "",
           });
           setSelectedTownId(data.locationNodeId || "");
+          setSelectedPartnerContactId(typeof (data as any).partnerContactId === "string" ? (data as any).partnerContactId : "");
           setMapPosition(data.latitude != null && data.longitude != null ? { lat: data.latitude, lng: data.longitude } : null);
           setLocationSource("USER_SELECTED");
         } catch (error) {
@@ -258,6 +270,7 @@ export default function ListPropertyPage() {
     } else {
         setIsEditMode(false);
         setPropertyIdToEdit(null);
+        setSelectedPartnerContactId("");
         setPageTitle("List Your Property");
         form.reset({ // Reset to default empty values if not in edit mode
              title: "",
@@ -428,6 +441,7 @@ export default function ListPropertyPage() {
       if (values.maxGuests !== '' && values.maxGuests !== undefined) formData.append('maxGuests', String(Number(values.maxGuests)));
       if (values.area !== undefined && values.area !== null && String(values.area) !== '') formData.append('area', String(Number(values.area)));
       formData.append('phoneNumber', values.phoneNumber || '');
+      formData.append('partnerContactId', selectedPartnerContactId);
       formData.append('amenities', JSON.stringify(values.amenities || []));
 
       const existingImages: string[] = [];
@@ -754,6 +768,25 @@ export default function ListPropertyPage() {
                       </FormItem>
                     )}
                   />
+
+                  {partnerContacts.length > 0 && (
+                    <div className="space-y-3 rounded-none border bg-card p-5 shadow-sm md:p-6">
+                      <div>
+                        <h2 className="text-base font-semibold">Property partner (optional)</h2>
+                        <p className="mt-1 text-sm text-muted-foreground">If this property came through a real estate partner, select their contact so the Nyumba-Finder team can reach them quickly when tenants enquire. This information is for internal coordination and is not shown on the public listing.</p>
+                      </div>
+                      <select
+                        value={selectedPartnerContactId}
+                        onChange={(event) => setSelectedPartnerContactId(event.target.value)}
+                        className="h-11 w-full rounded-none border bg-background px-3 text-sm"
+                      >
+                        <option value="">No partner selected</option>
+                        {partnerContacts.map((contact) => (
+                          <option key={contact.id} value={contact.id}>{contact.companyName}{contact.contactName ? " — " + contact.contactName : ""}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
 
 
                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
