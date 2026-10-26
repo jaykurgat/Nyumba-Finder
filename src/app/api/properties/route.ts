@@ -341,6 +341,22 @@ export async function POST(request: NextRequest) {
       const contact = await prisma.partnerContact.findUnique({ where: { id: requestedPartnerContactId }, select: { id: true } });
       if (!contact) return NextResponse.json({ message: 'Selected partner contact was not found.' }, { status: 400 });
     }
+    let resolvedPartnerContactId: string | undefined = requestedPartnerContactId;
+    if (canSetPartnerContact && rawData.partnerMode === 'new') {
+      let details: any;
+      try { details = JSON.parse(String(rawData.partnerContact || '{}')); } catch { return NextResponse.json({ message: 'Invalid partner contact details.' }, { status: 400 }); }
+      const companyName = typeof details.companyName === 'string' ? details.companyName.trim() : '';
+      if (!companyName) return NextResponse.json({ message: 'Agency / company name is required for a new partner.' }, { status: 400 });
+      const createdContact = await prisma.partnerContact.create({ data: {
+        companyName: companyName.slice(0, 200),
+        contactName: typeof details.contactName === 'string' ? details.contactName.trim().slice(0, 200) || null : null,
+        phone: typeof details.phone === 'string' ? details.phone.trim().slice(0, 80) || null : null,
+        whatsapp: typeof details.whatsapp === 'string' ? details.whatsapp.trim().slice(0, 80) || null : null,
+        email: typeof details.email === 'string' ? details.email.trim().slice(0, 200) || null : null,
+      }});
+      resolvedPartnerContactId = createdContact.id;
+    }
+    if (canSetPartnerContact && rawData.partnerMode === 'none') resolvedPartnerContactId = undefined;
     const propertyType = getString(rawData.propertyType, 'Apartment');
     const listingType = getString(rawData.listingType, 'FOR_RENT');
     const pricePeriod = getString(rawData.pricePeriod, listingType === 'FOR_SALE' ? 'ONE_TIME' : listingType === 'SHORT_STAY' ? 'NIGHT' : 'MONTH');
@@ -416,7 +432,7 @@ export async function POST(request: NextRequest) {
         data: {
           ownerId: user?.id ?? null,
           title, description, location, price, listingType, pricePeriod, shortStayMinNights, shortStayMaxNights, cleaningFee, securityDeposit, maxGuests, bedrooms, bathrooms, sizeSqm, amenities, images: [], phoneNumber, propertyType, status: 'ACTIVE',
-          ...(canSetPartnerContact ? { partnerContactId: requestedPartnerContactId ?? null } : {}),
+          ...(canSetPartnerContact ? { partnerContactId: resolvedPartnerContactId ?? null } : {}),
           latitude,
           longitude,
           countyId,
