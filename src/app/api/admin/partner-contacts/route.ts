@@ -25,10 +25,13 @@ export async function GET() {
   try {
     await requireAdmin();
     const contacts = await prisma.partnerContact.findMany({
-      include: { _count: { select: { properties: true } } },
+      include: {
+        _count: { select: { properties: true } },
+        properties: { select: { id: true, title: true, location: true, status: true }, orderBy: { updatedAt: "desc" }, take: 100 },
+      },
       orderBy: [{ companyName: "asc" }, { contactName: "asc" }],
     });
-    return NextResponse.json({ contacts: contacts.map(({ _count, ...contact }) => ({ ...contact, propertyCount: _count.properties })) });
+    return NextResponse.json({ contacts: contacts.map(({ _count, properties, ...contact }) => ({ ...contact, propertyCount: _count.properties, properties })) });
   } catch (error) {
     if (unauthorized(error)) return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     console.error("ADMIN_PARTNER_CONTACTS_GET", error);
