@@ -8,7 +8,7 @@ type Contact = {
   phone: string | null; whatsapp: string | null; email: string | null; website: string | null;
   notes: string; propertyCount: number; updatedAt: string;
 };
-type Draft = Omit<Contact, "id" | "propertyCount" | "updatedAt">;
+type Draft = Omit<Contact, "id" | "propertyCount" | "updatedAt" | "properties">;
 const empty: Draft = { companyName: "", contactName: "", role: "", phone: "", whatsapp: "", email: "", website: "", notes: "" };
 const fields: { key: keyof Draft; label: string; placeholder: string; type?: string }[] = [
   { key: "companyName", label: "Partner company name *", placeholder: "Company or agency name" },
