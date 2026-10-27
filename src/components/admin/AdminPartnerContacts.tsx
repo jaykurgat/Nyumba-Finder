@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 
 type Contact = {
-  id: string; companyName: string; contactName: string | null; role: string | null;
+  id: string; companyName: string; contactName: string | null; role: string | null; properties: { id: string; title: string; location: string; status: string }[];
   phone: string | null; whatsapp: string | null; email: string | null; website: string | null;
   notes: string; propertyCount: number; updatedAt: string;
 };
@@ -87,6 +87,7 @@ export default function AdminPartnerContacts() {
         <div className="mt-4 space-y-3">
           {visible.map(c => <article key={c.id} className="rounded-xl border border-[#e2e6df] bg-white p-4">
             <div className="flex flex-wrap items-start justify-between gap-3"><div><h3 className="font-semibold">{c.companyName}</h3>{c.contactName && <p className="mt-0.5 text-sm text-[#657267]">{c.contactName}{c.role ? " · " + c.role : ""}</p>}<p className="mt-1 text-xs text-[#788279]">{c.propertyCount} associated {c.propertyCount === 1 ? "property" : "properties"}</p></div><button onClick={() => startEdit(c)} className="rounded-lg border px-3 py-2 text-xs font-semibold hover:bg-[#f7f8f5]">Edit details</button></div>
+            {c.properties?.length > 0 && <div className="mt-3 border-t border-[#edf0ea] pt-3"><p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[#657267]">Linked properties</p><ul className="space-y-2">{c.properties.map(property => <li key={property.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-[#f7f8f5] px-3 py-2"><div className="min-w-0"><p className="truncate text-sm font-medium">{property.title}</p><p className="text-xs text-[#788279]">{property.location} · {property.status.replace(/_/g, " ")}</p></div><Link href={"/list-property?edit=" + encodeURIComponent(property.id)} className="shrink-0 text-xs font-semibold underline">Open property</Link></li>)}</ul>{c.propertyCount > c.properties.length && <p className="mt-2 text-xs text-[#788279]">Showing {c.properties.length} of {c.propertyCount} linked properties.</p>}</div>}
             <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-sm">
               {c.phone && <a className="underline" href={"tel:" + c.phone}>Call {c.phone}</a>}
               {c.whatsapp && <a className="underline" target="_blank" rel="noreferrer" href={"https://wa.me/" + c.whatsapp.replace(/[^\d]/g, "")}>WhatsApp</a>}
