@@ -110,8 +110,8 @@ export default function ComparePropertiesPage() {
               { label: "Location", render: (p: Property) => <span className="inline-flex items-start gap-2"><MapPin className="mt-0.5 h-4 w-4 shrink-0 text-[#74856b]" />{p.location || "Not provided"}</span> },
               { label: "Listing type", render: (p: Property) => p.listingType === "FOR_SALE" ? "For sale" : p.listingType === "SHORT_STAY" ? "Short stay" : "For rent" },
               { label: "Property type", render: (p: Property) => p.propertyType || "Not provided" },
-              { label: "Bedrooms", render: (p: Property) => p.bedrooms === 0 ? "Studio" : p.bedrooms ?? "Not provided" },
-              { label: "Bathrooms", render: (p: Property) => p.bathrooms ?? "Not provided" },
+              { label: "Bedrooms", render: (p: Property) => p.propertyType === "Land" ? "Not applicable" : p.bedrooms === 0 ? "Studio" : p.bedrooms ?? "Not provided" },
+              { label: "Bathrooms", render: (p: Property) => p.propertyType === "Land" ? "Not applicable" : p.bathrooms ?? "Not provided" },
               { label: "Floor area", render: (p: Property) => p.area ? p.area + " m²" : "Not provided" },
               { label: "Amenities", render: (p: Property) => p.amenities?.length ? p.amenities.join(", ") : "Not provided" },
             ].map((row, index) => <div key={row.label} className="contents">

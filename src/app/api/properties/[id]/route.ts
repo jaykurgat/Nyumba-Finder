@@ -234,7 +234,9 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     if ('securityDeposit' in rawData) data.securityDeposit = getOptionalNumber(rawData.securityDeposit) ?? null;
     if ('maxGuests' in rawData) data.maxGuests = getOptionalNumber(rawData.maxGuests) ?? null;
     if ('bedrooms' in rawData) data.bedrooms = Math.max(0, Math.trunc(getNumber(rawData.bedrooms)));
-    if ('bathrooms' in rawData) data.bathrooms = Math.max(1, Math.trunc(getNumber(rawData.bathrooms, 1)));
+    if ('bathrooms' in rawData) data.bathrooms = String(rawData.propertyType ?? '') === 'Land'
+      ? Math.max(0, Math.trunc(getNumber(rawData.bathrooms)))
+      : Math.max(1, Math.trunc(getNumber(rawData.bathrooms, 1)));
     if ('area' in rawData) data.sizeSqm = getOptionalNumber(rawData.area) ?? null;
     if ('amenities' in rawData) data.amenities = getStringArray(rawData.amenities);
     if ('images' in rawData && !uploadedImages.length) data.images = getStringArray(rawData.images);

@@ -328,12 +328,12 @@ export default function PropertyDetailPage({ params: paramsProp }: { params: Pro
                   <DetailStat
                     icon={BedDouble}
                     label="Bedrooms"
-                    value={property.bedrooms === 0 ? 'Studio' : String(property.bedrooms)}
+                    value={property.propertyType === 'Land' ? 'Not applicable' : property.bedrooms === 0 ? 'Studio' : String(property.bedrooms)}
                   />
                   <DetailStat
                     icon={Bath}
                     label="Bathrooms"
-                    value={String(property.bathrooms)}
+                    value={property.propertyType === 'Land' ? 'Not applicable' : String(property.bathrooms)}
                   />
                   {property.area !== undefined && property.area > 0 ? (
                     <DetailStat icon={Ruler} label="Floor area" value={property.area + ' m²'} />
@@ -470,11 +470,11 @@ export default function PropertyDetailPage({ params: paramsProp }: { params: Pro
                 </div>
                 <div className="flex items-center justify-between border-b pb-3 text-sm">
                   <span className="text-muted-foreground">Bedrooms</span>
-                  <span className="font-medium">{property.bedrooms === 0 ? 'Studio' : property.bedrooms}</span>
+                  <span className="font-medium">{property.propertyType === 'Land' ? 'Not applicable' : property.bedrooms === 0 ? 'Studio' : property.bedrooms}</span>
                 </div>
                 <div className="flex items-center justify-between border-b pb-3 text-sm">
                   <span className="text-muted-foreground">Bathrooms</span>
-                  <span className="font-medium">{property.bathrooms}</span>
+                  <span className="font-medium">{property.propertyType === 'Land' ? 'Not applicable' : property.bathrooms}</span>
                 </div>
                 {property.area !== undefined && property.area > 0 && (
                   <div className="flex items-center justify-between text-sm">
@@ -562,7 +562,7 @@ export default function PropertyDetailPage({ params: paramsProp }: { params: Pro
                     <p className="line-clamp-2 min-h-9 text-sm font-semibold leading-4 group-hover:text-primary">{item.title}</p>
                     <p className="flex items-center gap-1 truncate text-[11px] text-muted-foreground"><MapPin className="h-3 w-3 shrink-0" />{item.location}</p>
                     <p className="text-sm font-bold tracking-tight">Ksh {item.price.toLocaleString()}<span className="ml-1 text-[10px] font-medium text-muted-foreground">{item.listingType === 'SHORT_STAY' ? '/ night' : item.listingType === 'FOR_SALE' ? 'sale' : item.pricePeriod === 'WEEK' ? '/ week' : '/ month'}</span></p>
-                    <div className="flex flex-wrap gap-x-2 gap-y-1 text-[11px] text-muted-foreground"><span>{item.bedrooms === 0 ? 'Studio' : item.bedrooms + ' bed'}</span><span>{item.bathrooms} bath</span>{item.area ? <span>{item.area} m²</span> : null}</div>
+                    <div className="flex flex-wrap gap-x-2 gap-y-1 text-[11px] text-muted-foreground">{item.propertyType !== 'Land' && <><span>{item.bedrooms === 0 ? 'Studio' : item.bedrooms + ' bed'}</span><span>{item.bathrooms} bath</span></>}{item.area ? <span>{item.area} m²</span> : null}</div>
                   </div>
                 </Link>
               ))}

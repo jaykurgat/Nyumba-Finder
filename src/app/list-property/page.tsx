@@ -49,7 +49,7 @@ const formSchema = z.object({
   securityDeposit: z.preprocess((val) => (val === undefined || val === null || String(val).trim() === "" ? undefined : Number(val)), z.number().nonnegative().optional()),
   maxGuests: z.coerce.number().int().positive().optional().or(z.literal("")),
   bedrooms: z.coerce.number().int().min(0, "Number of bedrooms cannot be negative."),
-  bathrooms: z.coerce.number().int().min(1, "Must have at least 1 bathroom."),
+  bathrooms: z.coerce.number().int().min(0, "Bathrooms cannot be negative."),
   area: z.preprocess(
     (val) => (String(val).trim() === "" || val === undefined || val === null ? undefined : Number(val)),
     z.number().positive("Area must be a positive number if provided.").optional()
@@ -60,6 +60,10 @@ const formSchema = z.object({
     .or(z.literal('')),
   amenities: z.array(z.string()).optional().default([]),
   images: z.array(z.string()).optional().default([]), // For client-side preview only
+}).superRefine((values, context) => {
+  if (values.propertyType !== "Land" && values.bathrooms < 1) {
+    context.addIssue({ code: z.ZodIssueCode.custom, path: ["bathrooms"], message: "Must have at least 1 bathroom." });
+  }
 });
 
 type FormSchemaType = z.infer<typeof formSchema>;
@@ -120,6 +124,7 @@ export default function ListPropertyPage() {
   const watchedLocation = form.watch('location');
   const watchedCountyId = form.watch('countyId');
   const watchedListingType = form.watch('listingType');
+  const watchedPropertyType = form.watch('propertyType');
 
   useEffect(() => {
     let cancelled = false;
@@ -755,8 +760,18 @@ export default function ListPropertyPage() {
                       <FormItem>
                         <FormLabel>Property Type</FormLabel>
                         <FormControl>
-                          <select {...field} className="h-10 w-full border bg-background px-3 text-sm">
-                            {['Apartment', 'Bedsitter', 'Single Room', 'Maisonette', 'Townhouse', 'Bungalow', 'Villa', 'House', 'Shared accommodation'].map((type) => <option key={type}>{type}</option>)}
+                          <select {...field} onChange={(event) => {
+                            const nextType = event.target.value;
+                            field.onChange(nextType);
+                            if (nextType === "Land") {
+                              form.setValue("bedrooms", 0, { shouldValidate: true });
+                              form.setValue("bathrooms", 0, { shouldValidate: true });
+                            } else if (field.value === "Land") {
+                              form.setValue("bedrooms", "" as unknown as number, { shouldValidate: true });
+                              form.setValue("bathrooms", "" as unknown as number, { shouldValidate: true });
+                            }
+                          }} className="h-10 w-full border bg-background px-3 text-sm">
+                            {['Apartment', 'Bedsitter', 'Single Room', 'Maisonette', 'Townhouse', 'Bungalow', 'Villa', 'House', 'Shared accommodation', 'Land'].map((type) => <option key={type}>{type}</option>)}
                           </select>
                         </FormControl>
                         <FormMessage />
@@ -794,7 +809,7 @@ export default function ListPropertyPage() {
                       <p className="mt-4 rounded-lg border border-[#c7b07f]/60 bg-[#f7edd7]/80 px-3 py-2.5 text-xs leading-5 text-[#6d5937]">🔒 Private internal information — never shown to tenants.</p>
                     </section>
                   )}
-                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                   <div className={`grid grid-cols-1 gap-4 ${watchedPropertyType === "Land" ? "md:grid-cols-1" : "md:grid-cols-3"}`}>
                        <FormField
                         control={form.control}
                         name="price"
@@ -808,7 +823,7 @@ export default function ListPropertyPage() {
                           </FormItem>
                         )}
                       />
-                       <FormField
+                       {watchedPropertyType !== "Land" && <FormField
                         control={form.control}
                         name="bedrooms"
                         render={({ field }) => (
@@ -820,8 +835,8 @@ export default function ListPropertyPage() {
                             <FormMessage />
                           </FormItem>
                         )}
-                      />
-                       <FormField
+                      />}
+                       {watchedPropertyType !== "Land" && <FormField
                         control={form.control}
                         name="bathrooms"
                         render={({ field }) => (
@@ -833,10 +848,10 @@ export default function ListPropertyPage() {
                             <FormMessage />
                           </FormItem>
                         )}
-                      />
-                  </div>
+                      />}
+                   </div>
 
-                  {watchedListingType === 'SHORT_STAY' && (
+                   {watchedListingType === 'SHORT_STAY' && (
                     <div className="rounded-none border bg-card p-5 shadow-sm md:p-6">
                       <h2 className="text-base font-semibold">Short-stay details</h2>
                       <p className="mt-1 text-sm text-muted-foreground">Optional details for furnished, holiday, serviced, or Airbnb-style stays.</p>

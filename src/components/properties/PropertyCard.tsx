@@ -185,10 +185,10 @@ export function PropertyCard({ property, initiallySaved = false }: PropertyCardP
            {property.bedrooms > 0 && (
              <span className="flex items-center"><BedDouble className="w-4 h-4 mr-1" /> {property.bedrooms} Beds</span>
            )}
-           {property.bedrooms === 0 && (
+           {property.bedrooms === 0 && property.propertyType !== "Land" && (
                 <span className="flex items-center"><BedDouble className="w-4 h-4 mr-1" /> Studio</span>
             )}
-          <span className="flex items-center"><Bath className="w-4 h-4 mr-1" /> {property.bathrooms} Baths</span>
+          {property.propertyType !== "Land" && <span className="flex items-center"><Bath className="w-4 h-4 mr-1" /> {property.bathrooms} Baths</span>}
           {property.area !== undefined && property.area > 0 && (
             <span className="flex items-center"><Ruler className="w-4 h-4 mr-1" /> {property.area} sq m</span>
            )}
