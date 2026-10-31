@@ -326,8 +326,11 @@ export async function POST(request: NextRequest) {
     const description = getString(rawData.description);
     const location = getString(rawData.location, 'Unknown Location');
     const price = getNumber(rawData.price);
+    const propertyType = getString(rawData.propertyType, 'Apartment');
     const bedrooms = Math.max(0, Math.trunc(getNumber(rawData.bedrooms)));
-    const bathrooms = Math.max(1, Math.trunc(getNumber(rawData.bathrooms, 1)));
+    const bathrooms = propertyType === 'Land'
+      ? Math.max(0, Math.trunc(getNumber(rawData.bathrooms)))
+      : Math.max(1, Math.trunc(getNumber(rawData.bathrooms, 1)));
     const sizeSqm = getOptionalNumber(rawData.area);
     const amenities = getStringArray(rawData.amenities);
     const phoneNumber = getOptionalString(rawData.phoneNumber);
@@ -357,7 +360,6 @@ export async function POST(request: NextRequest) {
       resolvedPartnerContactId = createdContact.id;
     }
     if (canSetPartnerContact && rawData.partnerMode === 'none') resolvedPartnerContactId = undefined;
-    const propertyType = getString(rawData.propertyType, 'Apartment');
     const listingType = getString(rawData.listingType, 'FOR_RENT');
     const pricePeriod = getString(rawData.pricePeriod, listingType === 'FOR_SALE' ? 'ONE_TIME' : listingType === 'SHORT_STAY' ? 'NIGHT' : 'MONTH');
     const shortStayMinNights = getOptionalNumber(rawData.shortStayMinNights);
