@@ -68,7 +68,7 @@ export async function generateMetadata({
 
   const summary = [
     property.propertyType,
-    property.bedrooms === 0 ? 'studio' : property.bedrooms ? `${property.bedrooms}-bedroom` : null,
+    property.propertyType === 'Land' ? null : property.bedrooms === 0 ? 'studio' : property.bedrooms ? `${property.bedrooms}-bedroom` : null,
     property.price ? getPriceLabel(property) : null,
     property.location,
   ]
@@ -149,8 +149,8 @@ export default async function PropertyLayout({
           addressLocality: property.location,
           addressCountry: 'KE',
         },
-        ...(property.bedrooms !== null ? { numberOfBedrooms: property.bedrooms } : {}),
-        ...(property.bathrooms !== null ? { numberOfBathroomsTotal: property.bathrooms } : {}),
+        ...(property.propertyType !== 'Land' && property.bedrooms !== null ? { numberOfBedrooms: property.bedrooms } : {}),
+        ...(property.propertyType !== 'Land' && property.bathrooms !== null ? { numberOfBathroomsTotal: property.bathrooms } : {}),
         offers: {
           '@type': 'Offer',
           url,
