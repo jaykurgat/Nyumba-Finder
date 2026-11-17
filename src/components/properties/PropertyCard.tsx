@@ -182,13 +182,14 @@ export function PropertyCard({ property, initiallySaved = false }: PropertyCardP
         </div>
         <p className="text-sm text-muted-foreground mb-4 line-clamp-2">{property.description}</p>
          <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm text-muted-foreground mb-2">
-           {property.bedrooms > 0 && (
+           {property.propertyCategory === "RESIDENTIAL" && property.bedrooms > 0 && (
              <span className="flex items-center"><BedDouble className="w-4 h-4 mr-1" /> {property.bedrooms} Beds</span>
            )}
-           {property.bedrooms === 0 && property.propertyType !== "Land" && (
+           {property.propertyCategory === "RESIDENTIAL" && property.bedrooms === 0 && property.propertyType !== "Land" && (
                 <span className="flex items-center"><BedDouble className="w-4 h-4 mr-1" /> Studio</span>
             )}
-          {property.propertyType !== "Land" && <span className="flex items-center"><Bath className="w-4 h-4 mr-1" /> {property.bathrooms} Baths</span>}
+          {property.propertyCategory === "RESIDENTIAL" && property.propertyType !== "Land" && <span className="flex items-center"><Bath className="w-4 h-4 mr-1" /> {property.bathrooms} Baths</span>}
+           {property.propertyCategory !== "RESIDENTIAL" && <span className="text-xs font-medium uppercase tracking-wide">{property.propertyCategory === "LAND" ? "Land" : property.propertyType || "Commercial"}</span>}
           {property.area !== undefined && property.area > 0 && (
             <span className="flex items-center"><Ruler className="w-4 h-4 mr-1" /> {property.area} sq m</span>
            )}
