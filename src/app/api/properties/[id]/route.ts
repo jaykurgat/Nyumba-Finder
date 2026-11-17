@@ -230,6 +230,16 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       data.propertyCategory = category;
     }
     if ('propertyType' in rawData) data.propertyType = getString(rawData.propertyType, 'Apartment');
+    if ('propertyCategory' in rawData || 'propertyType' in rawData) {
+      const category = String(data.propertyCategory ?? 'RESIDENTIAL');
+      const type = String(data.propertyType ?? 'Apartment');
+      const allowedTypes: Record<string, string[]> = {
+        RESIDENTIAL: ['Apartment', 'Bedsitter', 'Single Room', 'Maisonette', 'Townhouse', 'Bungalow', 'Villa', 'House', 'Shared accommodation'],
+        COMMERCIAL: ['Office Space', 'Retail Shop', 'Showroom', 'Warehouse', 'Industrial Space', 'Co-working Space', 'Business Premises'],
+        LAND: ['Land'],
+      };
+      if (!allowedTypes[category]?.includes(type)) return NextResponse.json({ message: 'The selected property type does not match its category.' }, { status: 400 });
+    }
     if ('price' in rawData) data.price = getNumber(rawData.price);
     if ('listingType' in rawData) data.listingType = getString(rawData.listingType, 'FOR_RENT');
     if ('pricePeriod' in rawData) data.pricePeriod = getString(rawData.pricePeriod, 'MONTH');
