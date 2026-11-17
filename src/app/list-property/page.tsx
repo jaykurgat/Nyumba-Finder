@@ -40,6 +40,7 @@ const formSchema = z.object({
   countyId: z.string().min(1, "Please select a county."),
   location: z.string().min(2, "Please specify a location."),
   locationNodeId: z.string().min(1, "Please select a town, city or estate."),
+  propertyCategory: z.enum(["RESIDENTIAL", "COMMERCIAL", "LAND"]),
   propertyType: z.string().min(2, "Please select a property type."),
   listingType: z.enum(["FOR_RENT", "FOR_SALE", "SHORT_STAY"]),
   price: z.coerce.number().positive("Price must be a positive number."),
@@ -105,6 +106,7 @@ export default function ListPropertyPage() {
       countyId: "",
       location: "",
       locationNodeId: "",
+      propertyCategory: "RESIDENTIAL",
       propertyType: "Apartment",
       listingType: "FOR_RENT",
       shortStayMinNights: "",
@@ -125,6 +127,7 @@ export default function ListPropertyPage() {
   const watchedCountyId = form.watch('countyId');
   const watchedListingType = form.watch('listingType');
   const watchedPropertyType = form.watch('propertyType');
+  const watchedPropertyCategory = form.watch('propertyCategory');
 
   useEffect(() => {
     let cancelled = false;
@@ -291,6 +294,7 @@ export default function ListPropertyPage() {
              countyId: "",
              location: "",
              locationNodeId: "",
+             propertyCategory: "RESIDENTIAL",
              propertyType: "Apartment",
              listingType: "FOR_RENT",
              shortStayMinNights: "",
@@ -755,10 +759,45 @@ export default function ListPropertyPage() {
 
                   <FormField
                     control={form.control}
-                    name="propertyType"
+                    name="propertyCategory"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Property Type</FormLabel>
+                        <FormLabel>Property category</FormLabel>
+                        <FormControl>
+                          <select {...field} onChange={(event) => {
+                            const category = event.target.value as "RESIDENTIAL" | "COMMERCIAL" | "LAND";
+                            field.onChange(category);
+                            const firstType = category === "RESIDENTIAL" ? "Apartment" : category === "COMMERCIAL" ? "Office Space" : "Land";
+                            form.setValue("propertyType", firstType, { shouldValidate: true });
+                            if (category === "LAND") {
+                              form.setValue("bedrooms", 0, { shouldValidate: true });
+                              form.setValue("bathrooms", 0, { shouldValidate: true });
+                            } else if (watchedPropertyCategory === "LAND") {
+                              form.setValue("bedrooms", "" as unknown as number, { shouldValidate: true });
+                              form.setValue("bathrooms", "" as unknown as number, { shouldValidate: true });
+                            }
+                          }} className="h-11 w-full border border-[#d9ded4] bg-white px-3 text-sm outline-none focus:border-[#244c2c]">
+                            <option value="RESIDENTIAL">Residential</option>
+                            <option value="COMMERCIAL">Commercial</option>
+                            <option value="LAND">Land</option>
+                          </select>
+                        </FormControl>
+                        <FormDescription>Choose the category that best describes this listing.</FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="propertyType"
+                    render={({ field }) => {
+                      const options = watchedPropertyCategory === "COMMERCIAL"
+                        ? ["Office Space", "Retail Shop", "Showroom", "Warehouse", "Industrial Space", "Co-working Space", "Business Premises"]
+                        : watchedPropertyCategory === "LAND"
+                          ? ["Land"]
+                          : ["Apartment", "Bedsitter", "Single Room", "Maisonette", "Townhouse", "Bungalow", "Villa", "House", "Shared accommodation"];
+                      return <FormItem>
+                        <FormLabel>Property type</FormLabel>
                         <FormControl>
                           <select {...field} onChange={(event) => {
                             const nextType = event.target.value;
@@ -770,13 +809,13 @@ export default function ListPropertyPage() {
                               form.setValue("bedrooms", "" as unknown as number, { shouldValidate: true });
                               form.setValue("bathrooms", "" as unknown as number, { shouldValidate: true });
                             }
-                          }} className="h-10 w-full border bg-background px-3 text-sm">
-                            {['Apartment', 'Bedsitter', 'Single Room', 'Maisonette', 'Townhouse', 'Bungalow', 'Villa', 'House', 'Shared accommodation', 'Land'].map((type) => <option key={type}>{type}</option>)}
+                          }} className="h-11 w-full border border-[#d9ded4] bg-white px-3 text-sm outline-none focus:border-[#244c2c]">
+                            {options.map((type) => <option key={type} value={type}>{type}</option>)}
                           </select>
                         </FormControl>
                         <FormMessage />
-                      </FormItem>
-                    )}
+                      </FormItem>;
+                    }}
                   />
 
                   <FormField
