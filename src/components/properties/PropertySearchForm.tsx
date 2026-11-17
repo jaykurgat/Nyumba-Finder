@@ -65,6 +65,7 @@ export function PropertySearchForm({ onFormSubmit, isInSheet = false }: { onForm
 
   useEffect(function () {
     form.reset({
+      propertyCategory: params.get("propertyCategory") || "ALL",
       listingType: params.get("listingType") || "ALL",
       location: params.get("location") || "",
       minPrice: params.get("minPrice") ? Number(params.get("minPrice")) : "",
