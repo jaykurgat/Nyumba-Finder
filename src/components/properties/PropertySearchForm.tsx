@@ -15,6 +15,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 const amenities = ["Parking","Swimming Pool","Gym","Security","Balcony","Garden","Internet Ready","Servant Quarters","Lift","Water Included","Beach Access","Air Conditioning"];
 
 const schema = z.object({
+  propertyCategory: z.string().optional(),
   listingType: z.string().optional(),
   location: z.string().optional(),
   minPrice: z.coerce.number().positive("Enter a valid minimum").optional().or(z.literal("")),
@@ -51,6 +52,8 @@ export function PropertySearchForm({ onFormSubmit, isInSheet = false }: { onForm
   const form = useForm<Values>({
     resolver: zodResolver(schema),
     defaultValues: {
+      propertyCategory: params.get("propertyCategory") || "RESIDENTIAL",
+      propertyCategory: params.get("propertyCategory") || "RESIDENTIAL",
       listingType: params.get("listingType") || "ALL",
       location: params.get("location") || "",
       minPrice: params.get("minPrice") ? Number(params.get("minPrice")) : "",
@@ -93,6 +96,7 @@ export function PropertySearchForm({ onFormSubmit, isInSheet = false }: { onForm
 
   function submit(data: Values) {
     const next = new URLSearchParams();
+    if (data.propertyCategory && data.propertyCategory !== "ALL") next.set("propertyCategory", data.propertyCategory);
     if (data.listingType) next.set("listingType", data.listingType);
     if (data.location?.trim()) next.set("location", data.location.trim());
     if (data.minPrice) next.set("minPrice", String(data.minPrice));
@@ -106,7 +110,7 @@ export function PropertySearchForm({ onFormSubmit, isInSheet = false }: { onForm
   }
 
   function clear() {
-    form.reset({ listingType: "ALL", location: "", minPrice: "", maxPrice: "", minBedrooms: "all", minBathrooms: "all", amenities: [] });
+    form.reset({ propertyCategory: "RESIDENTIAL", listingType: "ALL", location: "", minPrice: "", maxPrice: "", minBedrooms: "all", minBathrooms: "all", amenities: [] });
     router.push("/properties");
     setOpen(null);
     onFormSubmit?.();
@@ -116,6 +120,7 @@ export function PropertySearchForm({ onFormSubmit, isInSheet = false }: { onForm
     return (
       <Form {...form}>
         <form onSubmit={form.handleSubmit(submit)} className="space-y-6">
+          <CategoryField form={form} />
           <ListingTypeField form={form} />
           <LocationField form={form} locations={locations} />
           <Panel title="Price range" description={pricePeriodLabel}>
@@ -141,6 +146,7 @@ export function PropertySearchForm({ onFormSubmit, isInSheet = false }: { onForm
     <Form {...form}>
       <form onSubmit={form.handleSubmit(submit)} className="relative border border-[#d9ded4] bg-white p-2 shadow-none">
         <div className="flex flex-col lg:flex-row lg:items-center">
+          <CategoryField form={form} compact />
           <ListingTypeField form={form} compact />
           <LocationField form={form} locations={locations} compact />
           <div className="hidden h-8 w-px bg-border lg:block" />
@@ -161,6 +167,19 @@ export function PropertySearchForm({ onFormSubmit, isInSheet = false }: { onForm
       </form>
     </Form>
   );
+}
+
+function CategoryField({ form, compact = false }: { form: any; compact?: boolean }) {
+  return <div className={compact ? "flex min-h-12 items-center px-3 lg:min-w-[150px]" : "space-y-2"}>
+    {!compact && <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Property category</p>}
+    <FormField control={form.control} name="propertyCategory" render={function ({ field }: any) {
+      return <FormItem className={compact ? "w-full space-y-0" : ""}><FormControl>
+        <select {...field} className="h-10 w-full border border-border/70 bg-background px-3 text-sm font-medium outline-none focus:border-primary">
+          <option value="RESIDENTIAL">Residential</option><option value="COMMERCIAL">Commercial</option><option value="LAND">Land</option><option value="ALL">All categories</option>
+        </select>
+      </FormControl></FormItem>;
+    }} />
+  </div>;
 }
 
 function ListingTypeField({ form, compact = false }: { form: any; compact?: boolean }) {
