@@ -32,7 +32,7 @@ const toProperty = (data: any): Property => ({
   cleaningFee: data.cleaningFee ?? undefined, securityDeposit: data.securityDeposit ?? undefined, maxGuests: data.maxGuests ?? undefined,
   images: data.images, bedrooms: data.bedrooms, bathrooms: data.bathrooms,
   area: data.area ?? undefined, amenities: data.amenities, phoneNumber: data.phoneNumber ?? undefined,
-  propertyType: data.propertyType ?? 'Apartment', status: data.status,
+  propertyCategory: data.propertyCategory ?? 'RESIDENTIAL', propertyType: data.propertyType ?? 'Apartment', status: data.status,
   latitude: data.latitude ?? undefined, longitude: data.longitude ?? undefined,
 });
 
@@ -224,6 +224,11 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     if ('title' in rawData) data.title = getString(rawData.title);
     if ('description' in rawData) data.description = getString(rawData.description);
     if ('location' in rawData) data.location = getString(rawData.location);
+    if ('propertyCategory' in rawData) {
+      const category = getString(rawData.propertyCategory, 'RESIDENTIAL').toUpperCase();
+      if (!['RESIDENTIAL', 'COMMERCIAL', 'LAND'].includes(category)) return NextResponse.json({ message: 'Please select a valid property category.' }, { status: 400 });
+      data.propertyCategory = category;
+    }
     if ('propertyType' in rawData) data.propertyType = getString(rawData.propertyType, 'Apartment');
     if ('price' in rawData) data.price = getNumber(rawData.price);
     if ('listingType' in rawData) data.listingType = getString(rawData.listingType, 'FOR_RENT');
