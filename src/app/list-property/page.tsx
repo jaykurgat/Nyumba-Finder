@@ -848,7 +848,7 @@ export default function ListPropertyPage() {
                       <p className="mt-4 rounded-lg border border-[#c7b07f]/60 bg-[#f7edd7]/80 px-3 py-2.5 text-xs leading-5 text-[#6d5937]">🔒 Private internal information — never shown to tenants.</p>
                     </section>
                   )}
-                   <div className={`grid grid-cols-1 gap-4 ${watchedPropertyType === "Land" ? "md:grid-cols-1" : "md:grid-cols-3"}`}>
+                   <div className={`grid grid-cols-1 gap-4 ${watchedPropertyType === "Land" || watchedPropertyCategory === "COMMERCIAL" ? "md:grid-cols-2" : "md:grid-cols-3"}`}>
                        <FormField
                         control={form.control}
                         name="price"
@@ -919,7 +919,7 @@ export default function ListPropertyPage() {
                     name="area"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Area (Square Meters) <span className="text-muted-foreground">(Optional)</span></FormLabel>
+                        <FormLabel>{watchedPropertyCategory === "LAND" ? "Land size (Square Meters)" : watchedPropertyCategory === "COMMERCIAL" ? "Floor area (Square Meters)" : "Area (Square Meters)"} <span className="text-muted-foreground">(Optional)</span></FormLabel>
                         <FormControl>
                            <Input type="number" placeholder="e.g., 100" {...field} value={field.value ?? ""} suppressHydrationWarning />
                         </FormControl>
