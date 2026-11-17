@@ -332,8 +332,8 @@ export async function POST(request: NextRequest) {
     if (!['RESIDENTIAL', 'COMMERCIAL', 'LAND'].includes(propertyCategory)) return NextResponse.json({ message: 'Please select a valid property category.' }, { status: 400 });
     const propertyType = getString(rawData.propertyType, propertyCategory === 'LAND' ? 'Land' : propertyCategory === 'COMMERCIAL' ? 'Office Space' : 'Apartment');
     const bedrooms = Math.max(0, Math.trunc(getNumber(rawData.bedrooms)));
-    const bathrooms = propertyType === 'Land'
-      ? Math.max(0, Math.trunc(getNumber(rawData.bathrooms)))
+    const bathrooms = propertyCategory !== 'RESIDENTIAL' || propertyType === 'Land'
+      ? 0
       : Math.max(1, Math.trunc(getNumber(rawData.bathrooms, 1)));
     const sizeSqm = getOptionalNumber(rawData.area);
     const amenities = getStringArray(rawData.amenities);
