@@ -238,9 +238,11 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     if ('cleaningFee' in rawData) data.cleaningFee = getOptionalNumber(rawData.cleaningFee) ?? null;
     if ('securityDeposit' in rawData) data.securityDeposit = getOptionalNumber(rawData.securityDeposit) ?? null;
     if ('maxGuests' in rawData) data.maxGuests = getOptionalNumber(rawData.maxGuests) ?? null;
+    if ('propertyCategory' in rawData && getString(rawData.propertyCategory).toUpperCase() !== 'RESIDENTIAL') data.bedrooms = 0;
     if ('bedrooms' in rawData) data.bedrooms = Math.max(0, Math.trunc(getNumber(rawData.bedrooms)));
-    if ('bathrooms' in rawData) data.bathrooms = String(rawData.propertyType ?? '') === 'Land'
-      ? Math.max(0, Math.trunc(getNumber(rawData.bathrooms)))
+    if ('propertyCategory' in rawData && getString(rawData.propertyCategory).toUpperCase() !== 'RESIDENTIAL') data.bathrooms = 0;
+    if ('bathrooms' in rawData) data.bathrooms = String(rawData.propertyType ?? '') === 'Land' || String(rawData.propertyCategory ?? '').toUpperCase() !== 'RESIDENTIAL'
+      ? 0
       : Math.max(1, Math.trunc(getNumber(rawData.bathrooms, 1)));
     if ('area' in rawData) data.sizeSqm = getOptionalNumber(rawData.area) ?? null;
     if ('amenities' in rawData) data.amenities = getStringArray(rawData.amenities);
