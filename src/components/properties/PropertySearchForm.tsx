@@ -152,13 +152,14 @@ export function PropertySearchForm({ onFormSubmit, isInSheet = false }: { onForm
           <FilterMenu name="price" label={priceLabel} active={priceActive} open={open === "price"} setOpen={setOpen} icon={null}>
             <PriceFields form={form} />
           </FilterMenu>
-          <FilterMenu name="beds" label={bedsLabel} active={bedsActive} open={open === "beds"} setOpen={setOpen} icon={<BedDouble className="h-4 w-4" />}>
+          {v.propertyCategory !== "COMMERCIAL" && v.propertyCategory !== "LAND" && <FilterMenu name="beds" label={bedsLabel} active={bedsActive} open={open === "beds"} setOpen={setOpen} icon={<BedDouble className="h-4 w-4" />}>
             <ChoiceGrid value={v.minBedrooms || "all"} options={["all","0","1","2","3","4"]} labels={["Any","Studio","1+","2+","3+","4+"]} onChange={function (x) { form.setValue("minBedrooms", x); }} />
           </FilterMenu>
           <FilterMenu name="baths" label={bathsLabel} active={bathsActive} open={open === "baths"} setOpen={setOpen} icon={<Bath className="h-4 w-4" />}>
             <ChoiceGrid value={v.minBathrooms || "all"} options={["all","1","2","3","4","5"]} labels={["Any","1+","2+","3+","4+","5+"]} onChange={function (x) { form.setValue("minBathrooms", x); }} />
           </FilterMenu>
-          <FilterMenu name="more" label={amenityCount ? "More filters (" + amenityCount + ")" : "More filters"} active={amenityCount > 0} open={open === "more"} setOpen={setOpen} icon={<SlidersHorizontal className="h-4 w-4" />}>
+          </FilterMenu>}
+          {v.propertyCategory !== "COMMERCIAL" && v.propertyCategory !== "LAND" && <FilterMenu name="baths" label={amenityCount ? "More filters (" + amenityCount + ")" : "More filters"} active={amenityCount > 0} open={open === "more"} setOpen={setOpen} icon={<SlidersHorizontal className="h-4 w-4" />}>
             <AmenityPanel form={form} />
           </FilterMenu>
           <Button type="submit" className="h-11 gap-2 px-5 lg:ml-1"><Search className="h-4 w-4" /><span>Search</span></Button>
