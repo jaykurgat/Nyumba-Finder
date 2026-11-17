@@ -163,6 +163,7 @@ model Property {
   phoneNumber  String?
   partnerContactId String? @db.Uuid
   partnerContact PartnerContact? @relation(fields: [partnerContactId], references: [id], onDelete: SetNull)
+  propertyCategory String @default("RESIDENTIAL")
   propertyType String @default("Apartment")
   status       PropertyStatus @default(ACTIVE)
   propertyImages PropertyImage[]
