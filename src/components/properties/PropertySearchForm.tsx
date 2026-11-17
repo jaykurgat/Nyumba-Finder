@@ -52,8 +52,7 @@ export function PropertySearchForm({ onFormSubmit, isInSheet = false }: { onForm
   const form = useForm<Values>({
     resolver: zodResolver(schema),
     defaultValues: {
-      propertyCategory: params.get("propertyCategory") || "RESIDENTIAL",
-      propertyCategory: params.get("propertyCategory") || "RESIDENTIAL",
+      propertyCategory: params.get("propertyCategory") || "ALL",
       listingType: params.get("listingType") || "ALL",
       location: params.get("location") || "",
       minPrice: params.get("minPrice") ? Number(params.get("minPrice")) : "",
@@ -126,12 +125,12 @@ export function PropertySearchForm({ onFormSubmit, isInSheet = false }: { onForm
           <Panel title="Price range" description={pricePeriodLabel}>
             <PriceFields form={form} />
           </Panel>
-          <Panel title="Bedrooms" description="Minimum bedrooms">
+          {v.propertyCategory !== "COMMERCIAL" && v.propertyCategory !== "LAND" && <Panel title="Bedrooms" description="Minimum bedrooms">
             <ChoiceGrid value={v.minBedrooms || "all"} options={["all","0","1","2","3","4"]} labels={["Any","Studio","1+","2+","3+","4+"]} onChange={function (x) { form.setValue("minBedrooms", x); }} />
-          </Panel>
-          <Panel title="Bathrooms" description="Minimum bathrooms">
+          </Panel>}
+          {v.propertyCategory !== "COMMERCIAL" && v.propertyCategory !== "LAND" && <Panel title="Bathrooms" description="Minimum bathrooms">
             <ChoiceGrid value={v.minBathrooms || "all"} options={["all","1","2","3","4","5"]} labels={["Any","1+","2+","3+","4+","5+"]} onChange={function (x) { form.setValue("minBathrooms", x); }} />
-          </Panel>
+          </Panel>}
           <AmenityPanel form={form} />
           <div className="sticky bottom-0 -mx-4 flex gap-2 border-t bg-background px-4 py-4">
             <Button type="button" variant="ghost" onClick={clear} className="flex-1">Clear all</Button>
