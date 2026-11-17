@@ -123,7 +123,7 @@ export default function AdminAIImporter() {
             <div className="space-y-3 rounded-xl bg-[#f7f9f6] p-3">
               <label className="flex items-start gap-2 text-xs leading-5 text-[#59675d]"><input type="checkbox" checked={accessApproved} onChange={e => setAccessApproved(e.target.checked)} className="mt-0.5 accent-[#315a3d]" />I confirm Nyumba-Finder has permission to access this website/feed automatically.</label>
               <label className="flex items-start gap-2 text-xs leading-5 text-[#59675d]"><input type="checkbox" checked={redisplayAllowed} onChange={e => setRedisplayAllowed(e.target.checked)} className="mt-0.5 accent-[#315a3d]" />I have permission to reuse the source's property photographs on Nyumba-Finder.</label>
-              <label className="flex items-start gap-2 text-xs leading-5 text-[#59675d]"><input type="checkbox" checked={enabled} onChange={e => setEnabled(e.target.checked)} className="mt-0.5 accent-[#315a3d]" />Enable scheduled / manual scans for this source.</label>
+              <label className="flex items-start gap-2 text-xs leading-5 text-[#59675d]"><input type="checkbox" checked={enabled} onChange={e => setEnabled(e.target.checked)} className="mt-0.5 accent-[#315a3d]" />Allow manual scans for this source.</label>
             </div>
             <button disabled={busy === "save"} className="mt-4 w-full rounded-lg bg-[#284b35] px-4 py-3 text-sm font-semibold text-white disabled:opacity-50">{busy === "save" ? "Saving…" : "Save source"}</button>
           </form>
