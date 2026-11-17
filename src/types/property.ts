@@ -22,6 +22,7 @@ export interface Property {
   area?: number;
   amenities?: string[];
   phoneNumber?: string;
+  propertyCategory?: "RESIDENTIAL" | "COMMERCIAL" | "LAND";
   propertyType?: string;
   status?: string;
   canEdit?: boolean;
