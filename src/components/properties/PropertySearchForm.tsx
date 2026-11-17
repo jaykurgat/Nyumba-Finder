@@ -110,7 +110,7 @@ export function PropertySearchForm({ onFormSubmit, isInSheet = false }: { onForm
   }
 
   function clear() {
-    form.reset({ propertyCategory: "RESIDENTIAL", listingType: "ALL", location: "", minPrice: "", maxPrice: "", minBedrooms: "all", minBathrooms: "all", amenities: [] });
+    form.reset({ propertyCategory: "ALL", listingType: "ALL", location: "", minPrice: "", maxPrice: "", minBedrooms: "all", minBathrooms: "all", amenities: [] });
     router.push("/properties");
     setOpen(null);
     onFormSubmit?.();
