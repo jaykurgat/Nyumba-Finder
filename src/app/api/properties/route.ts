@@ -109,7 +109,7 @@ export async function GET(request: NextRequest) {
       status: 'ACTIVE' as const,
       ...(requestedIds.length ? { id: { in: requestedIds } } : {}),
       ...(hasViewportBounds ? { latitude: { gte: south, lte: north }, longitude: { gte: west, lte: east } } : {}),
-      ...(propertyCategoryQuery && ['RESIDENTIAL', 'COMMERCIAL', 'LAND'].includes(propertyCategoryQuery) ? { propertyCategory: propertyCategoryQuery } : {}),
+      ...(propertyCategoryQuery === "LAND" ? { OR: [{ propertyCategory: "LAND" }, { propertyType: "Land" }] } : propertyCategoryQuery === "RESIDENTIAL" ? { propertyCategory: "RESIDENTIAL", NOT: { propertyType: "Land" } } : propertyCategoryQuery === "COMMERCIAL" ? { propertyCategory: "COMMERCIAL" } : {}),
       ...(listingTypeQuery && listingTypeQuery !== 'ALL' ? { listingType: listingTypeQuery } : {}),
       ...(propertyTypeQuery && propertyTypeQuery !== 'Any type' ? { propertyType: propertyTypeQuery } : {}),
       ...(minPrice !== undefined || maxPrice !== undefined
@@ -202,7 +202,7 @@ export async function GET(request: NextRequest) {
           ? row.propertyImages.map((image) => image.url ?? ('/api/properties/' + row.id + '?image=' + image.id))
           : (row.externalListings[0]?.imageUrls ?? []),
         }),
-        propertyCategory: row.propertyCategory ?? (row.propertyType === "Land" ? "LAND" : "RESIDENTIAL"),
+        propertyCategory: row.propertyCategory === "RESIDENTIAL" && row.propertyType === "Land" ? "LAND" : row.propertyCategory ?? (row.propertyType === "Land" ? "LAND" : "RESIDENTIAL"),
         propertyType: row.propertyType,
         status: row.status,
         isSponsored: Boolean(promotion),
