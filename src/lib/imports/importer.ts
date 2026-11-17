@@ -55,8 +55,10 @@ export async function importListing(sourceId: string, listing: ImportedListing, 
   if (!/^https:\/\//i.test(listing.sourceUrl)) throw new Error('A secure HTTPS source URL is required.');
 
   const locationNode = await resolveLocation(listing.location);
-  const possibleDuplicate = await findExistingProperty(listing);
+  const linkedPropertyId = existingExternal?.propertyId ?? null;
+  const possibleDuplicate = linkedPropertyId ? null : await findExistingProperty(listing);
   const status = existingExternal?.status === 'REJECTED' ? 'REJECTED'
+    : existingExternal?.status === 'IMPORTED' && linkedPropertyId ? 'IMPORTED'
     : possibleDuplicate ? 'POSSIBLE_DUPLICATE' : 'PENDING_REVIEW';
 
   const data = {
@@ -82,7 +84,7 @@ export async function importListing(sourceId: string, listing: ImportedListing, 
     } as any,
     status,
     lastSeenAt: new Date(),
-    propertyId: null,
+    propertyId: linkedPropertyId,
   };
 
   await prisma.externalListing.upsert({
