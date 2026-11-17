@@ -202,6 +202,7 @@ export async function GET(request: NextRequest) {
           ? row.propertyImages.map((image) => image.url ?? ('/api/properties/' + row.id + '?image=' + image.id))
           : (row.externalListings[0]?.imageUrls ?? []),
         }),
+        propertyCategory: row.propertyCategory ?? (row.propertyType === "Land" ? "LAND" : "RESIDENTIAL"),
         propertyType: row.propertyType,
         status: row.status,
         isSponsored: Boolean(promotion),
