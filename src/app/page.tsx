@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { FormEvent, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowRight, BedDouble, Home as HomeIcon, MapPin, Search, SlidersHorizontal } from 'lucide-react';
+import { ArrowRight, BedDouble, Building2, Home as HomeIcon, Map, MapPin, Search, SlidersHorizontal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { rememberSearchPreference } from '@/components/privacy/search-preferences';
