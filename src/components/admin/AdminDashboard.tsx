@@ -11,6 +11,7 @@ type Dashboard = {
 const groups = [
   { title: "Property management", description: "Review listings and manage marketplace visibility.", items: [
     { label: "Properties", href: "/admin/properties", description: "Edit listings, review status, partner source and property details." },
+    { label: "AI property importer", href: "/admin/ai-importer", description: "Discover properties for sale from approved sources and review imports before publishing." },
     { label: "Partner directory", href: "/admin/partner-contacts", description: "Save and update partner company contacts, and associate them with properties." },
     { label: "Sponsored listings", href: "/admin/promotions", description: "Manage paid placements and promotion periods." },
     { label: "Reports", href: "/admin/reports", description: "Review reports and issues raised about listings." },
