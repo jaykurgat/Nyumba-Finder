@@ -62,7 +62,7 @@ const formSchema = z.object({
   amenities: z.array(z.string()).optional().default([]),
   images: z.array(z.string()).optional().default([]), // For client-side preview only
 }).superRefine((values, context) => {
-  if (values.propertyType !== "Land" && values.bathrooms < 1) {
+  if (values.propertyCategory === "RESIDENTIAL" && values.propertyType !== "Land" && values.bathrooms < 1) {
     context.addIssue({ code: z.ZodIssueCode.custom, path: ["bathrooms"], message: "Must have at least 1 bathroom." });
   }
 });
@@ -772,7 +772,7 @@ export default function ListPropertyPage() {
                             if (category === "LAND") {
                               form.setValue("bedrooms", 0, { shouldValidate: true });
                               form.setValue("bathrooms", 0, { shouldValidate: true });
-                            } else if (watchedPropertyCategory === "LAND") {
+                            } else if (watchedPropertyCategory !== "RESIDENTIAL") {
                               form.setValue("bedrooms", "" as unknown as number, { shouldValidate: true });
                               form.setValue("bathrooms", "" as unknown as number, { shouldValidate: true });
                             }
