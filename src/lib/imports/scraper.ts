@@ -197,7 +197,7 @@ export async function scrapeStructuredListing(url: string): Promise<ImportedList
       cleanText(address.addressRegion),
     ].filter(Boolean).join(', '),
     amenities: Array.isArray(ai?.amenities) ? ai.amenities.filter((value): value is string => typeof value === 'string').slice(0, 30) : [],
-    imageUrls: collectImages(item?.image, url),
+    imageUrls: collectImages(item?.image ?? metaContent(html, 'og:image'), url),
     latitude: ai?.latitude ?? firstNumber(geo.latitude),
     longitude: ai?.longitude ?? firstNumber(geo.longitude),
     rawData: { structuredData: item ?? null, aiExtraction: ai, currency: currency || null, country: ai?.country ?? null },
