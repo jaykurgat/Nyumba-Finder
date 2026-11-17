@@ -176,7 +176,7 @@ function CategoryField({ form, compact = false }: { form: any; compact?: boolean
     {!compact && <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Property category</p>}
     <FormField control={form.control} name="propertyCategory" render={function ({ field }: any) {
       return <FormItem className={compact ? "w-full space-y-0" : ""}><FormControl>
-        <select {...field} className="h-10 w-full border border-border/70 bg-background px-3 text-sm font-medium outline-none focus:border-primary">
+        <select {...field} onChange={(event) => { field.onChange(event.target.value); form.setValue("minBedrooms", "all"); form.setValue("minBathrooms", "all"); }} className="h-10 w-full border border-border/70 bg-background px-3 text-sm font-medium outline-none focus:border-primary">
           <option value="RESIDENTIAL">Residential</option><option value="COMMERCIAL">Commercial</option><option value="LAND">Land</option><option value="ALL">All categories</option>
         </select>
       </FormControl></FormItem>;
