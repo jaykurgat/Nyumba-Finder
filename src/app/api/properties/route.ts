@@ -332,6 +332,12 @@ export async function POST(request: NextRequest) {
     const propertyCategory = getString(rawData.propertyCategory, 'RESIDENTIAL').toUpperCase();
     if (!['RESIDENTIAL', 'COMMERCIAL', 'LAND'].includes(propertyCategory)) return NextResponse.json({ message: 'Please select a valid property category.' }, { status: 400 });
     const propertyType = getString(rawData.propertyType, propertyCategory === 'LAND' ? 'Land' : propertyCategory === 'COMMERCIAL' ? 'Office Space' : 'Apartment');
+    const allowedTypes: Record<string, string[]> = {
+      RESIDENTIAL: ['Apartment', 'Bedsitter', 'Single Room', 'Maisonette', 'Townhouse', 'Bungalow', 'Villa', 'House', 'Shared accommodation'],
+      COMMERCIAL: ['Office Space', 'Retail Shop', 'Showroom', 'Warehouse', 'Industrial Space', 'Co-working Space', 'Business Premises'],
+      LAND: ['Land'],
+    };
+    if (!allowedTypes[propertyCategory].includes(propertyType)) return NextResponse.json({ message: 'The selected property type does not match its category.' }, { status: 400 });
     const bedrooms = Math.max(0, Math.trunc(getNumber(rawData.bedrooms)));
     const bathrooms = propertyCategory !== 'RESIDENTIAL' || propertyType === 'Land'
       ? 0
