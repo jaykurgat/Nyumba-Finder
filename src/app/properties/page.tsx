@@ -86,12 +86,13 @@ function PropertyListingsContent() {
 
   const location = params.get("location");
   const listingType = params.get("listingType") || "ALL";
-  const active = params.getAll("amenities").length + (params.get("minPrice") || params.get("maxPrice") ? 1 : 0) + (params.get("minBedrooms") ? 1 : 0) + (params.get("minBathrooms") ? 1 : 0) + (listingType !== "ALL" ? 1 : 0);
+  const propertyCategory = params.get("propertyCategory") || "ALL";
+  const active = params.getAll("amenities").length + (params.get("minPrice") || params.get("maxPrice") ? 1 : 0) + (params.get("minBedrooms") ? 1 : 0) + (params.get("minBathrooms") ? 1 : 0) + (listingType !== "ALL" ? 1 : 0) + (propertyCategory !== "ALL" ? 1 : 0);
 
   return <div>
     <div className="mb-5 flex items-end justify-between gap-4">
       <div>
-        <p className="text-sm text-muted-foreground">{listingType === "FOR_SALE" ? ("Homes for sale" + (location ? " in " + location : " across Kenya")) : listingType === "SHORT_STAY" ? ("Short stays" + (location ? " in " + location : " across Kenya")) : listingType === "FOR_RENT" ? ("Rentals" + (location ? " in " + location : " across Kenya")) : ("Homes across Kenya" + (location ? " near " + location : ""))}</p>
+        <p className="text-sm text-muted-foreground">{propertyCategory === "COMMERCIAL" ? "Commercial properties" : propertyCategory === "LAND" ? "Land listings" : propertyCategory === "RESIDENTIAL" ? "Residential properties" : "Properties across Kenya"}{location ? " in " + location : ""}</p>
         <h2 className="mt-1 text-xl font-semibold tracking-tight">{totalCount || properties.length} {(totalCount || properties.length) === 1 ? "property" : "properties"} found</h2>
         {totalCount > properties.length && <p className="mt-1 text-xs text-muted-foreground">Showing the most relevant matches first</p>}
       </div>
@@ -124,8 +125,8 @@ export default function PropertiesPage() {
     <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 md:py-8 lg:px-10">
       <div className="mb-6 max-w-3xl border-l-2 border-[#f28c28] pl-4">
         <p className="text-[10px] font-bold tracking-[0.2em] text-[#60715b]">NYUMBAFINDER</p>
-        <h1 className="mt-2 text-3xl font-semibold leading-tight tracking-[-0.04em] text-[#20271f] sm:text-4xl">Find a place that feels like home.</h1>
-        <p className="mt-2 max-w-2xl text-sm leading-6 text-[#687066] sm:text-base">Search rentals, homes for sale, and short stays by location, budget and the features you care about.</p>
+        <h1 className="mt-2 text-3xl font-semibold leading-tight tracking-[-0.04em] text-[#20271f] sm:text-4xl">Explore properties across Kenya.</h1>
+        <p className="mt-2 max-w-2xl text-sm leading-6 text-[#687066] sm:text-base">Discover residential homes, commercial spaces and land by location, budget and the features that matter.</p>
       </div>
 
       <div className="mb-8">
