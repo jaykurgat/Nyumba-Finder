@@ -173,9 +173,11 @@ export async function scrapeStructuredListing(url: string): Promise<ImportedList
 
   const sourceUrl = canonicalUrl(html, url);
   const externalId = cleanText(item?.sku) || cleanText(item?.productID) || cleanText(item?.identifier) || sourceUrl;
-  const extractedPrice = ai?.currency && !/^(KES|KSH|KSh)$/i.test(ai.currency.trim())
-    ? undefined
-    : (ai?.price ?? firstNumber(offers.price ?? item?.price));
+  const currency = cleanText(ai?.currency || offers.priceCurrency);
+  const isKes = /^(KES|KSH)$/i.test(currency);
+  const extractedPrice = ai
+    ? (isKes && typeof ai.price === 'number' ? ai.price : undefined)
+    : (isKes ? firstNumber(offers.price ?? item?.price) : undefined);
 
   return {
     externalId,
