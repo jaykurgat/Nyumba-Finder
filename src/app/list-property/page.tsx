@@ -445,6 +445,7 @@ export default function ListPropertyPage() {
         formData.append('longitude', String(mapPosition.lng));
       }
       formData.append('locationSource', locationSource);
+      formData.append('propertyCategory', values.propertyCategory);
       formData.append('propertyType', values.propertyType);
       formData.append('listingType', values.listingType);
       formData.append('pricePeriod', values.listingType === 'FOR_SALE' ? 'ONE_TIME' : values.listingType === 'SHORT_STAY' ? 'NIGHT' : 'MONTH');
