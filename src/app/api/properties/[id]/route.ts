@@ -32,7 +32,7 @@ const toProperty = (data: any): Property => ({
   cleaningFee: data.cleaningFee ?? undefined, securityDeposit: data.securityDeposit ?? undefined, maxGuests: data.maxGuests ?? undefined,
   images: data.images, bedrooms: data.bedrooms, bathrooms: data.bathrooms,
   area: data.area ?? undefined, amenities: data.amenities, phoneNumber: data.phoneNumber ?? undefined,
-  propertyCategory: data.propertyCategory ?? 'RESIDENTIAL', propertyType: data.propertyType ?? 'Apartment', status: data.status,
+  propertyCategory: data.propertyCategory === 'RESIDENTIAL' && data.propertyType === 'Land' ? 'LAND' : data.propertyCategory ?? (data.propertyType === 'Land' ? 'LAND' : 'RESIDENTIAL'), propertyType: data.propertyType ?? 'Apartment', status: data.status,
   latitude: data.latitude ?? undefined, longitude: data.longitude ?? undefined,
 });
 
