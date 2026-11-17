@@ -99,6 +99,7 @@ export async function importListing(sourceId: string, listing: ImportedListing, 
 }
 
 export async function runAuthorizedSourceImport(sourceName: string) {
+  if (!process.env.GOOGLE_GENAI_API_KEY) throw new Error('AI extraction is not configured. Add GOOGLE_GENAI_API_KEY to the production environment before scanning sources.');
   const source = await prisma.importSource.findUnique({ where: { name: sourceName } });
   if (!source) throw new Error('Import source "' + sourceName + '" is not configured.');
   if (!source.enabled || !source.accessApproved) {
