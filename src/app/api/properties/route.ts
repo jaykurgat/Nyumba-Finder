@@ -115,8 +115,8 @@ export async function GET(request: NextRequest) {
       ...(minPrice !== undefined || maxPrice !== undefined
         ? { price: { ...(minPrice !== undefined ? { gte: minPrice } : {}), ...(maxPrice !== undefined ? { lte: maxPrice } : {}) } }
         : {}),
-      ...(minBedrooms !== undefined ? { bedrooms: { gte: Math.ceil(minBedrooms) } } : {}),
-      ...(minBathrooms !== undefined ? { bathrooms: { gte: Math.ceil(minBathrooms) } } : {}),
+      ...(minBedrooms !== undefined && (!propertyCategoryQuery || propertyCategoryQuery === 'RESIDENTIAL') ? { bedrooms: { gte: Math.ceil(minBedrooms) } } : {}),
+      ...(minBathrooms !== undefined && (!propertyCategoryQuery || propertyCategoryQuery === 'RESIDENTIAL') ? { bathrooms: { gte: Math.ceil(minBathrooms) } } : {}),
       ...(selectedAmenities.length ? { amenities: { hasEvery: selectedAmenities } } : {}),
       ...(searchConditions.length ? { AND: searchConditions } : {}),
     };
