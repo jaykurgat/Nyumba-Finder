@@ -66,6 +66,7 @@ export async function GET(request: NextRequest) {
     const hasViewportBounds = north !== undefined && south !== undefined && east !== undefined && west !== undefined && north >= south && east >= west;
     const generalQueryTerm = searchParams.get('q')?.trim().toLowerCase();
     const propertyTypeQuery = searchParams.get('propertyType')?.trim();
+    const propertyCategoryQuery = searchParams.get('propertyCategory')?.trim().toUpperCase();
     const listingTypeQuery = searchParams.get('listingType')?.trim() || 'ALL';
     const minPrice = getOptionalNumber(searchParams.get('minPrice'));
     const maxPrice = getOptionalNumber(searchParams.get('maxPrice'));
@@ -108,6 +109,7 @@ export async function GET(request: NextRequest) {
       status: 'ACTIVE' as const,
       ...(requestedIds.length ? { id: { in: requestedIds } } : {}),
       ...(hasViewportBounds ? { latitude: { gte: south, lte: north }, longitude: { gte: west, lte: east } } : {}),
+      ...(propertyCategoryQuery && ['RESIDENTIAL', 'COMMERCIAL', 'LAND'].includes(propertyCategoryQuery) ? { propertyCategory: propertyCategoryQuery } : {}),
       ...(listingTypeQuery && listingTypeQuery !== 'ALL' ? { listingType: listingTypeQuery } : {}),
       ...(propertyTypeQuery && propertyTypeQuery !== 'Any type' ? { propertyType: propertyTypeQuery } : {}),
       ...(minPrice !== undefined || maxPrice !== undefined
@@ -326,7 +328,9 @@ export async function POST(request: NextRequest) {
     const description = getString(rawData.description);
     const location = getString(rawData.location, 'Unknown Location');
     const price = getNumber(rawData.price);
-    const propertyType = getString(rawData.propertyType, 'Apartment');
+    const propertyCategory = getString(rawData.propertyCategory, 'RESIDENTIAL').toUpperCase();
+    if (!['RESIDENTIAL', 'COMMERCIAL', 'LAND'].includes(propertyCategory)) return NextResponse.json({ message: 'Please select a valid property category.' }, { status: 400 });
+    const propertyType = getString(rawData.propertyType, propertyCategory === 'LAND' ? 'Land' : propertyCategory === 'COMMERCIAL' ? 'Office Space' : 'Apartment');
     const bedrooms = Math.max(0, Math.trunc(getNumber(rawData.bedrooms)));
     const bathrooms = propertyType === 'Land'
       ? Math.max(0, Math.trunc(getNumber(rawData.bathrooms)))
@@ -433,7 +437,7 @@ export async function POST(request: NextRequest) {
       const created = await tx.property.create({
         data: {
           ownerId: user?.id ?? null,
-          title, description, location, price, listingType, pricePeriod, shortStayMinNights, shortStayMaxNights, cleaningFee, securityDeposit, maxGuests, bedrooms, bathrooms, sizeSqm, amenities, images: [], phoneNumber, propertyType, status: 'ACTIVE',
+          title, description, location, price, listingType, pricePeriod, shortStayMinNights, shortStayMaxNights, cleaningFee, securityDeposit, maxGuests, bedrooms, bathrooms, sizeSqm, amenities, images: [], phoneNumber, propertyCategory, propertyType, status: 'ACTIVE',
           ...(canSetPartnerContact ? { partnerContactId: resolvedPartnerContactId ?? null } : {}),
           latitude,
           longitude,
