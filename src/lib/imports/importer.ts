@@ -50,82 +50,52 @@ export async function importListing(sourceId: string, listing: ImportedListing, 
     where: { sourceId_externalId: { sourceId, externalId: listing.externalId } },
   });
 
+  const title = listing.title.trim();
+  if (!title) throw new Error('A property title is required.');
+  if (!/^https:\/\//i.test(listing.sourceUrl)) throw new Error('A secure HTTPS source URL is required.');
+
   const locationNode = await resolveLocation(listing.location);
-  const existingProperty = existingExternal?.propertyId
-    ? { id: existingExternal.propertyId }
-    : await findExistingProperty(listing);
+  const possibleDuplicate = await findExistingProperty(listing);
+  const status = existingExternal?.status === 'REJECTED' ? 'REJECTED'
+    : possibleDuplicate ? 'POSSIBLE_DUPLICATE' : 'PENDING_REVIEW';
 
-  const propertyData = {
-    title: listing.title,
+  const data = {
+    sourceUrl: listing.sourceUrl,
+    title,
     description: listing.description ?? '',
-    location: listing.location || locationNode?.name || 'Kenya',
-    price: listing.price ?? 0,
-    bedrooms: Math.max(0, Math.trunc(listing.bedrooms ?? 0)),
-    bathrooms: Math.max(1, Math.trunc(listing.bathrooms ?? 1)),
-    sizeSqm: listing.sizeSqm ?? null,
+    price: listing.price,
+    bedrooms: listing.bedrooms,
+    bathrooms: listing.bathrooms,
+    sizeSqm: listing.sizeSqm,
+    propertyType: listing.propertyType || 'House',
+    location: listing.location || locationNode?.name || '',
     amenities: listing.amenities ?? [],
-    images: redisplayAllowed ? (listing.imageUrls ?? []) : [],
-    phoneNumber: null,
-    propertyType: listing.propertyType || 'Apartment',
-    status: 'ACTIVE' as const,
-    countyId: locationNode?.countyId ?? null,
-    locationNodeId: locationNode?.id ?? null,
-    latitude: listing.latitude ?? locationNode?.latitude ?? null,
-    longitude: listing.longitude ?? locationNode?.longitude ?? null,
-    locationSource: 'EXTERNAL_IMPORT',
-    locationAccuracy: listing.latitude != null && listing.longitude != null ? 'SOURCE_PROPERTY_PIN' : 'SOURCE_LOCATION',
+    imageUrls: redisplayAllowed ? (listing.imageUrls ?? []) : [],
+    latitude: listing.latitude,
+    longitude: listing.longitude,
+    rawData: {
+      ...(listing.rawData && typeof listing.rawData === 'object' ? listing.rawData as Record<string, unknown> : {}),
+      importer: 'AI_ASSISTED',
+      possibleDuplicatePropertyId: possibleDuplicate?.id ?? null,
+      currency: 'KES',
+      listingType: 'FOR_SALE',
+    } as any,
+    status,
+    lastSeenAt: new Date(),
+    propertyId: null,
   };
-
-  const property = existingProperty
-    ? await prisma.property.update({ where: { id: existingProperty.id }, data: propertyData })
-    : await prisma.property.create({ data: propertyData });
 
   await prisma.externalListing.upsert({
     where: { sourceId_externalId: { sourceId, externalId: listing.externalId } },
-    update: {
-      sourceUrl: listing.sourceUrl,
-      title: listing.title,
-      description: listing.description ?? '',
-      price: listing.price,
-      bedrooms: listing.bedrooms,
-      bathrooms: listing.bathrooms,
-      sizeSqm: listing.sizeSqm,
-      propertyType: listing.propertyType,
-      location: listing.location,
-      amenities: listing.amenities ?? [],
-      imageUrls: listing.imageUrls ?? [],
-      latitude: listing.latitude,
-      longitude: listing.longitude,
-      rawData: listing.rawData as any,
-      status: 'ACTIVE',
-      lastSeenAt: new Date(),
-      importedAt: new Date(),
-      propertyId: property.id,
-    },
+    update: data,
     create: {
       sourceId,
       externalId: listing.externalId,
-      sourceUrl: listing.sourceUrl,
-      title: listing.title,
-      description: listing.description ?? '',
-      price: listing.price,
-      bedrooms: listing.bedrooms,
-      bathrooms: listing.bathrooms,
-      sizeSqm: listing.sizeSqm,
-      propertyType: listing.propertyType,
-      location: listing.location,
-      amenities: listing.amenities ?? [],
-      imageUrls: listing.imageUrls ?? [],
-      latitude: listing.latitude,
-      longitude: listing.longitude,
-      rawData: listing.rawData as any,
-      status: 'ACTIVE',
-      importedAt: new Date(),
-      propertyId: property.id,
+      ...data,
     },
   });
 
-  return { propertyId: property.id, deduplicated: Boolean(existingProperty) };
+  return { queued: status === 'PENDING_REVIEW', possibleDuplicate: status === 'POSSIBLE_DUPLICATE', status };
 }
 
 export async function runAuthorizedSourceImport(sourceName: string) {
@@ -143,16 +113,16 @@ export async function runAuthorizedSourceImport(sourceName: string) {
     listingPatterns: source.listingPatterns,
   });
 
-  let imported = 0;
-  let deduplicated = 0;
+  let queued = 0;
+  let possibleDuplicates = 0;
   const errors: string[] = [];
 
   for (const url of urls) {
     try {
       const listing = await scrapeStructuredListing(url);
       const result = await importListing(source.id, listing, source.redisplayAllowed);
-      imported += 1;
-      if (result.deduplicated) deduplicated += 1;
+      if (result.queued) queued += 1;
+      if (result.possibleDuplicate) possibleDuplicates += 1;
     } catch (error) {
       errors.push(url + ': ' + (error instanceof Error ? error.message : 'Unknown error'));
     }
@@ -188,8 +158,8 @@ export async function runAuthorizedSourceImport(sourceName: string) {
   return {
     source: source.name,
     discovered: urls.length,
-    imported,
-    deduplicated,
+    queued,
+    possibleDuplicates,
     errors,
   };
 }
