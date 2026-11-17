@@ -125,14 +125,14 @@ async function extractWithAI(html: string, url: string): Promise<AiExtraction | 
   const key = process.env.GOOGLE_GENAI_API_KEY;
   if (!key) return null;
   const pageText = html
-    .replace(/<script[\\s\\S]*?<\\/script>/gi, ' ')
-    .replace(/<style[\\s\\S]*?<\\/style>/gi, ' ')
+    .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, ' ')
     .replace(/<[^>]+>/g, ' ')
     .replace(/&nbsp;|&#160;/gi, ' ')
     .replace(/&amp;/gi, '&')
     .replace(/&quot;/gi, '"')
     .replace(/&#39;|&apos;/gi, "'")
-    .replace(/\\s+/g, ' ')
+    .replace(/\s+/g, ' ')
     .trim()
     .slice(0, 18000);
   if (!pageText) return null;
@@ -155,7 +155,6 @@ async function extractWithAI(html: string, url: string): Promise<AiExtraction | 
   try { return JSON.parse(output) as AiExtraction; }
   catch { throw new Error('AI returned invalid structured listing data.'); }
 }
-
 export async function scrapeStructuredListing(url: string): Promise<ImportedListing> {
   const html = await fetchHtml(url);
   const item = findListingObject(jsonLdBlocks(html));
@@ -168,41 +167,42 @@ export async function scrapeStructuredListing(url: string): Promise<ImportedList
     throw new Error('AI verification: page is not a confirmed Kenyan residential property for sale.');
   }
 
-  const title = cleanText(item?.name) || cleanText(metaContent(html, 'og:title')) || cleanText(metaContent(html, 'twitter:title'));
+  const structuredTitle = cleanText(item?.name) || cleanText(metaContent(html, 'og:title')) || cleanText(metaContent(html, 'twitter:title'));
+  const title = cleanText(ai?.title) || structuredTitle;
   if (!title) throw new Error('No supported property title found on source page.');
 
   const sourceUrl = canonicalUrl(html, url);
   const externalId = cleanText(item?.sku) || cleanText(item?.productID) || cleanText(item?.identifier) || sourceUrl;
   const currency = cleanText(ai?.currency || offers.priceCurrency);
   const isKes = /^(KES|KSH)$/i.test(currency);
-  const extractedPrice = ai
-    ? (isKes && typeof ai.price === 'number' ? ai.price : undefined)
+  const price = ai
+    ? (isKes && typeof ai.price === 'number' && ai.price > 0 ? ai.price : undefined)
     : (isKes ? firstNumber(offers.price ?? item?.price) : undefined);
 
   return {
     externalId,
     sourceUrl,
     title,
-    description: cleanText(item?.description) || cleanText(metaContent(html, 'og:description')),
-    price: firstNumber(offers.price ?? item?.price),
-    bedrooms: firstNumber(item?.numberOfBedrooms ?? item?.bedrooms),
-    bathrooms: firstNumber(item?.numberOfBathroomsTotal ?? item?.numberOfBathrooms ?? item?.bathrooms),
-    sizeSqm: firstNumber(item?.floorSize && typeof item.floorSize === 'object'
+    description: cleanText(ai?.description) || cleanText(item?.description) || cleanText(metaContent(html, 'og:description')),
+    price,
+    bedrooms: ai?.bedrooms ?? firstNumber(item?.numberOfBedrooms ?? item?.bedrooms),
+    bathrooms: ai?.bathrooms ?? firstNumber(item?.numberOfBathroomsTotal ?? item?.numberOfBathrooms ?? item?.bathrooms),
+    sizeSqm: ai?.sizeSqm ?? firstNumber(item?.floorSize && typeof item.floorSize === 'object'
       ? (item.floorSize as Record<string, unknown>).value
       : item?.floorSize),
-    propertyType: cleanText(item?.additionalType ?? item?.['@type']),
-    location: [
+    propertyType: cleanText(ai?.propertyType) || cleanText(item?.additionalType ?? item?.['@type']) || 'House',
+    location: cleanText(ai?.location) || [
       cleanText(address.streetAddress),
       cleanText(address.addressLocality),
       cleanText(address.addressRegion),
     ].filter(Boolean).join(', '),
+    amenities: Array.isArray(ai?.amenities) ? ai.amenities.filter((value): value is string => typeof value === 'string').slice(0, 30) : [],
     imageUrls: collectImages(item?.image, url),
-    latitude: firstNumber(geo.latitude),
-    longitude: firstNumber(geo.longitude),
-    rawData: item ?? { title },
+    latitude: ai?.latitude ?? firstNumber(geo.latitude),
+    longitude: ai?.longitude ?? firstNumber(geo.longitude),
+    rawData: { structuredData: item ?? null, aiExtraction: ai, currency: currency || null, country: ai?.country ?? null },
   };
 }
-
 const isAllowedListingUrl = (url: string, listingPageUrl: string, patterns: string[]) => {
   try {
     const candidate = new URL(url);
