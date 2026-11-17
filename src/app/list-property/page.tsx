@@ -862,7 +862,7 @@ export default function ListPropertyPage() {
                           </FormItem>
                         )}
                       />
-                       {watchedPropertyType !== "Land" && <FormField
+                       {watchedPropertyCategory === "RESIDENTIAL" && watchedPropertyType !== "Land" && <FormField
                         control={form.control}
                         name="bedrooms"
                         render={({ field }) => (
