@@ -116,7 +116,6 @@ export async function PATCH(request: NextRequest) {
       ] },
       orderBy: [{ searchPriority: 'desc' }, { level: 'asc' }],
     });
-    const raw = external.rawData && typeof external.rawData === 'object' ? external.rawData as Record<string, unknown> : {};
     const normalizedType = (external.propertyType || '').toLowerCase();
     const propertyType = /apartment|flat/.test(normalizedType) ? 'Apartment'
       : /villa/.test(normalizedType) ? 'Villa'
