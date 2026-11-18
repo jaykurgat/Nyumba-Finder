@@ -112,7 +112,7 @@ export async function PATCH(request: NextRequest) {
     const locationNode = await prisma.locationNode.findFirst({
       where: { searchable: true, OR: [
         { name: { contains: locationText, mode: 'insensitive' } },
-        { aliases: { some: { alias: { contains: locationText, mode: 'insensitive' } } },
+        { aliases: { some: { alias: { contains: locationText, mode: 'insensitive' } } } },
       ] },
       orderBy: [{ searchPriority: 'desc' }, { level: 'asc' }],
     });
