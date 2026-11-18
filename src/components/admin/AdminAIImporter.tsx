@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 
 type Source = {
-  id: string; name: string; baseUrl: string; listingUrl: string | null; enabled: boolean;
+  id: string; name: string; baseUrl: string; listingUrl: string | null; listingPatterns: string[]; enabled: boolean;
   accessApproved: boolean; redisplayAllowed: boolean; lastRunAt: string | null; lastError: string | null;
 };
 type Scan = { id: string; status: string; discovered: number; processed: number; queued: number; possibleDuplicates: number; rejected: number; failed: number; source: { name: string }; };
@@ -69,7 +69,7 @@ export default function AdminAIImporter() {
 
   function editSource(source: Source) {
     setEditingId(source.id); setName(source.name); setBaseUrl(source.baseUrl);
-    setListingUrl(source.listingUrl || ""); setPatterns(""); setAccessApproved(source.accessApproved);
+    setListingUrl(source.listingUrl || ""); setPatterns((source.listingPatterns || []).join("\n")); setAccessApproved(source.accessApproved);
     setRedisplayAllowed(source.redisplayAllowed); setEnabled(source.enabled);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
