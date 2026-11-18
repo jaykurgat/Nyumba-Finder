@@ -148,6 +148,25 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ source });
     }
 
+    if (action === 'edit-listing') {
+      if (!id) return NextResponse.json({ message: 'Listing ID is required.' }, { status: 400 });
+      const title = clean(body.title);
+      const description = clean(body.description);
+      const location = clean(body.location);
+      const propertyType = clean(body.propertyType);
+      const price = body.price == null || body.price === '' ? null : Number(body.price);
+      if (!title || !propertyType) return NextResponse.json({ message: 'A title and property type are required.' }, { status: 400 });
+      if (price !== null && (!Number.isFinite(price) || price <= 0)) return NextResponse.json({ message: 'Enter a valid positive price or leave it blank.' }, { status: 400 });
+      const existing = await prisma.externalListing.findUnique({ where: { id }, select: { id: true, rawData: true } });
+      if (!existing) return NextResponse.json({ message: 'Imported listing not found.' }, { status: 404 });
+      const rawData = existing.rawData && typeof existing.rawData === 'object' && !Array.isArray(existing.rawData) ? existing.rawData as Record<string, unknown> : {};
+      await prisma.externalListing.update({
+        where: { id },
+        data: { title, description, location, propertyType, price, rawData: { ...rawData, adminCorrections: { updatedAt: new Date().toISOString() } } as any },
+      });
+      return NextResponse.json({ message: 'Listing corrections saved.' });
+    }
+
     if (!id || !['approve', 'reject'].includes(action)) return NextResponse.json({ message: 'Invalid review action.' }, { status: 400 });
 
     const external = await prisma.externalListing.findUnique({
