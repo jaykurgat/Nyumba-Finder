@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
       const result = await importListing(scan.sourceId, listing, scan.source.redisplayAllowed);
       await prisma.importScanItem.update({
         where: { id: candidate.id },
-        data: { status: 'COMPLETED', externalListingId: listing.externalId, error: null },
+        data: { status: 'COMPLETED', externalId: listing.externalId, error: null },
       });
       await prisma.importScan.update({
         where: { id: scanId },
