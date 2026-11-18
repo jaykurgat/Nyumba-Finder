@@ -50,12 +50,12 @@ async function acquire(url: URL) {
     if (!/text\/html|application\/xhtml\+xml/i.test(type)) throw new Error('Source did not return HTML (' + type + ').');
     const html = await response.text();
     if (html.length > 1500000) throw new Error('HTML exceeds 1.5 MB limit.');
-    const jsonLd = [...html.matchAll(/<script[^>]*type=["']application\/ld\+json["'][^>]*>([\\s\\S]*?)<\/script>/gi)].map(m => m[1]).join('\n');
-    const text = html.replace(/<script\\b[^>]*>[\\s\\S]*?<\\/script>/gi,' ')
-      .replace(/<style\\b[^>]*>[\\s\\S]*?<\\/style>/gi,' ')
+    const jsonLd = [...html.matchAll(/<script[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi)].map(m => m[1]).join('\n');
+    const text = html.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi,' ')
+      .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi,' ')
       .replace(/<[^>]+>/g,' ').replace(/&nbsp;|&#160;/gi,' ').replace(/&amp;/gi,'&')
-      .replace(/&quot;/gi,'"').replace(/&#39;|&apos;/gi,"'").replace(/\\s+/g,' ').trim();
-    return { content: ('STRUCTURED DATA:\\n'+jsonLd+'\\nVISIBLE PAGE TEXT:\\n'+text).slice(0,24000), finalUrl: current.toString(), bytes: html.length };
+      .replace(/&quot;/gi,'"').replace(/&#39;|&apos;/gi,"'").replace(/\s+/g,' ').trim();
+    return { content: ('STRUCTURED DATA:\n'+jsonLd+'\nVISIBLE PAGE TEXT:\n'+text).slice(0,24000), finalUrl: current.toString(), bytes: html.length };
   }
   throw new Error('Too many redirects.');
 }
