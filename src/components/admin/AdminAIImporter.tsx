@@ -35,6 +35,12 @@ export default function AdminAIImporter() {
   const [redisplayAllowed, setRedisplayAllowed] = useState(false);
   const [enabled, setEnabled] = useState(false);
   const [editingId, setEditingId] = useState("");
+  const [editingListingId, setEditingListingId] = useState("");
+  const [editTitle, setEditTitle] = useState("");
+  const [editDescription, setEditDescription] = useState("");
+  const [editPrice, setEditPrice] = useState("");
+  const [editLocation, setEditLocation] = useState("");
+  const [editPropertyType, setEditPropertyType] = useState("");
 
   async function load() {
     setLoading(true); setError("");
@@ -136,6 +142,26 @@ export default function AdminAIImporter() {
     finally { setBusy(""); }
   }
 
+  async function saveListingEdits(id: string) {
+    setBusy("edit:" + id); setError(""); setNotice("");
+    try {
+      const response = await fetch("/api/admin/ai-importer", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({
+        id, action: "edit-listing", title: editTitle, description: editDescription,
+        price: editPrice === "" ? null : Number(editPrice), location: editLocation, propertyType: editPropertyType,
+      }) });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || "Could not save listing edits.");
+      setEditingListingId(""); setNotice("Listing corrections saved. Review it again before approval."); await load();
+    } catch (e) { setError(e instanceof Error ? e.message : "Could not save listing edits."); }
+    finally { setBusy(""); }
+  }
+
+  function beginListingEdit(item: Listing) {
+    setEditingListingId(item.id); setEditTitle(item.title); setEditDescription(item.description || "");
+    setEditPrice(item.price == null ? "" : String(item.price)); setEditLocation(item.location || "");
+    setEditPropertyType(item.propertyType || "");
+  }
+
   return (
     <main className="min-h-screen bg-[#f6f8f5] text-[#26372d]">
       <header className="border-b border-[#e2e7df] bg-white">
@@ -224,6 +250,16 @@ export default function AdminAIImporter() {
                 <p className="mt-2 line-clamp-3 text-xs leading-5 text-[#68766c]">{item.description || "No description extracted."}</p>
                 <div className="mt-3 flex flex-wrap gap-3 text-[11px] text-[#718076]">{item.bedrooms != null && <span>{item.bedrooms} bedrooms</span>}{item.bathrooms != null && <span>{item.bathrooms} bathrooms</span>}</div>
                 <a href={item.sourceUrl} target="_blank" rel="noreferrer" className="mt-3 inline-block text-xs font-semibold text-[#477653] underline underline-offset-2">Open original listing ↗</a>
+                {editingListingId === item.id ? <div className="mt-3 space-y-2 rounded-lg bg-[#f7f9f6] p-3">
+                  <label className="block text-[11px] font-semibold text-[#59675d]">Nyumba-Finder title<input value={editTitle} onChange={e => setEditTitle(e.target.value)} className="mt-1 w-full rounded border border-[#dce4da] bg-white px-2 py-2 text-xs font-normal" /></label>
+                  <label className="block text-[11px] font-semibold text-[#59675d]">Description<textarea rows={4} value={editDescription} onChange={e => setEditDescription(e.target.value)} className="mt-1 w-full rounded border border-[#dce4da] bg-white px-2 py-2 text-xs font-normal" /></label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <label className="block text-[11px] font-semibold text-[#59675d]">Price (KES)<input type="number" min="1" value={editPrice} onChange={e => setEditPrice(e.target.value)} className="mt-1 w-full rounded border border-[#dce4da] bg-white px-2 py-2 text-xs font-normal" /></label>
+                    <label className="block text-[11px] font-semibold text-[#59675d]">Property type<input value={editPropertyType} onChange={e => setEditPropertyType(e.target.value)} className="mt-1 w-full rounded border border-[#dce4da] bg-white px-2 py-2 text-xs font-normal" /></label>
+                  </div>
+                  <label className="block text-[11px] font-semibold text-[#59675d]">Location<input value={editLocation} onChange={e => setEditLocation(e.target.value)} className="mt-1 w-full rounded border border-[#dce4da] bg-white px-2 py-2 text-xs font-normal" /></label>
+                  <div className="flex gap-2"><button disabled={!!busy} onClick={() => void saveListingEdits(item.id)} className="flex-1 rounded-lg bg-[#284b35] px-3 py-2 text-xs font-semibold text-white disabled:opacity-40">{busy === "edit:" + item.id ? "Saving…" : "Save corrections"}</button><button disabled={!!busy} onClick={() => setEditingListingId("")} className="rounded-lg border border-[#dce4da] px-3 py-2 text-xs font-semibold">Cancel</button></div>
+                </div> : <button disabled={!!busy} onClick={() => beginListingEdit(item)} className="mt-3 rounded-lg border border-[#dce4da] px-3 py-2 text-xs font-semibold text-[#365f40] disabled:opacity-40">Edit extracted details</button>}
                 {item.status === "POSSIBLE_DUPLICATE" && <p className="mt-2 text-xs text-amber-800">Compare this with existing listings before deciding. Automatic approval is disabled for possible duplicates.</p>}
                 <div className="mt-4 flex gap-2 border-t border-[#edf0eb] pt-3">
                   <button disabled={!!busy || item.status === "POSSIBLE_DUPLICATE"} onClick={() => void review(item.id, "approve")} className="flex-1 rounded-lg bg-[#284b35] px-3 py-2.5 text-xs font-semibold text-white disabled:opacity-40">{busy === item.id ? "Saving…" : "Approve & publish"}</button>
