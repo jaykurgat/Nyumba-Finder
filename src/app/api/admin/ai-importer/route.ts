@@ -93,6 +93,36 @@ export async function PATCH(request: NextRequest) {
     const body = await request.json().catch(() => ({}));
     const id = clean(body.id);
     const action = clean(body.action);
+
+    if (action === 'update-source') {
+      if (!id) return NextResponse.json({ message: 'Source ID is required.' }, { status: 400 });
+      const name = clean(body.name);
+      const baseUrl = clean(body.baseUrl);
+      const listingUrl = clean(body.listingUrl);
+      if (!name || !baseUrl || !listingUrl) return NextResponse.json({ message: 'Source name, website URL and listing/search URL are required.' }, { status: 400 });
+      let base: URL; let listing: URL;
+      try { base = new URL(baseUrl); listing = new URL(listingUrl); } catch { return NextResponse.json({ message: 'Enter valid source URLs.' }, { status: 400 }); }
+      if (base.protocol !== 'https:' || listing.protocol !== 'https:' || base.hostname !== listing.hostname) return NextResponse.json({ message: 'Use HTTPS URLs from the same website.' }, { status: 400 });
+      const existing = await prisma.importSource.findUnique({ where: { id } });
+      if (!existing) return NextResponse.json({ message: 'Source not found.' }, { status: 404 });
+      const duplicate = await prisma.importSource.findFirst({ where: { name, NOT: { id } } });
+      if (duplicate) return NextResponse.json({ message: 'Another source already uses that name.' }, { status: 409 });
+      const source = await prisma.importSource.update({
+        where: { id },
+        data: {
+          name, baseUrl: base.origin, listingUrl: listing.toString(),
+          listingPatterns: Array.isArray(body.listingPatterns) ? body.listingPatterns.filter((v: unknown) => typeof v === 'string').slice(0, 20) : [],
+          maxPages: int(body.maxPages, 1, 1, 5),
+          requestDelayMs: int(body.requestDelayMs, 1500, 1000, 10000),
+          enabled: body.enabled === true,
+          accessApproved: body.accessApproved === true,
+          accessMethod: clean(body.accessMethod) || 'AUTHORIZED_WEB',
+          redisplayAllowed: body.redisplayAllowed === true,
+        },
+      });
+      return NextResponse.json({ source });
+    }
+
     if (!id || !['approve', 'reject'].includes(action)) return NextResponse.json({ message: 'Invalid review action.' }, { status: 400 });
 
     const external = await prisma.externalListing.findUnique({
@@ -156,5 +186,25 @@ export async function PATCH(request: NextRequest) {
     if (error instanceof Error && error.message === 'UNAUTHORIZED_ADMIN') return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     console.error('AI_IMPORTER_REVIEW', error);
     return NextResponse.json({ message: error instanceof Error ? error.message : 'Unable to review imported listing.' }, { status: 500 });
+  }
+}
+
+
+export async function DELETE(request: NextRequest) {
+  try {
+    await requireAdmin();
+    const id = clean(new URL(request.url).searchParams.get('id'));
+    if (!id) return NextResponse.json({ message: 'Source ID is required.' }, { status: 400 });
+    const source = await prisma.importSource.findUnique({ where: { id }, include: { _count: { select: { listings: true } } } });
+    if (!source) return NextResponse.json({ message: 'Source not found.' }, { status: 404 });
+    if (source._count.listings > 0) {
+      return NextResponse.json({ message: 'This source has import history. Disable it instead of deleting it so listing and audit history are preserved.' }, { status: 409 });
+    }
+    await prisma.importSource.delete({ where: { id } });
+    return NextResponse.json({ message: 'Source removed.' });
+  } catch (error) {
+    if (error instanceof Error && error.message === 'UNAUTHORIZED_ADMIN') return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+    console.error('AI_IMPORTER_DELETE_SOURCE', error);
+    return NextResponse.json({ message: 'Unable to remove source.' }, { status: 500 });
   }
 }
