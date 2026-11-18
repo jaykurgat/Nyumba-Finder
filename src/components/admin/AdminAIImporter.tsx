@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import QuickImportPanel from "./QuickImportPanel";
 import { useEffect, useState } from "react";
 
 type Source = {
@@ -152,6 +153,7 @@ export default function AdminAIImporter() {
         </div>
         {error && <p role="alert" className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>}
         {notice && <p role="status" className="mb-4 rounded-lg border border-[#cbdcc9] bg-[#f0f6ee] px-4 py-3 text-sm text-[#426c49]">{notice}</p>}
+        <QuickImportPanel onImported={() => { void load(); setNotice("Quick import saved. Review the generated listing below before approving it."); }} />
 
         <section className="grid gap-5 xl:grid-cols-[minmax(0,1.1fr)_minmax(320px,.9fr)]">
           <div className="rounded-2xl border border-[#e1e7df] bg-white p-5 shadow-[0_2px_8px_rgba(31,48,35,.035)]">
