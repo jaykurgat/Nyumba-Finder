@@ -44,20 +44,25 @@ const privateIpv4 = (ip: string) => {
     (a === 169 && b === 254) || (a === 172 && b >= 16 && b <= 31) ||
     (a === 192 && b === 168) || (a === 100 && b >= 64 && b <= 127);
 };
+const privateIpv6 = (ip: string) => {
+  const value = ip.toLowerCase();
+  return value === '::' || value === '::1' || value.startsWith('fc') || value.startsWith('fd') ||
+    /^fe[89ab]/.test(value) || value.startsWith('ff') || value.startsWith('::ffff:');
+};
 const assertPublicUrl = async (value: string) => {
   let url: URL;
   try { url = new URL(value); } catch { throw new Error('Enter a valid property URL.'); }
   if (url.protocol !== 'https:' || url.username || url.password) throw new Error('Only public HTTPS property URLs are supported.');
-  const host = url.hostname.toLowerCase();
+  const host = url.hostname.toLowerCase().replace(/^\\[|\\]$/g, '');
   if (host === 'localhost' || host.endsWith('.localhost') || host.endsWith('.local') || host.endsWith('.internal')) {
     throw new Error('Private and local network addresses cannot be imported.');
   }
   if (isIP(host)) {
-    if (host.includes(':') || privateIpv4(host)) throw new Error('Private and local network addresses cannot be imported.');
+    if (isIP(host) === 6 ? privateIpv6(host) : privateIpv4(host)) throw new Error('Private and local network addresses cannot be imported.');
   } else {
     const records = await lookup(host, { all: true, verbatim: true });
-    if (!records.length || records.some((record) => record.family === 6 || privateIpv4(record.address))) {
-      throw new Error('The URL does not resolve exclusively to a public IPv4 address.');
+    if (!records.length || records.some((record) => record.family === 4 ? privateIpv4(record.address) : privateIpv6(record.address))) {
+      throw new Error('The URL does not resolve exclusively to public addresses.');
     }
   }
   return url;
