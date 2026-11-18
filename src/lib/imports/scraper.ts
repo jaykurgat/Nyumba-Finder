@@ -98,6 +98,7 @@ const fetchHtml = async (url: string) => {
     },
     redirect: 'follow',
     cache: 'no-store',
+    signal: AbortSignal.timeout(20000),
   });
   if (!response.ok) throw new Error('Source returned HTTP ' + response.status);
   return response.text();
