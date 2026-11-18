@@ -22,7 +22,7 @@ export async function GET() {
         orderBy: { updatedAt: 'desc' },
         take: 100,
       }),
-      prisma.importScan.findMany({ include: { source: { select: { name: true } } }, orderBy: { createdAt: 'desc' }, take: 10 }),
+      prisma.importScan.findMany({ include: { source: { select: { name: true } }, items: { select: { id: true, url: true, status: true, attempts: true, error: true, updatedAt: true }, orderBy: { createdAt: 'asc' } } }, orderBy: { createdAt: 'desc' }, take: 10 }),
     ]);
     return NextResponse.json({ sources, listings, scans });
   } catch (error) {
