@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireAdmin } from '@/lib/require-admin';
-import { runAuthorizedSourceImport } from '@/lib/imports/importer';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -23,8 +22,9 @@ export async function GET() {
         orderBy: { updatedAt: 'desc' },
         take: 100,
       }),
+      prisma.importScan.findMany({ include: { source: { select: { name: true } } }, orderBy: { createdAt: 'desc' }, take: 10 }),
     ]);
-    return NextResponse.json({ sources, listings });
+    return NextResponse.json({ sources, listings, scans });
   } catch (error) {
     if (error instanceof Error && error.message === 'UNAUTHORIZED_ADMIN') return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     console.error('AI_IMPORTER_GET', error);
