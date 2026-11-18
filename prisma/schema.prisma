@@ -296,7 +296,7 @@ model ImportScanItem {
   status             String   @default("PENDING")
   attempts           Int      @default(0)
   error              String?
-  externalListingId  String?  @db.Uuid
+  externalId         String?
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 
