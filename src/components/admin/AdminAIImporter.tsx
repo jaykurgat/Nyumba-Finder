@@ -7,7 +7,8 @@ type Source = {
   id: string; name: string; baseUrl: string; listingUrl: string | null; listingPatterns: string[]; enabled: boolean;
   accessApproved: boolean; redisplayAllowed: boolean; lastRunAt: string | null; lastError: string | null;
 };
-type ScanItem = { id: string; url: string; status: string; attempts: number; error: string | null; updatedAt: string; };\ntype Scan = { id: string; status: string; discovered: number; processed: number; queued: number; possibleDuplicates: number; rejected: number; failed: number; source: { name: string }; items: ScanItem[]; };
+type ScanItem = { id: string; url: string; status: string; attempts: number; error: string | null; updatedAt: string; };
+type Scan = { id: string; status: string; discovered: number; processed: number; queued: number; possibleDuplicates: number; rejected: number; failed: number; source: { name: string }; items: ScanItem[]; };
 type Listing = {
   id: string; title: string; description: string; price: number | null; bedrooms: number | null;
   bathrooms: number | null; propertyType: string | null; location: string; sourceUrl: string;
