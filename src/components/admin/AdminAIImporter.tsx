@@ -30,6 +30,7 @@ export default function AdminAIImporter() {
   const [accessApproved, setAccessApproved] = useState(false);
   const [redisplayAllowed, setRedisplayAllowed] = useState(false);
   const [enabled, setEnabled] = useState(false);
+  const [editingId, setEditingId] = useState("");
 
   async function load() {
     setLoading(true); setError("");
@@ -47,15 +48,41 @@ export default function AdminAIImporter() {
     event.preventDefault(); setBusy("save"); setError(""); setNotice("");
     try {
       const response = await fetch("/api/admin/ai-importer", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "save-source", name, baseUrl, listingUrl, listingPatterns: patterns.split("\n").map(v => v.trim()).filter(Boolean), accessApproved, redisplayAllowed, enabled, accessMethod: "AUTHORIZED_WEB" }),
+        method: editingId ? "PATCH" : "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: editingId ? "update-source" : "save-source", id: editingId || undefined, name, baseUrl, listingUrl, listingPatterns: patterns.split("\n").map(v => v.trim()).filter(Boolean), accessApproved, redisplayAllowed, enabled, accessMethod: "AUTHORIZED_WEB" }),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.message || "Could not save source.");
-      setNotice("Source saved. It will only be scanned when enabled and approved.");
-      setName(""); setBaseUrl(""); setListingUrl(""); setPatterns(""); setAccessApproved(false); setRedisplayAllowed(false); setEnabled(false);
+      setNotice(editingId ? "Source updated." : "Source saved. It will only be scanned when enabled and approved.");
+      resetSourceForm();
       await load();
     } catch (e) { setError(e instanceof Error ? e.message : "Could not save source."); }
+    finally { setBusy(""); }
+  }
+
+  function resetSourceForm() {
+    setEditingId(""); setName(""); setBaseUrl(""); setListingUrl(""); setPatterns("");
+    setAccessApproved(false); setRedisplayAllowed(false); setEnabled(false);
+  }
+
+  function editSource(source: Source) {
+    setEditingId(source.id); setName(source.name); setBaseUrl(source.baseUrl);
+    setListingUrl(source.listingUrl || ""); setPatterns(""); setAccessApproved(source.accessApproved);
+    setRedisplayAllowed(source.redisplayAllowed); setEnabled(source.enabled);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  async function removeSource(source: Source) {
+    if (!window.confirm("Remove " + source.name + "? Sources with import history cannot be deleted; you can disable those instead.")) return;
+    setBusy("delete:" + source.id); setError(""); setNotice("");
+    try {
+      const response = await fetch("/api/admin/ai-importer?id=" + encodeURIComponent(source.id), { method: "DELETE" });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || "Could not remove source.");
+      setNotice(data.message || "Source removed.");
+      if (editingId === source.id) resetSourceForm();
+      await load();
+    } catch (e) { setError(e instanceof Error ? e.message : "Could not remove source."); }
     finally { setBusy(""); }
   }
 
@@ -106,7 +133,7 @@ export default function AdminAIImporter() {
             <div className="space-y-3">
               {sources.map(source => <div key={source.id} className="rounded-xl border border-[#edf0eb] p-4">
                 <div className="flex flex-wrap items-center justify-between gap-2"><div><p className="text-sm font-semibold">{source.name}</p><p className="mt-0.5 break-all text-xs text-[#7b887e]">{source.baseUrl}</p></div><span className={"rounded-full px-2.5 py-1 text-[11px] font-semibold " + (source.enabled && source.accessApproved ? "bg-[#edf6eb] text-[#47734c]" : "bg-[#f4f1e9] text-[#8a7444]")}>{source.enabled && source.accessApproved ? "Ready to scan" : "Disabled / not approved"}</span></div>
-                <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-[#78857b]"><span>{source.redisplayAllowed ? "Image reuse approved" : "No image reuse permission"}</span><button disabled={!source.enabled || !source.accessApproved || !!busy} onClick={() => void runSource(source.name)} className="rounded-lg bg-[#284b35] px-3 py-2 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40">{busy === "run:" + source.name ? "Scanning…" : "Scan source"}</button></div>
+                <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-[#78857b]"><span>{source.redisplayAllowed ? "Image reuse approved" : "No image reuse permission"}</span><div className="flex flex-wrap gap-2"><button disabled={!!busy} onClick={() => editSource(source)} className="rounded-lg border border-[#dce4da] px-3 py-2 font-semibold text-[#365f40] disabled:opacity-40">Edit</button><button disabled={!!busy} onClick={() => void removeSource(source)} className="rounded-lg border border-[#eadbd6] px-3 py-2 font-semibold text-[#986254] disabled:opacity-40">{busy === "delete:" + source.id ? "Removing…" : "Remove"}</button><button disabled={!source.enabled || !source.accessApproved || !!busy} onClick={() => void runSource(source.name)} className="rounded-lg bg-[#284b35] px-3 py-2 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40">{busy === "run:" + source.name ? "Scanning…" : "Scan source"}</button></div></div>
                 {source.lastError && <p className="mt-2 whitespace-pre-wrap text-xs text-red-700">{source.lastError}</p>}
               </div>)}
               {sources.length === 0 && <p className="rounded-xl border border-dashed border-[#dfe6dd] px-4 py-6 text-center text-sm text-[#829087]">No sources configured yet.</p>}
@@ -114,7 +141,7 @@ export default function AdminAIImporter() {
           </div>
 
           <form onSubmit={saveSource} className="rounded-2xl border border-[#e1e7df] bg-white p-5 shadow-[0_2px_8px_rgba(31,48,35,.035)]">
-            <h2 className="text-lg font-semibold">Add a source</h2>
+            <h2 className="text-lg font-semibold">{editingId ? "Edit source" : "Add a source"}</h2>
             <p className="mb-4 mt-1 text-xs leading-5 text-[#7a877d]">Start with one Kenyan property website or an authorized listing feed.</p>
             <label className="mb-3 block text-xs font-semibold text-[#59675d]">Source name<input required value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Partner property feed" className="mt-1.5 h-10 w-full rounded-lg border border-[#dce4da] px-3 text-sm font-normal outline-none focus:border-[#719579]" /></label>
             <label className="mb-3 block text-xs font-semibold text-[#59675d]">Website URL<input required type="url" value={baseUrl} onChange={e => setBaseUrl(e.target.value)} placeholder="https://example.co.ke" className="mt-1.5 h-10 w-full rounded-lg border border-[#dce4da] px-3 text-sm font-normal outline-none focus:border-[#719579]" /></label>
@@ -125,7 +152,7 @@ export default function AdminAIImporter() {
               <label className="flex items-start gap-2 text-xs leading-5 text-[#59675d]"><input type="checkbox" checked={redisplayAllowed} onChange={e => setRedisplayAllowed(e.target.checked)} className="mt-0.5 accent-[#315a3d]" />I have permission to reuse the source's property photographs on Nyumba-Finder.</label>
               <label className="flex items-start gap-2 text-xs leading-5 text-[#59675d]"><input type="checkbox" checked={enabled} onChange={e => setEnabled(e.target.checked)} className="mt-0.5 accent-[#315a3d]" />Allow manual scans for this source.</label>
             </div>
-            <button disabled={busy === "save"} className="mt-4 w-full rounded-lg bg-[#284b35] px-4 py-3 text-sm font-semibold text-white disabled:opacity-50">{busy === "save" ? "Saving…" : "Save source"}</button>
+            <button disabled={busy === "save"} className="mt-4 w-full rounded-lg bg-[#284b35] px-4 py-3 text-sm font-semibold text-white disabled:opacity-50">{busy === "save" ? "Saving…" : editingId ? "Save changes" : "Save source"}</button>{editingId && <button type="button" onClick={resetSourceForm} className="mt-2 w-full rounded-lg border border-[#dce4da] px-4 py-2.5 text-sm font-semibold text-[#526456]">Cancel editing</button>}
           </form>
         </section>
 
