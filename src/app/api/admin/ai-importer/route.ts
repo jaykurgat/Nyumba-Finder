@@ -15,7 +15,7 @@ const int = (value: unknown, fallback: number, min: number, max: number) => {
 export async function GET() {
   try {
     await requireAdmin();
-    const [sources, listings] = await Promise.all([
+    const [sources, listings, scans] = await Promise.all([
       prisma.importSource.findMany({ orderBy: { name: 'asc' } }),
       prisma.externalListing.findMany({
         where: { status: { in: ['PENDING_REVIEW', 'POSSIBLE_DUPLICATE'] } },
@@ -72,11 +72,35 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ source });
     }
 
-    if (action === 'run-source') {
+    if (action === 'start-scan') {
+      if (!process.env.GOOGLE_GENAI_API_KEY) return NextResponse.json({ message: 'AI extraction is not configured. Add GOOGLE_GENAI_API_KEY to Vercel and redeploy.' }, { status: 503 });
       const name = clean(body.name);
       if (!name) return NextResponse.json({ message: 'Select a source to scan.' }, { status: 400 });
-      const result = await runAuthorizedSourceImport(name);
-      return NextResponse.json(result);
+      const source = await prisma.importSource.findUnique({ where: { name } });
+      if (!source) return NextResponse.json({ message: 'Import source not found.' }, { status: 404 });
+      if (!source.enabled || !source.accessApproved) return NextResponse.json({ message: 'This source is disabled or not approved for automated access.' }, { status: 403 });
+      const { discoverListingUrls } = await import('@/lib/imports/scraper');
+      const urls = await discoverListingUrls(source.listingUrl || source.baseUrl, {
+        maxListings: Math.max(1, Math.min(source.maxPages * 100, 500)),
+        maxPages: source.maxPages,
+        paginationParam: source.paginationParam || 'page',
+        listingPatterns: source.listingPatterns,
+      });
+      if (!urls.length) return NextResponse.json({ message: 'No candidate listing URLs were discovered. Check the listings page and URL patterns.' }, { status: 422 });
+      const scan = await prisma.importScan.create({
+        data: {
+          sourceId: source.id,
+          status: 'PROCESSING',
+          discovered: urls.length,
+          items: { create: urls.map(url => ({ url })) },
+        },
+      });
+      await prisma.importSource.update({ where: { id: source.id }, data: { lastRunAt: new Date(), lastError: null } });
+      return NextResponse.json({ scan }, { status: 202 });
+    }
+
+    if (action === 'run-source') {
+      return NextResponse.json({ message: 'The synchronous scan has been replaced. Start a resumable scan instead.' }, { status: 410 });
     }
 
     return NextResponse.json({ message: 'Unsupported importer action.' }, { status: 400 });
