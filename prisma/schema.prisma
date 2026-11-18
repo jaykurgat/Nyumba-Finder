@@ -254,6 +254,7 @@ model ImportSource {
   accessApproved      Boolean  @default(false)
   accessMethod        String   @default("MANUAL")
   redisplayAllowed    Boolean  @default(false)
+  mappingTemplate     Json?
   lastRunAt           DateTime?
   lastSuccessAt       DateTime?
   lastError           String?
