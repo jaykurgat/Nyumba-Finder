@@ -260,8 +260,48 @@ model ImportSource {
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
   listings            ExternalListing[]
+  importScans         ImportScan[]
 
   @@index([enabled, accessApproved])
+}
+
+
+model ImportScan {
+  id             String   @id @default(uuid()) @db.Uuid
+  sourceId       String   @db.Uuid
+  source         ImportSource @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  status         String   @default("QUEUED")
+  discovered     Int      @default(0)
+  processed      Int      @default(0)
+  queued         Int      @default(0)
+  possibleDuplicates Int  @default(0)
+  rejected       Int      @default(0)
+  failed         Int      @default(0)
+  startedAt      DateTime @default(now())
+  completedAt    DateTime?
+  lastError      String?
+  items          ImportScanItem[]
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([sourceId, status])
+  @@index([status, createdAt])
+}
+
+model ImportScanItem {
+  id                 String   @id @default(uuid()) @db.Uuid
+  scanId             String   @db.Uuid
+  scan               ImportScan @relation(fields: [scanId], references: [id], onDelete: Cascade)
+  url                String
+  status             String   @default("PENDING")
+  attempts           Int      @default(0)
+  error              String?
+  externalListingId  String?  @db.Uuid
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@unique([scanId, url])
+  @@index([scanId, status, createdAt])
 }
 
 model ExternalListing {
