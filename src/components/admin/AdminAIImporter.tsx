@@ -7,6 +7,7 @@ type Source = {
   id: string; name: string; baseUrl: string; listingUrl: string | null; enabled: boolean;
   accessApproved: boolean; redisplayAllowed: boolean; lastRunAt: string | null; lastError: string | null;
 };
+type Scan = { id: string; status: string; discovered: number; processed: number; queued: number; possibleDuplicates: number; rejected: number; failed: number; source: { name: string }; };
 type Listing = {
   id: string; title: string; description: string; price: number | null; bedrooms: number | null;
   bathrooms: number | null; propertyType: string | null; location: string; sourceUrl: string;
@@ -19,6 +20,7 @@ const money = (value: number | null) => value == null ? "Price not detected" : "
 export default function AdminAIImporter() {
   const [sources, setSources] = useState<Source[]>([]);
   const [listings, setListings] = useState<Listing[]>([]);
+  const [scans, setScans] = useState<Scan[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
@@ -38,7 +40,7 @@ export default function AdminAIImporter() {
       const response = await fetch("/api/admin/ai-importer", { cache: "no-store" });
       const data = await response.json();
       if (!response.ok) throw new Error(data.message || "Unable to load importer.");
-      setSources(data.sources || []); setListings(data.listings || []);
+      setSources(data.sources || []); setListings(data.listings || []); setScans(data.scans || []);
     } catch (e) { setError(e instanceof Error ? e.message : "Unable to load importer."); }
     finally { setLoading(false); }
   }
@@ -86,15 +88,38 @@ export default function AdminAIImporter() {
     finally { setBusy(""); }
   }
 
+  async function processScan(scanId: string) {
+    let finished = false;
+    while (!finished) {
+      const response = await fetch("/api/admin/ai-importer/worker", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ scanId }) });
+      const raw = await response.text();
+      let data: any;
+      try { data = JSON.parse(raw); } catch { throw new Error("Worker HTTP " + response.status + " returned non-JSON: " + raw.slice(0, 240)); }
+      if (!response.ok) throw new Error(data.message || "Scan worker failed (HTTP " + response.status + ").");
+      if (data.scan) { const s = data.scan; setNotice("Processing: " + s.processed + "/" + s.discovered + " · " + s.queued + " queued · " + s.possibleDuplicates + " duplicates · " + s.failed + " failed."); }
+      finished = data.done === true;
+      if (data.busy) await new Promise(resolve => setTimeout(resolve, 1000));
+      await load();
+    }
+    setNotice("Scan completed. Check the scan totals and review queue.");
+  }
+
   async function runSource(sourceName: string) {
     setBusy("run:" + sourceName); setError(""); setNotice("");
     try {
-      const response = await fetch("/api/admin/ai-importer", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "run-source", name: sourceName }) });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.message || "Source scan failed.");
-      setNotice("Scan complete: " + data.discovered + " pages discovered, " + data.queued + " awaiting review, " + data.possibleDuplicates + " possible duplicates.");
-      await load();
-    } catch (e) { setError(e instanceof Error ? e.message : "Source scan failed."); }
+      const response = await fetch("/api/admin/ai-importer", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "start-scan", name: sourceName }) });
+      const raw = await response.text(); let data: any;
+      try { data = JSON.parse(raw); } catch { throw new Error("Scan start HTTP " + response.status + " returned non-JSON: " + raw.slice(0, 240)); }
+      if (!response.ok) throw new Error(data.message || "Could not start scan.");
+      await load(); await processScan(data.scan.id);
+    } catch (e) { setError(e instanceof Error ? e.message : "Source scan failed."); await load(); }
+    finally { setBusy(""); }
+  }
+
+  async function resumeScan(scanId: string) {
+    setBusy("scan:" + scanId); setError("");
+    try { await processScan(scanId); }
+    catch (e) { setError(e instanceof Error ? e.message : "Unable to resume scan."); }
     finally { setBusy(""); }
   }
 
@@ -154,6 +179,20 @@ export default function AdminAIImporter() {
             </div>
             <button disabled={busy === "save"} className="mt-4 w-full rounded-lg bg-[#284b35] px-4 py-3 text-sm font-semibold text-white disabled:opacity-50">{busy === "save" ? "Saving…" : editingId ? "Save changes" : "Save source"}</button>{editingId && <button type="button" onClick={resetSourceForm} className="mt-2 w-full rounded-lg border border-[#dce4da] px-4 py-2.5 text-sm font-semibold text-[#526456]">Cancel editing</button>}
           </form>
+        </section>
+
+        <section className="mt-7">
+          <div className="mb-3"><h2 className="text-xl font-semibold">Scan activity</h2><p className="mt-1 text-xs text-[#7b887e]">Saved listing jobs can be resumed without repeating completed work.</p></div>
+          <div className="grid gap-3 md:grid-cols-2">
+            {scans.map(scan => <div key={scan.id} className="rounded-xl border border-[#e1e7df] bg-white p-4">
+              <div className="flex items-center justify-between"><p className="text-sm font-semibold">{scan.source.name}</p><span className="text-[11px] font-semibold uppercase text-[#64856b]">{scan.status}</span></div>
+              <p className="mt-2 text-xs text-[#718076]">{scan.processed}/{scan.discovered} processed · {scan.queued} queued · {scan.possibleDuplicates} duplicates · {scan.failed} failed</p>
+              <div className="mt-2 h-2 overflow-hidden rounded-full bg-[#edf1eb]"><div className="h-full rounded-full bg-[#668c6c]" style={{ width: (scan.discovered ? Math.min(100, scan.processed / scan.discovered * 100) : 0) + "%" }} /></div>
+              {["PROCESSING","QUEUED"].includes(scan.status) && <button disabled={!!busy} onClick={() => void resumeScan(scan.id)} className="mt-3 rounded-lg bg-[#284b35] px-3 py-2 text-xs font-semibold text-white disabled:opacity-40">{busy === "scan:" + scan.id ? "Processing…" : "Resume scan"}</button>}
+              {scan.failed > 0 && <button disabled={!!busy} onClick={async () => { const r = await fetch("/api/admin/ai-importer/worker", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ scanId: scan.id, action: "retry-failed" }) }); if (r.ok) await load(); }} className="ml-2 mt-3 rounded-lg border border-[#dce4da] px-3 py-2 text-xs font-semibold text-[#365f40] disabled:opacity-40">Retry failures</button>}
+            </div>)}
+            {scans.length === 0 && <p className="rounded-xl border border-dashed border-[#dfe6dd] bg-white p-5 text-sm text-[#829087]">No scans have been started yet.</p>}
+          </div>
         </section>
 
         <section className="mt-7">
