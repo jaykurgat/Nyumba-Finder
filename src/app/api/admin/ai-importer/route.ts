@@ -171,29 +171,39 @@ export async function PATCH(request: NextRequest) {
       ] },
       orderBy: [{ searchPriority: 'desc' }, { level: 'asc' }],
     });
+    const quickMapping = (external.rawData as any)?.quickImport ?? {};
     const normalizedType = (external.propertyType || '').toLowerCase();
-    const propertyType = /apartment|flat/.test(normalizedType) ? 'Apartment'
-      : /villa/.test(normalizedType) ? 'Villa'
-      : /maisonette/.test(normalizedType) ? 'Maisonette'
-      : /townhouse|town house/.test(normalizedType) ? 'Townhouse'
-      : /bungalow/.test(normalizedType) ? 'Bungalow'
-      : /bedsitter|studio/.test(normalizedType) ? 'Bedsitter'
-      : /single room/.test(normalizedType) ? 'Single Room'
-      : 'House';
+    const propertyCategory = ['RESIDENTIAL', 'COMMERCIAL', 'LAND'].includes(quickMapping.propertyCategory)
+      ? quickMapping.propertyCategory : 'RESIDENTIAL';
+    const propertyType = propertyCategory === 'LAND' ? 'Land'
+      : propertyCategory === 'COMMERCIAL'
+        ? (['Office Space', 'Retail Shop', 'Showroom', 'Warehouse', 'Industrial Space', 'Co-working Space', 'Business Premises'].includes(external.propertyType || '') ? external.propertyType! : 'Business Premises')
+        : /apartment|flat/.test(normalizedType) ? 'Apartment'
+        : /villa/.test(normalizedType) ? 'Villa'
+        : /maisonette/.test(normalizedType) ? 'Maisonette'
+        : /townhouse|town house/.test(normalizedType) ? 'Townhouse'
+        : /bungalow/.test(normalizedType) ? 'Bungalow'
+        : /bedsitter|studio/.test(normalizedType) ? 'Bedsitter'
+        : /single room/.test(normalizedType) ? 'Single Room'
+        : /shared/.test(normalizedType) ? 'Shared accommodation'
+        : 'House';
+    const listingType = quickMapping.listingType === 'FOR_RENT' ? 'FOR_RENT' : 'FOR_SALE';
+    const pricePeriod = ['ONE_TIME', 'MONTH', 'WEEK', 'DAY'].includes(quickMapping.pricePeriod)
+      ? quickMapping.pricePeriod : (listingType === 'FOR_SALE' ? 'ONE_TIME' : 'MONTH');
     const property = await prisma.property.create({
       data: {
         title: external.title,
         description: external.description || '',
         location: locationText,
         price: external.price,
-        listingType: 'FOR_SALE',
-        pricePeriod: 'ONE_TIME',
-        bedrooms: Math.max(0, Math.trunc(external.bedrooms ?? 0)),
+        listingType,
+        pricePeriod,
+        bedrooms: propertyCategory === 'LAND' ? 0 : Math.max(0, Math.trunc(external.bedrooms ?? 0)),
         bathrooms: Math.max(1, Math.trunc(external.bathrooms ?? 1)),
         sizeSqm: external.sizeSqm,
         amenities: external.amenities,
         images: external.source.redisplayAllowed ? external.imageUrls : [],
-        propertyCategory: 'RESIDENTIAL',
+        propertyCategory,
         propertyType,
         status: 'ACTIVE',
         countyId: locationNode?.countyId ?? null,
