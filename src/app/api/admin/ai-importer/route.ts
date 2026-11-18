@@ -79,6 +79,7 @@ export async function POST(request: NextRequest) {
       const source = await prisma.importSource.findUnique({ where: { name } });
       if (!source) return NextResponse.json({ message: 'Import source not found.' }, { status: 404 });
       if (!source.enabled || !source.accessApproved) return NextResponse.json({ message: 'This source is disabled or not approved for automated access.' }, { status: 403 });
+      if (!source.listingPatterns.length) return NextResponse.json({ message: 'Add at least one listing URL pattern before scanning. This prevents navigation and unrelated pages from entering the import queue.' }, { status: 422 });
       const { discoverListingUrls } = await import('@/lib/imports/scraper');
       const urls = await discoverListingUrls(source.listingUrl || source.baseUrl, {
         maxListings: Math.max(1, Math.min(source.maxPages * 100, 500)),
