@@ -53,7 +53,7 @@ const assertPublicUrl = async (value: string) => {
   let url: URL;
   try { url = new URL(value); } catch { throw new Error('Enter a valid property URL.'); }
   if (url.protocol !== 'https:' || url.username || url.password) throw new Error('Only public HTTPS property URLs are supported.');
-  const host = url.hostname.toLowerCase().replace(/^\\[|\\]$/g, '');
+  const host = url.hostname.toLowerCase().replace(/^\[|\]$/g, '');
   if (host === 'localhost' || host.endsWith('.localhost') || host.endsWith('.local') || host.endsWith('.internal')) {
     throw new Error('Private and local network addresses cannot be imported.');
   }
@@ -161,7 +161,7 @@ export async function POST(request: NextRequest) {
     if (body.authorized !== true) return NextResponse.json({ message: 'Confirm that you are authorised to access and use this listing information.' }, { status: 400 });
     const parsedUrl = await assertPublicUrl(sourceUrl);
     const { html, finalUrl } = await fetchPage(parsedUrl);
-    const host = new URL(finalUrl).hostname.replace(/^www\\./, '');
+    const host = new URL(finalUrl).hostname.replace(/^www\./, '');
     const sourceName = 'Quick URL import — ' + host;
     const priorSource = await prisma.importSource.findUnique({ where: { name: sourceName }, select: { mappingTemplate: true } });
     const extracted = await analyseWithAi(pageTextFromHtml(html), finalUrl, priorSource?.mappingTemplate ?? undefined);
