@@ -7,7 +7,7 @@ type Source = {
   id: string; name: string; baseUrl: string; listingUrl: string | null; listingPatterns: string[]; enabled: boolean;
   accessApproved: boolean; redisplayAllowed: boolean; lastRunAt: string | null; lastError: string | null;
 };
-type Scan = { id: string; status: string; discovered: number; processed: number; queued: number; possibleDuplicates: number; rejected: number; failed: number; source: { name: string }; };
+type ScanItem = { id: string; url: string; status: string; attempts: number; error: string | null; updatedAt: string; };\ntype Scan = { id: string; status: string; discovered: number; processed: number; queued: number; possibleDuplicates: number; rejected: number; failed: number; source: { name: string }; items: ScanItem[]; };
 type Listing = {
   id: string; title: string; description: string; price: number | null; bedrooms: number | null;
   bathrooms: number | null; propertyType: string | null; location: string; sourceUrl: string;
@@ -189,7 +189,21 @@ export default function AdminAIImporter() {
               <p className="mt-2 text-xs text-[#718076]">{scan.processed}/{scan.discovered} processed · {scan.queued} queued · {scan.possibleDuplicates} duplicates · {scan.failed} failed</p>
               <div className="mt-2 h-2 overflow-hidden rounded-full bg-[#edf1eb]"><div className="h-full rounded-full bg-[#668c6c]" style={{ width: (scan.discovered ? Math.min(100, scan.processed / scan.discovered * 100) : 0) + "%" }} /></div>
               {["PROCESSING","QUEUED"].includes(scan.status) && <button disabled={!!busy} onClick={() => void resumeScan(scan.id)} className="mt-3 rounded-lg bg-[#284b35] px-3 py-2 text-xs font-semibold text-white disabled:opacity-40">{busy === "scan:" + scan.id ? "Processing…" : "Resume scan"}</button>}
-              {scan.failed > 0 && <button disabled={!!busy} onClick={async () => { const r = await fetch("/api/admin/ai-importer/worker", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ scanId: scan.id, action: "retry-failed" }) }); if (r.ok) await load(); }} className="ml-2 mt-3 rounded-lg border border-[#dce4da] px-3 py-2 text-xs font-semibold text-[#365f40] disabled:opacity-40">Retry failures</button>}
+              {scan.failed > 0 && <button disabled={!!busy} onClick={async () => { setBusy("retry:" + scan.id); try { const r = await fetch("/api/admin/ai-importer/worker", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ scanId: scan.id, action: "retry-failed" }) }); const d = await r.json(); if (!r.ok) throw new Error(d.message || "Could not retry failed listings."); await load(); if (d.retried > 0) await processScan(scan.id); } catch (e) { setError(e instanceof Error ? e.message : "Could not retry failed listings."); } finally { setBusy(""); } }} className="ml-2 mt-3 rounded-lg border border-[#dce4da] px-3 py-2 text-xs font-semibold text-[#365f40] disabled:opacity-40">{busy === "retry:" + scan.id ? "Retrying…" : "Retry failures"}</button>}
+              <div className="mt-4 border-t border-[#edf0eb] pt-3">
+                <p className="mb-2 text-xs font-semibold text-[#526456]">Discovered URLs and results ({scan.items?.length || 0})</p>
+                <div className="max-h-80 space-y-2 overflow-y-auto">
+                  {(scan.items || []).map(item => <div key={item.id} className="rounded-lg border border-[#edf0eb] bg-[#fbfcfa] p-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <span className={"rounded-full px-2 py-1 text-[10px] font-semibold " + (item.status === "FAILED" ? "bg-red-50 text-red-700" : item.status === "COMPLETED" ? "bg-[#edf6eb] text-[#47734c]" : "bg-[#f4f1e9] text-[#8a7444]")}>{item.status}</span>
+                      <span className="text-[10px] text-[#829087]">Attempt {item.attempts}</span>
+                    </div>
+                    <a href={item.url} target="_blank" rel="noreferrer" className="mt-2 block break-all text-xs font-medium text-[#477653] underline underline-offset-2">{item.url}</a>
+                    {item.error && <p className="mt-2 whitespace-pre-wrap break-words text-xs leading-5 text-red-700">Failure reason: {item.error}</p>}
+                  </div>)}
+                  {(!scan.items || scan.items.length === 0) && <p className="text-xs text-[#829087]">No listing URLs recorded for this scan.</p>}
+                </div>
+              </div>
             </div>)}
             {scans.length === 0 && <p className="rounded-xl border border-dashed border-[#dfe6dd] bg-white p-5 text-sm text-[#829087]">No scans have been started yet.</p>}
           </div>
