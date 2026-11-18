@@ -147,6 +147,7 @@ async function extractWithAI(html: string, url: string): Promise<AiExtraction | 
       generationConfig: { responseMimeType: 'application/json', temperature: 0.1 },
     }),
     cache: 'no-store',
+    signal: AbortSignal.timeout(25000),
   });
   if (!response.ok) throw new Error('AI extraction service returned HTTP ' + response.status);
   const payload = await response.json();
