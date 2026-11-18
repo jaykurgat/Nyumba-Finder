@@ -92,9 +92,20 @@ export async function PATCH(request: NextRequest) {
       await prisma.importScanItem.updateMany({ where: { scanId, status: 'PENDING' }, data: { status: 'CANCELLED' } });
       return NextResponse.json({ scan: updated });
     }
-    const retried = await prisma.importScanItem.updateMany({ where: { scanId, status: 'FAILED' }, data: { status: 'PENDING', error: null } });
-    await prisma.importScan.update({ where: { id: scanId }, data: { status: 'PROCESSING', completedAt: null, failed: { decrement: retried.count } } });
-    return NextResponse.json({ retried: retried.count });
+    // Retry only transient Gemini 503 failures; source HTTP 403 is an access restriction.
+    const retryable = await prisma.importScanItem.findMany({
+      where: { scanId, status: 'FAILED', attempts: { lt: 5 }, error: { contains: 'AI extraction service returned HTTP 503' } },
+      select: { id: true },
+    });
+    const retried = retryable.length ? await prisma.importScanItem.updateMany({
+      where: { scanId, id: { in: retryable.map((item) => item.id) }, status: 'FAILED' },
+      data: { status: 'PENDING', error: null },
+    }) : { count: 0 };
+    if (retried.count > 0) {
+      await prisma.importScan.update({ where: { id: scanId }, data: { status: 'PROCESSING', completedAt: null, failed: { decrement: retried.count } } });
+    }
+    const skipped = await prisma.importScanItem.count({ where: { scanId, status: 'FAILED' } });
+    return NextResponse.json({ retried: retried.count, skipped, message: retried.count ? 'Transient AI failures queued for retry.' : 'No retryable AI 503 failures remain. HTTP 403 source errors are not retried.' });
   } catch (error) {
     if (error instanceof Error && error.message === 'UNAUTHORIZED_ADMIN') return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     console.error('AI_IMPORTER_WORKER_ACTION', error);
