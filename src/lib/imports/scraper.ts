@@ -122,6 +122,21 @@ type AiExtraction = {
   longitude?: number | null;
 };
 
+const wait = (milliseconds: number) => new Promise((resolve) => setTimeout(resolve, milliseconds));
+
+async function fetchWithAiRetry(url: string, init: RequestInit): Promise<Response> {
+  const maxRetries = 2;
+  for (let attempt = 0; ; attempt += 1) {
+    const response = await fetch(url, init);
+    if (response.ok) return response;
+    if (response.status === 503 && attempt < maxRetries) {
+      await wait(1000 * (2 ** attempt));
+      continue;
+    }
+    throw new Error('AI extraction service returned HTTP ' + response.status + (response.status === 503 ? ' after ' + (attempt + 1) + ' attempts' : ''));
+  }
+}
+
 async function extractWithAI(html: string, url: string): Promise<AiExtraction | null> {
   const key = process.env.GOOGLE_GENAI_API_KEY;
   if (!key) return null;
@@ -138,7 +153,7 @@ async function extractWithAI(html: string, url: string): Promise<AiExtraction | 
     .slice(0, 18000);
   if (!pageText) return null;
 
-  const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=' + encodeURIComponent(key), {
+  const response = await fetchWithAiRetry('https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=' + encodeURIComponent(key), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -150,7 +165,6 @@ async function extractWithAI(html: string, url: string): Promise<AiExtraction | 
     cache: 'no-store',
     signal: AbortSignal.timeout(25000),
   });
-  if (!response.ok) throw new Error('AI extraction service returned HTTP ' + response.status);
   const payload = await response.json();
   const output = payload?.candidates?.[0]?.content?.parts?.map((part: { text?: string }) => part.text || '').join('');
   if (!output) throw new Error('AI could not extract structured listing details.');
