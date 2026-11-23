@@ -95,7 +95,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (action === 'connection') {
-      const result = await callGemini(key, 'Reply with exactly this JSON and no other text: {"connection":"ok","model":"' + 'gemini-2.5-flash-lite' + '"}');
+      const result = await callGemini(key, 'Reply with exactly this JSON and no other text: {"connection":"ok","model":"' + 'gemini-3.5-flash-lite' + '"}');
       return NextResponse.json({ stage: 'gemini_connection', ok: true, model: result.model, latencyMs: result.latencyMs, attempts: result.attempts, fallbackUsed: result.fallbackUsed, usage: result.usage, response: result.parsed });
     }
     if (action !== 'extract') return NextResponse.json({ message: 'Unsupported diagnostic action.' }, { status: 400 });
@@ -119,7 +119,7 @@ export async function POST(request: NextRequest) {
       }
     }
     if (!page) return NextResponse.json({ stage: 'input', ok: false, message: 'Paste the listing page text/HTML, or enable URL retrieval for a source that authorizes automated access.' }, { status: 400 });
-    if (sourceUrl && !/^https:\\/\\//i.test(sourceUrl)) return NextResponse.json({ stage: 'input', ok: false, message: 'Use the original listing URL beginning with https://.' }, { status: 400 });
+    if (sourceUrl) { try { const parsedSourceUrl = new URL(sourceUrl); if (parsedSourceUrl.protocol !== 'https:') throw new Error(); } catch { return NextResponse.json({ stage: 'input', ok: false, message: 'Use a valid original listing URL beginning with https://.' }, { status: 400 }); } }
     const started = Date.now();
     const result = await callGemini(key, promptFor(page.slice(0,24000), sourceUrl));
     const x = result.parsed;
