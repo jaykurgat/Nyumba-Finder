@@ -1,7 +1,7 @@
 // Both models below have standard free-tier input/output pricing in Google's Gemini API pricing.
 // Keep this allowlist explicit so a stale Vercel environment variable cannot select a paid model.
-const DEFAULT_MODEL = 'gemini-2.5-flash-lite';
-const FALLBACK_CANDIDATES = ['gemini-2.5-flash'];
+const DEFAULT_MODEL = 'gemini-3.5-flash-lite';
+const FALLBACK_CANDIDATES = ['gemini-3.8-flash'];
 const GENERATE_TIMEOUT_MS = 10_000;
 
 type GeminiPayload = {
