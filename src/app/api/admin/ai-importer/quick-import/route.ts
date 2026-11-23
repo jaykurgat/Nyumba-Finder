@@ -98,20 +98,6 @@ async function fetchPage(initialUrl: URL) {
   throw new Error('The source redirected too many times.');
 }
 
-const pageTextFromHtml = (html: string) => {
-  const jsonLd = [...html.matchAll(/<script[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi)]
-    .map((match) => match[1].slice(0, 12000)).join('\n');
-  const text = html
-    .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, ' ')
-    .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, ' ')
-    .replace(/<[^>]+>/g, ' ')
-    .replace(/&nbsp;|&#160;/gi, ' ')
-    .replace(/&amp;/gi, '&').replace(/&quot;/gi, '"')
-    .replace(/&#39;|&apos;/gi, "'")
-    .replace(/\s+/g, ' ').trim();
-  return ('STRUCTURED DATA:\n' + jsonLd + '\nVISIBLE PAGE TEXT:\n' + text).slice(0, 24000);
-};
-
 async function analyseWithAi(page: string, sourceUrl: string, mappingTemplate?: unknown): Promise<{ extracted: Extracted; model: string; attempts: number; fallbackUsed: boolean }> {
   const key = process.env.GOOGLE_GENAI_API_KEY;
   if (!key) throw new Error('AI extraction is not configured. Add GOOGLE_GENAI_API_KEY to Vercel and redeploy.');
