@@ -1,5 +1,7 @@
-const DEFAULT_MODEL = 'gemini-3.8-flash';
-const FALLBACK_CANDIDATES = ['gemini-3.5-flash-lite', 'gemini-3.5-flash'];
+// Both models below have standard free-tier input/output pricing in Google's Gemini API pricing.
+// Keep this allowlist explicit so a stale Vercel environment variable cannot select a paid model.
+const DEFAULT_MODEL = 'gemini-2.5-flash-lite';
+const FALLBACK_CANDIDATES = ['gemini-2.5-flash'];
 const GENERATE_TIMEOUT_MS = 10_000;
 
 type GeminiPayload = {
@@ -82,8 +84,9 @@ export async function listGeminiModels() {
 export async function generateGeminiJson(prompt: string): Promise<GeminiResult> {
   const key = process.env.GOOGLE_GENAI_API_KEY;
   if (!key) throw new Error('GOOGLE_GENAI_API_KEY is missing from this deployment environment.');
-  const primary = process.env.GEMINI_MODEL?.trim() || DEFAULT_MODEL;
-  const configuredFallback = process.env.GEMINI_FALLBACK_MODEL?.trim();
+  const primary = DEFAULT_MODEL;
+  // Never honor GEMINI_MODEL / GEMINI_FALLBACK_MODEL here: older deployments may
+  // still define those variables with a different model. This importer is free-tier only.
   const started = Date.now();
   let attempts = 0;
   let lastError: Error | null = null;
@@ -110,8 +113,7 @@ export async function generateGeminiJson(prompt: string): Promise<GeminiResult> 
       (/HTTP 503|HTTP 502|HTTP 504|timed out|network request failed/i.test(lastError.message))) {
     try {
       const available = await listGeminiModels();
-      const fallback = [configuredFallback, ...FALLBACK_CANDIDATES]
-        .filter((value): value is string => !!value && value !== primary && available.includes(value))[0];
+      const fallback = FALLBACK_CANDIDATES.find((value) => value !== primary && available.includes(value));
       if (fallback) {
         attempts += 1;
         const payload = await requestModel(key, fallback, prompt);
