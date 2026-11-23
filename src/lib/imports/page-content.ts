@@ -29,7 +29,7 @@ export function normalizePropertyContent(input: string) {
     throw new Error('The supplied content is too large. Keep pasted text/HTML below 150,000 characters.');
   }
 
-  const looksLikeHtml = /<!doctype\s+html|<html\b|<body\b|<script\b|<article\b|<main\b/i.test(raw);
+  const looksLikeHtml = /<\\s*(?:!doctype|[a-z][a-z0-9-]*(?:\\s|>|\\/))/i.test(raw);
   if (!looksLikeHtml) {
     const text = decodeEntities(raw.replace(/\u0000/g, ' ')).replace(/\s+/g, ' ').trim();
     if (text.length < 80) throw new Error('The supplied text is too short. Paste the complete property description and its key details.');
