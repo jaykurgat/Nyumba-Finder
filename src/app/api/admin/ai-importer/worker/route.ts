@@ -96,6 +96,8 @@ export async function PATCH(request: NextRequest) {
     const retryable = await prisma.importScanItem.findMany({
       where: { scanId, status: 'FAILED', attempts: { lt: 5 }, OR: [
         { error: { contains: 'AI extraction service returned HTTP 503' } },
+        { error: { contains: 'HTTP 502' } },
+        { error: { contains: 'HTTP 504' } },
         { error: { contains: 'AI extraction service timed out' } },
         { error: { contains: 'AI extraction service network request failed' } },
       ] },
