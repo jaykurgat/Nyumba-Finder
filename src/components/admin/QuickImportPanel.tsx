@@ -53,7 +53,7 @@ export default function QuickImportPanel({ onImported }: { onImported: () => voi
         <div>
           <p className="text-xs font-semibold uppercase tracking-[.16em] text-[#64856b]">Individual property import</p>
           <h2 className="mt-1 text-xl font-semibold">Quick Import with AI</h2>
-          <p className="mt-1 max-w-3xl text-sm leading-6 text-[#718076]">Import from an accessible, authorized property page or paste its copied page text/HTML when the source does not permit automated retrieval. AI maps the details into Nyumba-Finder fields. Images are never imported.</p>
+          <p className="mt-1 max-w-3xl text-sm leading-6 text-[#718076]">Import from an accessible source or paste listing text/HTML when you have permission to use it but automated retrieval is unavailable. A page being publicly viewable does not itself grant reuse rights. Images are never imported.</p>
         </div>
         <span className="rounded-full bg-[#edf6eb] px-3 py-1.5 text-xs font-semibold text-[#47734c]">AI field mapping</span>
       </div>
@@ -63,12 +63,12 @@ export default function QuickImportPanel({ onImported }: { onImported: () => voi
           <input type="url" required value={url} onChange={e => setUrl(e.target.value)} placeholder="https://property-website.com/listing/123" className="mt-1.5 h-11 w-full rounded-lg border border-[#dce4da] px-3 text-sm font-normal outline-none focus:border-[#719579]" />
         </label>
         <label className="block text-xs font-semibold text-[#59675d]">Optional: paste listing page text or HTML
-          <textarea value={content} onChange={e => setContent(e.target.value)} rows={6} maxLength={150000} placeholder="If the website blocks automated access (HTTP 403), open the listing in your browser, copy its visible property details, and paste them here. The importer will use this content directly without requesting the source URL." className="mt-1.5 w-full rounded-lg border border-[#dce4da] p-3 text-sm font-normal outline-none focus:border-[#719579]" />
+          <textarea value={content} onChange={e => setContent(e.target.value)} rows={6} maxLength={150000} placeholder="If you have permission to reuse this listing information but the source blocks automated retrieval (HTTP 403), paste the listing content here. This will not request the source URL." className="mt-1.5 w-full rounded-lg border border-[#dce4da] p-3 text-sm font-normal outline-none focus:border-[#719579]" />
           <span className="mt-1 block font-normal text-[#829087]">Up to 150,000 characters. Pasted content is processed directly; the original URL is retained for review.</span>
         </label>
         <label className="flex items-start gap-2 rounded-lg bg-[#f7f9f6] p-3 text-xs leading-5 text-[#59675d]">
           <input type="checkbox" checked={authorized} onChange={e => setAuthorized(e.target.checked)} className="mt-0.5 accent-[#315a3d]" />
-          I confirm I am authorised to access this page and use its property information for review on Nyumba-Finder.
+          I confirm I have permission to use this listing information on Nyumba-Finder. Access to a public page alone is not permission to reproduce its content.
         </label>
         <div className="flex flex-wrap items-center gap-3">
           <button disabled={busy || !url.trim() || !authorized || (!content.trim() && !url.trim())} className="rounded-lg bg-[#284b35] px-5 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50">
