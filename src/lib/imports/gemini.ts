@@ -2,7 +2,8 @@
 // Keep this allowlist explicit so a stale Vercel environment variable cannot select a paid model.
 const DEFAULT_MODEL = 'gemini-3.5-flash-lite';
 const FALLBACK_CANDIDATES = ['gemini-3.8-flash'];
-const GENERATE_TIMEOUT_MS = 10_000;
+// Keep the full primary retry + catalogue lookup + fallback path inside the route's 60s budget.
+const GENERATE_TIMEOUT_MS = 15_000;
 
 type GeminiPayload = {
   candidates?: Array<{ content?: { parts?: Array<{ text?: string }> }; finishReason?: string }>;
@@ -108,9 +109,11 @@ export async function generateGeminiJson(prompt: string): Promise<GeminiResult> 
   }
 
   // Only attempt a fallback after Google's own model catalogue confirms it supports generateContent.
-  // A 429 is a project quota/rate limit and is not bypassed by switching models.
+  // A 404 may mean this API project is not eligible for the primary model; a 429 is a
+  // project quota/rate limit and is not bypassed by switching models.
+  const modelUnavailable = (lastError as (Error & { status?: number }) | null)?.status === 404;
   if (lastError && !/HTTP 429/.test(lastError.message) &&
-      (/HTTP 503|HTTP 502|HTTP 504|timed out|network request failed/i.test(lastError.message))) {
+      (modelUnavailable || /HTTP 503|HTTP 502|HTTP 504|timed out|network request failed/i.test(lastError.message))) {
     try {
       const available = await listGeminiModels();
       const fallback = FALLBACK_CANDIDATES.find((value) => value !== primary && available.includes(value));
