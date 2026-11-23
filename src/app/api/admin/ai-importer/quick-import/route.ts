@@ -156,7 +156,7 @@ export async function POST(request: NextRequest) {
       finalUrl = fetched.finalUrl;
       pageContent = normalizePropertyContent(fetched.html);
     }
-    const host = new URL(finalUrl).hostname.replace(/^www\\./, '');
+    const host = new URL(finalUrl).hostname.replace(/^www\./, '');
     const sourceName = 'Quick URL import — ' + host;
     const priorSource = await prisma.importSource.findUnique({ where: { name: sourceName }, select: { mappingTemplate: true } });
     const aiResult = await analyseWithAi(pageContent, finalUrl, priorSource?.mappingTemplate ?? undefined);
