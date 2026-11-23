@@ -152,11 +152,25 @@ export async function POST(request: NextRequest) {
     await requireAdmin();
     const body = await request.json().catch(() => ({}));
     const sourceUrl = typeof body.url === 'string' ? body.url.trim() : '';
-    if (!sourceUrl) return NextResponse.json({ message: 'Paste an individual property URL.' }, { status: 400 });
+    const suppliedContent = typeof body.content === 'string' ? body.content.trim() : '';
+    if (!sourceUrl) return NextResponse.json({ message: 'Enter the original individual property URL so the source can be recorded.' }, { status: 400 });
     if (body.authorized !== true) return NextResponse.json({ message: 'Confirm that you are authorised to access and use this listing information.' }, { status: 400 });
-    const parsedUrl = await assertPublicUrl(sourceUrl);
-    const { html, finalUrl } = await fetchPage(parsedUrl);
-    const host = new URL(finalUrl).hostname.replace(/^www\./, '');
+    let parsedUrl: URL;
+    try { parsedUrl = new URL(sourceUrl); } catch { throw new Error('Enter a valid original property URL.'); }
+    if (parsedUrl.protocol !== 'https:' || parsedUrl.username || parsedUrl.password) throw new Error('Only public HTTPS property URLs are supported.');
+    if (suppliedContent.length > 150_000) throw new Error('Pasted page content must be 150,000 characters or fewer.');
+    let finalUrl = sourceUrl;
+    let pageContent: string;
+    if (suppliedContent) {
+      // User-supplied content is used directly; do not make a request to the source URL.
+      pageContent = normalizePropertyContent(suppliedContent);
+    } else {
+      const safeUrl = await assertPublicUrl(sourceUrl);
+      const fetched = await fetchPage(safeUrl);
+      finalUrl = fetched.finalUrl;
+      pageContent = normalizePropertyContent(fetched.html);
+    }
+    const host = new URL(finalUrl).hostname.replace(/^www\\./, '');
     const sourceName = 'Quick URL import — ' + host;
     const priorSource = await prisma.importSource.findUnique({ where: { name: sourceName }, select: { mappingTemplate: true } });
     const aiResult = await analyseWithAi(pageContent, finalUrl, priorSource?.mappingTemplate ?? undefined);
