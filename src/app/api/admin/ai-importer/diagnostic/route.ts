@@ -2,12 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { lookup } from 'node:dns/promises';
 import { isIP } from 'node:net';
 import { requireAdmin } from '@/lib/require-admin';
+import { generateGeminiJson, listGeminiModels } from '@/lib/imports/gemini';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
 
-const MODEL = 'gemini-3.8-flash';
 const privateV4 = (ip: string) => {
   const p = ip.split('.').map(Number); if (p.length !== 4) return true;
   const [a,b] = p;
@@ -71,22 +71,13 @@ SOURCE URL: ${sourceUrl}
 PAGE CONTENT:
 ${page}`;
 
-async function callGemini(key: string, prompt: string) {
-  const started = Date.now();
-  const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + MODEL + ':generateContent?key=' + encodeURIComponent(key), {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { responseMimeType: 'application/json', temperature: 0.1 } }),
-    cache: 'no-store', signal: AbortSignal.timeout(40000),
-  });
-  const raw = await response.text();
-  if (!response.ok) throw new Error('Gemini HTTP ' + response.status + ': ' + raw.slice(0, 1200));
-  let payload: any;
-  try { payload = JSON.parse(raw); } catch { throw new Error('Gemini returned a non-JSON API response: ' + raw.slice(0, 500)); }
-  const output = payload?.candidates?.[0]?.content?.parts?.map((p: {text?:string}) => p.text || '').join('');
-  if (!output) throw new Error('Gemini returned no candidate text. Finish reason: ' + (payload?.candidates?.[0]?.finishReason || 'unknown') + '. ' + JSON.stringify(payload?.promptFeedback || {}));
+async function callGemini(_key: string, prompt: string) {
+  const result = await generateGeminiJson(prompt);
+  const output = result.payload?.candidates?.[0]?.content?.parts?.map((p: {text?:string}) => p.text || '').join('');
+  if (!output) throw new Error('Gemini returned no candidate text. Finish reason: ' + (result.payload?.candidates?.[0]?.finishReason || 'unknown') + '. ' + JSON.stringify(result.payload?.promptFeedback || {}));
   let parsed: any;
   try { parsed = JSON.parse(output); } catch { throw new Error('Gemini response was not valid JSON: ' + output.slice(0, 1000)); }
-  return { parsed, latencyMs: Date.now() - started, usage: payload.usageMetadata ?? null, finishReason: payload?.candidates?.[0]?.finishReason ?? null };
+  return { parsed, latencyMs: result.latencyMs, usage: result.payload.usageMetadata ?? null, finishReason: result.payload?.candidates?.[0]?.finishReason ?? null, model: result.model, attempts: result.attempts, fallbackUsed: result.fallbackUsed };
 }
 
 export async function POST(request: NextRequest) {
@@ -97,9 +88,14 @@ export async function POST(request: NextRequest) {
     const key = process.env.GOOGLE_GENAI_API_KEY;
     if (!key) return NextResponse.json({ stage: 'configuration', ok: false, message: 'GOOGLE_GENAI_API_KEY is missing from this deployment environment.' }, { status: 500 });
 
+    if (action === 'models') {
+      const models = await listGeminiModels();
+      return NextResponse.json({ stage: 'gemini_models', ok: true, primaryModel: process.env.GEMINI_MODEL || 'gemini-3.8-flash', fallbackModel: process.env.GEMINI_FALLBACK_MODEL || null, availableGenerateContentModels: models });
+    }
+
     if (action === 'connection') {
       const result = await callGemini(key, 'Reply with exactly this JSON and no other text: {"connection":"ok","model":"' + MODEL + '"}');
-      return NextResponse.json({ stage: 'gemini_connection', ok: true, model: MODEL, latencyMs: result.latencyMs, usage: result.usage, response: result.parsed });
+      return NextResponse.json({ stage: 'gemini_connection', ok: true, model: result.model, latencyMs: result.latencyMs, attempts: result.attempts, fallbackUsed: result.fallbackUsed, usage: result.usage, response: result.parsed });
     }
     if (action !== 'extract') return NextResponse.json({ message: 'Unsupported diagnostic action.' }, { status: 400 });
 
@@ -130,7 +126,7 @@ export async function POST(request: NextRequest) {
       descriptionPresent: typeof x.generatedDescription === 'string' && !!x.generatedDescription.trim(),
       priceSafe: x.price === null || (typeof x.price === 'number' && x.price > 0),
     };
-    return NextResponse.json({ stage: 'gemini_extraction', ok: Object.values(checks).every(Boolean), model: MODEL, latencyMs: result.latencyMs, totalMs: Date.now()-started, acquisition, checks, extraction: x, usage: result.usage, finishReason: result.finishReason, sourceUrl }, { status: 200 });
+    return NextResponse.json({ stage: 'gemini_extraction', ok: Object.values(checks).every(Boolean), model: result.model, attempts: result.attempts, fallbackUsed: result.fallbackUsed, latencyMs: result.latencyMs, totalMs: Date.now()-started, acquisition, checks, extraction: x, usage: result.usage, finishReason: result.finishReason, sourceUrl }, { status: 200 });
   } catch (error) {
     if (error instanceof Error && error.message === 'UNAUTHORIZED_ADMIN') return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     const message = error instanceof Error ? error.message : 'Diagnostic failed';
