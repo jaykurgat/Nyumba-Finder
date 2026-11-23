@@ -4,6 +4,7 @@ import { isIP } from 'node:net';
 import { prisma } from '@/lib/prisma';
 import { requireAdmin } from '@/lib/require-admin';
 import { importListing } from '@/lib/imports/importer';
+import { generateGeminiJson } from '@/lib/imports/gemini';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -122,15 +123,8 @@ Create an SEO title and meta description from verified facts. Output keys: isPro
 SOURCE URL: ${sourceUrl}
 PAGE CONTENT:
 ${page}`;
-  const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=' + encodeURIComponent(key), {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { responseMimeType: 'application/json', temperature: 0.1 } }),
-    cache: 'no-store',
-    signal: AbortSignal.timeout(35000),
-  });
-  if (!response.ok) throw new Error('AI extraction service returned HTTP ' + response.status + '.');
-  const payload = await response.json();
+  const aiResult = await generateGeminiJson(prompt);
+  const payload = aiResult.payload;
   const output = payload?.candidates?.[0]?.content?.parts?.map((part: { text?: string }) => part.text || '').join('');
   if (!output) throw new Error('AI did not return structured property information.');
   let parsed: Extracted;
