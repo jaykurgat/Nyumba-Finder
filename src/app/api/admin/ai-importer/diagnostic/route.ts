@@ -94,7 +94,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (action === 'connection') {
-      const result = await callGemini(key, 'Reply with exactly this JSON and no other text: {"connection":"ok","model":"' + MODEL + '"}');
+      const result = await callGemini(key, 'Reply with exactly this JSON and no other text: {"connection":"ok","model":"' + (process.env.GEMINI_MODEL || 'gemini-3.8-flash') + '"}');
       return NextResponse.json({ stage: 'gemini_connection', ok: true, model: result.model, latencyMs: result.latencyMs, attempts: result.attempts, fallbackUsed: result.fallbackUsed, usage: result.usage, response: result.parsed });
     }
     if (action !== 'extract') return NextResponse.json({ message: 'Unsupported diagnostic action.' }, { status: 400 });
