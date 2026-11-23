@@ -60,7 +60,7 @@ export function normalizePropertyContent(input: string) {
     jsonLd ? 'STRUCTURED DATA (JSON-LD):\n' + jsonLd : '',
     visible ? 'VISIBLE PAGE TEXT:\n' + visible : '',
   ].filter(Boolean).join('\n\n');
-  if (combined.replace(/[^\p{L}\p{N}]/gu, '').length < 80) {
+  if (combined.trim().length < 100) {
     throw new Error('No meaningful listing content was found. Paste the rendered listing text rather than an empty page shell.');
   }
   return combined.slice(0, MAX_OUTPUT_CHARS);
