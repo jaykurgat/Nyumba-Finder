@@ -223,6 +223,9 @@ export async function POST(request: NextRequest) {
       missingFields: extracted.missingFields || [],
       confidence: extracted.confidence || {},
       sourceUrl: finalUrl,
+      aiModel: aiResult.model,
+      aiAttempts: aiResult.attempts,
+      usedFallbackModel: aiResult.fallbackUsed,
     }, { status: 201 });
   } catch (error) {
     if (error instanceof Error && error.message === 'UNAUTHORIZED_ADMIN') return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
