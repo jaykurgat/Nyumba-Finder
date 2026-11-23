@@ -90,11 +90,11 @@ export async function POST(request: NextRequest) {
 
     if (action === 'models') {
       const models = await listGeminiModels();
-      return NextResponse.json({ stage: 'gemini_models', ok: true, primaryModel: process.env.GEMINI_MODEL || 'gemini-3.8-flash', fallbackModel: process.env.GEMINI_FALLBACK_MODEL || null, availableGenerateContentModels: models });
+      return NextResponse.json({ stage: 'gemini_models', ok: true, primaryModel: 'gemini-2.5-flash-lite', fallbackModel: 'gemini-2.5-flash', availableGenerateContentModels: models });
     }
 
     if (action === 'connection') {
-      const result = await callGemini(key, 'Reply with exactly this JSON and no other text: {"connection":"ok","model":"' + (process.env.GEMINI_MODEL || 'gemini-3.8-flash') + '"}');
+      const result = await callGemini(key, 'Reply with exactly this JSON and no other text: {"connection":"ok","model":"' + 'gemini-2.5-flash-lite' + '"}');
       return NextResponse.json({ stage: 'gemini_connection', ok: true, model: result.model, latencyMs: result.latencyMs, attempts: result.attempts, fallbackUsed: result.fallbackUsed, usage: result.usage, response: result.parsed });
     }
     if (action !== 'extract') return NextResponse.json({ message: 'Unsupported diagnostic action.' }, { status: 400 });
