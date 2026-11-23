@@ -90,7 +90,7 @@ export async function POST(request: NextRequest) {
 
     if (action === 'models') {
       const models = await listGeminiModels();
-      return NextResponse.json({ stage: 'gemini_models', ok: true, primaryModel: 'gemini-2.5-flash-lite', fallbackModel: 'gemini-2.5-flash', availableGenerateContentModels: models });
+      return NextResponse.json({ stage: 'gemini_models', ok: true, primaryModel: 'gemini-3.5-flash-lite', fallbackModel: 'gemini-3.8-flash', availableGenerateContentModels: models });
     }
 
     if (action === 'connection') {
