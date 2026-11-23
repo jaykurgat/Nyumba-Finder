@@ -107,7 +107,7 @@ export async function POST(request: NextRequest) {
     // to a source that may deny automated access.
     if (page) {
       page = normalizePropertyContent(page);
-      acquisition = { ok: true, method: /<html\\b|<body\\b|<script\\b/i.test(body.content) ? 'pasted_html' : 'pasted_text' };
+      acquisition = { ok: true, method: 'pasted_content' };
     } else if (body.tryUrl === true && sourceUrl) {
       try {
         const acquired = await acquire(await validatePublicUrl(sourceUrl));
