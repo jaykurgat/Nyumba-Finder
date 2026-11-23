@@ -3,6 +3,7 @@ import { lookup } from 'node:dns/promises';
 import { isIP } from 'node:net';
 import { requireAdmin } from '@/lib/require-admin';
 import { generateGeminiJson, listGeminiModels } from '@/lib/imports/gemini';
+import { normalizePropertyContent } from '@/lib/imports/page-content';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -100,19 +101,25 @@ export async function POST(request: NextRequest) {
     if (action !== 'extract') return NextResponse.json({ message: 'Unsupported diagnostic action.' }, { status: 400 });
 
     let page = typeof body.content === 'string' ? body.content.trim() : '';
-    let sourceUrl = typeof body.url === 'string' ? body.url.trim() : 'https://provided-content.local/';
-    let acquisition: any = { ok: false, method: 'pasted_content' };
-    if (body.tryUrl === true && sourceUrl) {
+    let sourceUrl = typeof body.url === 'string' ? body.url.trim() : '';
+    let acquisition: any = { ok: false, method: page ? 'pasted_content' : 'not_attempted' };
+    // Pasted content is the primary path when supplied: never make an unnecessary request
+    // to a source that may deny automated access.
+    if (page) {
+      page = normalizePropertyContent(page);
+      acquisition = { ok: true, method: /<html\\b|<body\\b|<script\\b/i.test(body.content) ? 'pasted_html' : 'pasted_text' };
+    } else if (body.tryUrl === true && sourceUrl) {
       try {
         const acquired = await acquire(await validatePublicUrl(sourceUrl));
-        page = acquired.content; sourceUrl = acquired.finalUrl;
+        page = normalizePropertyContent(acquired.content); sourceUrl = acquired.finalUrl;
         acquisition = { ok: true, method: 'server_fetch', bytes: acquired.bytes, finalUrl: acquired.finalUrl };
       } catch (e) {
         acquisition = { ok: false, method: 'server_fetch', error: e instanceof Error ? e.message : 'Acquisition failed' };
         if (!page) return NextResponse.json({ stage: 'acquisition', ok: false, acquisition, message: 'Page acquisition failed. Paste the page text or HTML to test Gemini independently.' }, { status: 422 });
       }
     }
-    if (!page) return NextResponse.json({ stage: 'input', ok: false, message: 'Provide page text/HTML, or enable URL fetch.' }, { status: 400 });
+    if (!page) return NextResponse.json({ stage: 'input', ok: false, message: 'Paste the listing page text/HTML, or enable URL retrieval for a source that authorizes automated access.' }, { status: 400 });
+    if (sourceUrl && !/^https:\\/\\//i.test(sourceUrl)) return NextResponse.json({ stage: 'input', ok: false, message: 'Use the original listing URL beginning with https://.' }, { status: 400 });
     const started = Date.now();
     const result = await callGemini(key, promptFor(page.slice(0,24000), sourceUrl));
     const x = result.parsed;
