@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma';
 import { requireAdmin } from '@/lib/require-admin';
 import { importListing } from '@/lib/imports/importer';
 import { generateGeminiJson } from '@/lib/imports/gemini';
+import { normalizePropertyContent } from '@/lib/imports/page-content';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -158,7 +159,7 @@ export async function POST(request: NextRequest) {
     const host = new URL(finalUrl).hostname.replace(/^www\./, '');
     const sourceName = 'Quick URL import — ' + host;
     const priorSource = await prisma.importSource.findUnique({ where: { name: sourceName }, select: { mappingTemplate: true } });
-    const aiResult = await analyseWithAi(pageTextFromHtml(html), finalUrl, priorSource?.mappingTemplate ?? undefined);
+    const aiResult = await analyseWithAi(pageContent, finalUrl, priorSource?.mappingTemplate ?? undefined);
     const extracted = aiResult.extracted;
     const mappingTemplate = {
       version: 1,
@@ -204,6 +205,7 @@ export async function POST(request: NextRequest) {
           seoTitle: extracted.seoTitle || extracted.generatedTitle,
           metaDescription: extracted.metaDescription || extracted.generatedDescription.slice(0, 160),
           originalUrl: sourceUrl,
+          acquisitionMethod: suppliedContent ? 'USER_SUPPLIED_CONTENT' : 'SERVER_FETCH',
         },
       },
     };
@@ -211,6 +213,7 @@ export async function POST(request: NextRequest) {
     const saved = await prisma.externalListing.findUnique({ where: { sourceId_externalId: { sourceId: source.id, externalId: finalUrl } }, select: { id: true, status: true } });
     return NextResponse.json({
       message: result.possibleDuplicate ? 'Extracted and saved for duplicate review.' : 'Extracted and saved to the private review queue.',
+      acquisitionMethod: suppliedContent ? 'USER_SUPPLIED_CONTENT' : 'SERVER_FETCH',
       listingId: saved?.id,
       status: result.status,
       duplicate: result.possibleDuplicate,
