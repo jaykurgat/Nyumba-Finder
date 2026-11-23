@@ -11,7 +11,7 @@ type Report = {
 export default function ImportDiagnosticPanel() {
   const [url, setUrl] = useState("https://www.buyrentkenya.com/listings/1-bedroom-apartment-for-sale-westlands-area-10005044");
   const [content, setContent] = useState("");
-  const [tryUrl, setTryUrl] = useState(true);
+  const [tryUrl, setTryUrl] = useState(false);
   const [busy, setBusy] = useState("");
   const [report, setReport] = useState<Report | null>(null);
   const [error, setError] = useState("");
@@ -37,7 +37,7 @@ export default function ImportDiagnosticPanel() {
         <div>
           <p className="text-xs font-semibold uppercase tracking-[.16em] text-amber-700">Temporary diagnostic · admin only</p>
           <h2 className="mt-1 text-xl font-semibold">AI Importer System Test</h2>
-          <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-600">Tests the deployed Gemini key/model and the real extraction prompt without creating or saving a listing. It separately reports source acquisition failures.</p>
+          <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-600">Tests Gemini independently from source access. Paste listing text/HTML to test extraction directly; URL retrieval is optional and only appropriate for sources that authorize it.</p>
         </div>
         <span className="rounded-full bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-800">No listing saved</span>
       </div>
@@ -47,16 +47,16 @@ export default function ImportDiagnosticPanel() {
         </label>
         <label className="flex items-center gap-2 text-xs text-slate-600">
           <input type="checkbox" checked={tryUrl} onChange={e => setTryUrl(e.target.checked)} />
-          First try retrieving this URL from the Nyumba-Finder server
+          Try server retrieval instead of pasted content (only for sources that permit automated access)
         </label>
-        <label className="block text-xs font-semibold text-slate-600">Optional: paste page text or HTML (used if URL retrieval fails)
-          <textarea value={content} onChange={e => setContent(e.target.value)} rows={5} placeholder="Paste the property page's copied text or HTML here to test Gemini independently of website access." className="mt-1.5 w-full rounded-lg border border-slate-300 p-3 text-sm font-normal" />
+        <label className="block text-xs font-semibold text-slate-600">Paste property page text or HTML (recommended; takes priority and skips URL retrieval)
+          <textarea value={content} onChange={e => setContent(e.target.value)} rows={5} placeholder="Paste the listing text or HTML copied from a page you are authorized to use. This runs Gemini directly without requesting the source website." className="mt-1.5 w-full rounded-lg border border-slate-300 p-3 text-sm font-normal" />
         </label>
         <div className="flex flex-wrap gap-2">
           <button onClick={() => run("connection")} disabled={!!busy} className="rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-semibold disabled:opacity-50">{busy === "connection" ? "Testing…" : "1. Test Gemini connection"}</button>
           <button onClick={() => run("extract")} disabled={!!busy || (!tryUrl && !content.trim())} className="rounded-lg bg-[#284b35] px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50">{busy === "extract" ? "Running extraction…" : "2. Test property extraction"}</button>
         </div>
-        <p className="text-xs text-slate-500">Connection test sends a tiny JSON prompt. Extraction test uses the production model name and the same property-analysis instructions as Quick Import. The endpoint is admin-protected and does not write to the database.</p>
+        <p className="text-xs text-slate-500">Connection test sends a small JSON prompt. Extraction uses pasted content directly when present; otherwise it can optionally fetch an accessible, authorized URL. It never bypasses HTTP 403 and never writes to the database. JavaScript-only pages must be copied from the rendered browser page; this tool does not run website JavaScript.</p>
       </div>
       {error && <pre className="mt-4 max-h-72 overflow-auto whitespace-pre-wrap rounded-lg border border-red-200 bg-red-50 p-3 text-xs text-red-800">{error}</pre>}
       {report && <div className="mt-4 space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
