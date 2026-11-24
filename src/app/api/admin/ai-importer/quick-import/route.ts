@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { lookup } from 'node:dns/promises';
-import { isIP } from 'node:net';
 import { prisma } from '@/lib/prisma';
 import { requireAdmin } from '@/lib/require-admin';
 import { importListing } from '@/lib/imports/importer';
 import { generateGeminiJson } from '@/lib/imports/gemini';
 import { normalizePropertyContent } from '@/lib/imports/page-content';
+import { fetchListingPage } from '@/lib/imports/source-fetch';
+import { normalizeExtractionEvidence } from '@/lib/imports/evidence';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -34,69 +34,10 @@ type Extracted = {
   confidence: Record<string, number>;
   missingFields: string[];
   fieldEvidence: Record<string, string>;
+  contradictions: Array<{ field: string; values: string[]; evidence: string[] }>;
   seoTitle: string;
   metaDescription: string;
 };
-
-const privateIpv4 = (ip: string) => {
-  const parts = ip.split('.').map(Number);
-  if (parts.length !== 4) return true;
-  const [a, b] = parts;
-  return a === 0 || a === 10 || a === 127 || a >= 224 ||
-    (a === 169 && b === 254) || (a === 172 && b >= 16 && b <= 31) ||
-    (a === 192 && b === 168) || (a === 100 && b >= 64 && b <= 127);
-};
-const privateIpv6 = (ip: string) => {
-  const value = ip.toLowerCase();
-  return value === '::' || value === '::1' || value.startsWith('fc') || value.startsWith('fd') ||
-    /^fe[89ab]/.test(value) || value.startsWith('ff') || value.startsWith('::ffff:');
-};
-const assertPublicUrl = async (value: string) => {
-  let url: URL;
-  try { url = new URL(value); } catch { throw new Error('Enter a valid property URL.'); }
-  if (url.protocol !== 'https:' || url.username || url.password) throw new Error('Only public HTTPS property URLs are supported.');
-  const host = url.hostname.toLowerCase().replace(/^\[|\]$/g, '');
-  if (host === 'localhost' || host.endsWith('.localhost') || host.endsWith('.local') || host.endsWith('.internal')) {
-    throw new Error('Private and local network addresses cannot be imported.');
-  }
-  if (isIP(host)) {
-    if (isIP(host) === 6 ? privateIpv6(host) : privateIpv4(host)) throw new Error('Private and local network addresses cannot be imported.');
-  } else {
-    const records = await lookup(host, { all: true, verbatim: true });
-    if (!records.length || records.some((record) => record.family === 4 ? privateIpv4(record.address) : privateIpv6(record.address))) {
-      throw new Error('The URL does not resolve exclusively to public addresses.');
-    }
-  }
-  return url;
-};
-
-async function fetchPage(initialUrl: URL) {
-  let current = initialUrl;
-  for (let hop = 0; hop < 4; hop++) {
-    await assertPublicUrl(current.toString());
-    const response = await fetch(current, {
-      headers: { 'User-Agent': 'NyumbaFinder-QuickImport/1.0', Accept: 'text/html,application/xhtml+xml' },
-      redirect: 'manual',
-      cache: 'no-store',
-      signal: AbortSignal.timeout(20000),
-    });
-    if ([301, 302, 303, 307, 308].includes(response.status)) {
-      const location = response.headers.get('location');
-      if (!location) throw new Error('The source redirected without a destination.');
-      current = new URL(location, current);
-      continue;
-    }
-    if (!response.ok) throw new Error(response.status === 403
-      ? 'The source website denied access (HTTP 403). This URL cannot be imported automatically.'
-      : 'The source website returned HTTP ' + response.status + '.');
-    const type = response.headers.get('content-type') || '';
-    if (!/text\/html|application\/xhtml\+xml/i.test(type)) throw new Error('The URL did not return an HTML property page.');
-    const html = await response.text();
-    if (html.length > 1_500_000) throw new Error('The property page is larger than the 1.5 MB import limit.');
-    return { html, finalUrl: current.toString() };
-  }
-  throw new Error('The source redirected too many times.');
-}
 
 async function analyseWithAi(page: string, sourceUrl: string, mappingTemplate?: unknown): Promise<{ extracted: Extracted; model: string; attempts: number; fallbackUsed: boolean }> {
   const key = process.env.GOOGLE_GENAI_API_KEY;
@@ -105,8 +46,8 @@ async function analyseWithAi(page: string, sourceUrl: string, mappingTemplate?: 
 Determine if this is one actual property listing, not a search page, category page, agent profile or article. Extract only facts supported by the page. Do not invent amenities, location details, measurements, security, distances or facilities.
 Map category to RESIDENTIAL, COMMERCIAL or LAND. Use these residential types where applicable: Apartment, Bedsitter, Single Room, Maisonette, Townhouse, Bungalow, Villa, House, Shared accommodation. Commercial types: Office Space, Retail Shop, Showroom, Warehouse, Industrial Space, Co-working Space, Business Premises. Land type must be Land. Preserve the listing transaction as FOR_SALE or FOR_RENT. Map source price period accurately. Only return price as a number when the currency is clearly KES/KSh; otherwise price must be null and preserve currency. Never convert currencies.
 Create a fresh, professional Nyumba-Finder title and description, not a close paraphrase of the source wording. Use only verified facts. The generated copy must not add claims. The original title and description should be retained separately.
-Prior semantic mapping template (use only as a consistency guide; verify all fields against this page): ${JSON.stringify(mappingTemplate ?? null)}. For each field in confidence, give a number from 0 to 1 based on evidence. fieldEvidence should briefly quote or identify the page evidence for important facts. missingFields should list important absent fields. Unknown numeric values must be null. Amenities must only include explicitly stated features. Country should be Kenya only when supported.
-Create an SEO title and meta description from verified facts. Output keys: isPropertyListing, country, currency, sourceTitle, sourceDescription, generatedTitle, generatedDescription, seoTitle, metaDescription, price, propertyCategory, propertyType, listingType, pricePeriod, location, bedrooms, bathrooms, sizeSqm, amenities, latitude, longitude, confidence, missingFields, fieldEvidence.
+Prior semantic mapping template (use only as a consistency guide; verify all fields against this page): ${JSON.stringify(mappingTemplate ?? null)}. For each field in confidence, give a number from 0 to 1 based on evidence. fieldEvidence should briefly quote or identify the page evidence for important facts. missingFields should list important absent fields. If the page gives conflicting values for the same fact (for example, different bedroom counts in the title and body, or multiple different prices), do not choose silently: add each conflict to contradictions with the field name, conflicting values, and short evidence excerpts; lower that field's confidence to 0.4 or less. Return an empty contradictions array when none are visible. Unknown numeric values must be null. Amenities must only include explicitly stated features. Country should be Kenya only when supported.
+Create an SEO title and meta description from verified facts. Output keys: isPropertyListing, country, currency, sourceTitle, sourceDescription, generatedTitle, generatedDescription, seoTitle, metaDescription, price, propertyCategory, propertyType, listingType, pricePeriod, location, bedrooms, bathrooms, sizeSqm, amenities, latitude, longitude, confidence, missingFields, fieldEvidence, contradictions.
 SOURCE URL: ${sourceUrl}
 PAGE CONTENT:
 ${page}`;
@@ -127,6 +68,11 @@ ${page}`;
   };
   if (!allowedTypes[parsed.propertyCategory].includes(parsed.propertyType)) throw new Error('AI mapped an unsupported property type: ' + parsed.propertyType);
   if (!['FOR_SALE', 'FOR_RENT'].includes(parsed.listingType)) throw new Error('The listing transaction could not be established.');
+  const evidence = normalizeExtractionEvidence(parsed);
+  parsed.confidence = evidence.confidence;
+  parsed.fieldEvidence = evidence.fieldEvidence;
+  parsed.missingFields = evidence.missingFields;
+  parsed.contradictions = evidence.contradictions;
   if (parsed.pricePeriod && !['ONE_TIME', 'MONTH', 'WEEK', 'DAY'].includes(parsed.pricePeriod)) parsed.pricePeriod = parsed.listingType === 'FOR_SALE' ? 'ONE_TIME' : 'MONTH';
   if (parsed.currency && !/^(KES|KSH|KSh)$/i.test(parsed.currency)) parsed.price = null;
   if (typeof parsed.price !== 'number' || parsed.price <= 0) parsed.price = null;
@@ -151,8 +97,7 @@ export async function POST(request: NextRequest) {
       // User-supplied content is used directly; do not make a request to the source URL.
       pageContent = normalizePropertyContent(suppliedContent);
     } else {
-      const safeUrl = await assertPublicUrl(sourceUrl);
-      const fetched = await fetchPage(safeUrl);
+      const fetched = await fetchListingPage(parsedUrl);
       finalUrl = fetched.finalUrl;
       pageContent = normalizePropertyContent(fetched.html);
     }
@@ -202,6 +147,7 @@ export async function POST(request: NextRequest) {
           confidence: extracted.confidence || {},
           missingFields: extracted.missingFields || [],
           fieldEvidence: extracted.fieldEvidence || {},
+          contradictions: extracted.contradictions || [],
           seoTitle: extracted.seoTitle || extracted.generatedTitle,
           metaDescription: extracted.metaDescription || extracted.generatedDescription.slice(0, 160),
           originalUrl: sourceUrl,
@@ -238,3 +184,4 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ message }, { status: /HTTP 403|HTTP 4\d\d|valid property URL|authorised|Private and local/.test(message) ? 422 : 500 });
   }
 }
+

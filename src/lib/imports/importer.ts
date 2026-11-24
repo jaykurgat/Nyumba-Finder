@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma';
 import { discoverListingUrls, scrapeStructuredListing } from './scraper';
+import { isLikelyDuplicateProperty } from './duplicates';
 import type { ImportedListing } from './types';
 
 const normalize = (value: string) =>
@@ -31,18 +32,13 @@ async function findExistingProperty(listing: ImportedListing) {
   const candidates = await prisma.property.findMany({
     where: {
       status: { in: ['ACTIVE', 'EXPIRED', 'SUSPENDED'] },
-      ...(listing.price != null ? { price: listing.price } : {}),
+      ...(listing.price != null ? { price: { gte: listing.price * 0.95, lte: listing.price * 1.05 } } : {}),
       ...(listing.bedrooms != null ? { bedrooms: listing.bedrooms } : {}),
     },
     select: { id: true, title: true, location: true },
-    take: 50,
+    take: 100,
   });
-  const location = normalize(listing.location ?? '');
-  return candidates.find((candidate) => {
-    const sameTitle = normalize(candidate.title) === title;
-    const candidateLocation = normalize(candidate.location);
-    return sameTitle && (!location || candidateLocation.includes(location) || location.includes(candidateLocation));
-  }) ?? null;
+  return candidates.find((candidate) => isLikelyDuplicateProperty(candidate, listing)) ?? null;
 }
 
 export async function importListing(sourceId: string, listing: ImportedListing, redisplayAllowed: boolean) {
@@ -166,3 +162,4 @@ export async function runAuthorizedSourceImport(sourceName: string) {
     errors,
   };
 }
+

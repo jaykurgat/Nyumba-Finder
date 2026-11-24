@@ -1,0 +1,18 @@
+{
+  "sourceUrl": "https://www.propertypro.co.ke/property/flatapartment-for-sale-kilimani-nairobi-3BSSV",
+  "sourceRecord": "PropertyPro Kenya public listing results, PID 3BSSV",
+  "verifiedOn": "2026-11-24",
+  "expected": {
+    "title": "2 Bedroom Apartment (100 Sqm)",
+    "location": "Kilimani Nairobi",
+    "category": "RESIDENTIAL",
+    "propertyType": "Apartment",
+    "listingType": "FOR_SALE",
+    "currency": "KSh",
+    "price": 9900000,
+    "bedrooms": 2,
+    "sizeSqm": 100,
+    "externalId": "3BSSV"
+  }
+}
+

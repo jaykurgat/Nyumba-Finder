@@ -39,8 +39,17 @@ export function normalizePropertyContent(input: string) {
   const jsonLd = [...raw.matchAll(/<script\b[^>]*type\s*=\s*["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi)]
     .map((match) => decodeEntities(match[1]).slice(0, 12_000))
     .join('\n');
-  const metadata = [...raw.matchAll(/<meta\b[^>]*(?:property|name)\s*=\s*["']([^"']+)["'][^>]*content\s*=\s*["']([^"']*)["'][^>]*>/gi)]
-    .map((match) => match[1] + ': ' + decodeEntities(match[2]))
+  const metadata = [...raw.matchAll(/<meta\b[^>]*>/gi)]
+    .map(([tag]) => {
+      const attributes = new Map<string, string>();
+      for (const match of tag.matchAll(/([a-z:-]+)\s*=\s*(["'])(.*?)\2/gi)) {
+        attributes.set(match[1].toLowerCase(), match[3]);
+      }
+      const key = attributes.get('property') ?? attributes.get('name');
+      const content = attributes.get('content');
+      return key && content ? key + ': ' + decodeEntities(content) : '';
+    })
+    .filter(Boolean)
     .join('\n');
   const title = raw.match(/<title\b[^>]*>([\s\S]*?)<\/title>/i)?.[1] ?? '';
   const visible = decodeEntities(raw
@@ -65,3 +74,4 @@ export function normalizePropertyContent(input: string) {
   }
   return combined.slice(0, MAX_OUTPUT_CHARS);
 }
+

@@ -20,6 +20,23 @@ type Listing = {
 
 const money = (value: number | null) => value == null ? "Price not detected" : "KES " + value.toLocaleString("en-KE");
 
+function quickImportReview(rawData: Listing["rawData"]) {
+  const value = rawData?.quickImport;
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const data = value as Record<string, unknown>;
+  const confidence = data.confidence && typeof data.confidence === "object" && !Array.isArray(data.confidence)
+    ? Object.entries(data.confidence as Record<string, unknown>).filter((entry): entry is [string, number] => typeof entry[1] === "number")
+    : [];
+  const evidence = data.fieldEvidence && typeof data.fieldEvidence === "object" && !Array.isArray(data.fieldEvidence)
+    ? Object.entries(data.fieldEvidence as Record<string, unknown>).filter((entry): entry is [string, string] => typeof entry[1] === "string" && !!entry[1].trim())
+    : [];
+  const missing = Array.isArray(data.missingFields) ? data.missingFields.filter((field): field is string => typeof field === "string") : [];
+  const contradictions = Array.isArray(data.contradictions) ? data.contradictions.filter((item): item is { field: string; values: string[]; evidence: string[] } =>
+    !!item && typeof item === "object" && typeof (item as { field?: unknown }).field === "string" &&
+    Array.isArray((item as { values?: unknown }).values) && Array.isArray((item as { evidence?: unknown }).evidence)) : [];
+  return { confidence, evidence, missing, contradictions };
+}
+
 export default function AdminAIImporter() {
   const [sources, setSources] = useState<Source[]>([]);
   const [listings, setListings] = useState<Listing[]>([]);
@@ -252,6 +269,23 @@ export default function AdminAIImporter() {
                 <p className="mt-2 line-clamp-3 text-xs leading-5 text-[#68766c]">{item.description || "No description extracted."}</p>
                 <div className="mt-3 flex flex-wrap gap-3 text-[11px] text-[#718076]">{item.bedrooms != null && <span>{item.bedrooms} bedrooms</span>}{item.bathrooms != null && <span>{item.bathrooms} bathrooms</span>}</div>
                 <a href={item.sourceUrl} target="_blank" rel="noreferrer" className="mt-3 inline-block text-xs font-semibold text-[#477653] underline underline-offset-2">Open original listing ↗</a>
+                {(() => {
+                  const reviewData = quickImportReview(item.rawData);
+                  if (!reviewData) return null;
+                  return <div className="mt-3 space-y-2">
+                    {reviewData.contradictions.map((conflict, index) => <div key={conflict.field + index} className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs text-amber-950">
+                      <p className="font-semibold">Conflicting source details: {conflict.field}</p>
+                      <p className="mt-1">Values: {conflict.values.join(" · ")}</p>
+                      {conflict.evidence.length > 0 && <p className="mt-1 text-amber-900">Evidence: {conflict.evidence.join(" · ")}</p>}
+                    </div>)}
+                    {(reviewData.evidence.length > 0 || reviewData.confidence.length > 0 || reviewData.missing.length > 0) && <details className="rounded-lg border border-[#dce4da] bg-[#f8faf7] p-3 text-xs text-[#526456]">
+                      <summary className="cursor-pointer font-semibold">Extraction evidence and confidence</summary>
+                      {reviewData.missing.length > 0 && <p className="mt-2"><strong>Missing:</strong> {reviewData.missing.join(", ")}</p>}
+                      {reviewData.confidence.length > 0 && <ul className="mt-2 grid gap-1 sm:grid-cols-2">{reviewData.confidence.map(([field, score]) => <li key={field}>{field}: <strong>{Math.round(Math.max(0, Math.min(1, score)) * 100)}%</strong></li>)}</ul>}
+                      {reviewData.evidence.length > 0 && <ul className="mt-2 space-y-1 border-t border-[#e3e9e0] pt-2">{reviewData.evidence.slice(0, 15).map(([field, quote]) => <li key={field}><strong>{field}:</strong> “{quote}”</li>)}</ul>}
+                    </details>}
+                  </div>;
+                })()}
                 {editingListingId === item.id ? <div className="mt-3 space-y-2 rounded-lg bg-[#f7f9f6] p-3">
                   <label className="block text-[11px] font-semibold text-[#59675d]">Nyumba-Finder title<input value={editTitle} onChange={e => setEditTitle(e.target.value)} className="mt-1 w-full rounded border border-[#dce4da] bg-white px-2 py-2 text-xs font-normal" /></label>
                   <label className="block text-[11px] font-semibold text-[#59675d]">Description<textarea rows={4} value={editDescription} onChange={e => setEditDescription(e.target.value)} className="mt-1 w-full rounded border border-[#dce4da] bg-white px-2 py-2 text-xs font-normal" /></label>
@@ -274,3 +308,4 @@ export default function AdminAIImporter() {
     </main>
   );
 }
+

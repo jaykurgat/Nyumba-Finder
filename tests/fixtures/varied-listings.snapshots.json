@@ -1,0 +1,27 @@
+[
+  {
+    "name": "PropertyPro Nairobi house",
+    "sourceUrl": "https://www.propertypro.co.ke/property-for-sale/houses/in/nairobi",
+    "sourceRecord": "PID 0BNUS",
+    "snapshot": "<article><h2>8 Bedroom House For Sale In Karen</h2><p>Off Bogani Rd, Karen Nairobi</p><p>Houses FOR Sale</p><p>KSh 250,000,000</p><p>PID : 0BNUS</p><p>8 Beds 8 Baths</p><p>Kitchen · Balcony · Internet</p></article>",
+    "expected": { "title": "8 Bedroom House For Sale In Karen", "location": "Off Bogani Rd, Karen Nairobi", "category": "RESIDENTIAL", "propertyType": "House", "listingType": "FOR_SALE", "currency": "KSh", "price": 250000000, "bedrooms": 8, "bathrooms": 8, "amenities": ["Kitchen", "Balcony", "Internet"] },
+    "expectedMissing": ["land area", "floor area"]
+  },
+  {
+    "name": "PropertyPro Mtwapa land",
+    "sourceUrl": "https://www.propertypro.co.ke/property-for-sale/land",
+    "sourceRecord": "PID 3BTJY",
+    "snapshot": "<article><h2>Exclusive Beachfront Land For Sale – Mtwapa, Kilifi County</h2><p>Mtwapa Kilifi South Kilifi</p><p>Land FOR Sale</p><p>KSh 40,000,000</p><p>PID : 3BTJY</p></article>",
+    "expected": { "title": "Exclusive Beachfront Land For Sale – Mtwapa, Kilifi County", "location": "Mtwapa Kilifi South Kilifi", "category": "LAND", "propertyType": "Land", "listingType": "FOR_SALE", "currency": "KSh", "price": 40000000, "bedrooms": null, "bathrooms": null, "amenities": [] },
+    "expectedMissing": ["bedrooms", "bathrooms", "plot size"]
+  },
+  {
+    "name": "BuyRentKenya Kilimani apartment",
+    "sourceUrl": "https://www.buyrentkenya.com/flats-apartments-for-sale/nairobi/3-bedroom",
+    "sourceRecord": "Kilimani, Nairobi · 3 bedroom apartment result",
+    "snapshot": "<section><h2>Spacious 3-Bedroom All-En-Suite Apartment for Sale in Kilimani</h2><p>Kilimani, Nairobi</p><p>KSh 32,000,000</p><p>3 bedrooms · 3 bathrooms · 2,800 sqft</p><p>Low-density residential complex of only 36 units.</p></section>",
+    "expected": { "title": "Spacious 3-Bedroom All-En-Suite Apartment for Sale in Kilimani", "location": "Kilimani, Nairobi", "category": "RESIDENTIAL", "propertyType": "Apartment", "listingType": "FOR_SALE", "currency": "KSh", "price": 32000000, "bedrooms": 3, "bathrooms": 3, "sizeSqm": null },
+    "expectedMissing": ["size in square metres"]
+  }
+]
+
