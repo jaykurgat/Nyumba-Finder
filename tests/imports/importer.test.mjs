@@ -6,6 +6,7 @@ import { assertPublicHttpsUrl, fetchListingPage } from '../../src/lib/imports/so
 import { generateGeminiJson } from '../../src/lib/imports/gemini.ts';
 import { isLikelyDuplicateProperty } from '../../src/lib/imports/duplicates.ts';
 import { normalizeExtractionEvidence } from '../../src/lib/imports/evidence.ts';
+import { extractRuleBasedProperty } from '../../src/lib/imports/rule-based-extraction.ts';
 
 const fixtureRoot = new URL('../fixtures/', import.meta.url);
 const fixture = JSON.parse(await readFile(new URL('propertypro-3bssv.expected.json', fixtureRoot), 'utf8'));
@@ -28,6 +29,30 @@ test('selected PropertyPro listing snapshot retains manually verified facts', ()
   assert.ok(normalized.includes('PID : ' + expected.externalId));
   assert.equal(fixture.sourceUrl, 'https://www.propertypro.co.ke/property/flatapartment-for-sale-kilimani-nairobi-3BSSV');
   assert.equal(fixture.verifiedOn, '2026-11-24');
+});
+
+test('rule-based outage fallback returns evidenced PropertyPro fields without Gemini', () => {
+  const normalized = normalizePropertyContent(propertyProSnapshot);
+  const result = extractRuleBasedProperty(normalized, fixture.sourceUrl);
+  assert.ok(result);
+  assert.equal(result.isPropertyListing, true);
+  assert.equal(result.propertyCategory, fixture.expected.category);
+  assert.equal(result.propertyType, fixture.expected.propertyType);
+  assert.equal(result.listingType, fixture.expected.listingType);
+  assert.equal(result.location, fixture.expected.location);
+  assert.equal(result.currency, fixture.expected.currency);
+  assert.equal(result.price, fixture.expected.price);
+  assert.equal(result.bedrooms, fixture.expected.bedrooms);
+  assert.equal(result.sizeSqm, fixture.expected.sizeSqm);
+  assert.ok(result.fieldEvidence.price.includes('KSh 9,900,000'));
+  assert.ok(result.fieldEvidence.bedrooms.includes('2 Bedroom'));
+  assert.ok(result.missingFields.includes('bathrooms'));
+  assert.equal(result.amenities.length, 0);
+});
+
+test('rule-based fallback refuses ambiguous sale and rent pages', () => {
+  const normalized = normalizePropertyContent('Two Bedroom Apartment for sale or rent in Kilimani Nairobi, KSh 9,900,000. This is an individual listing with a detailed property description and contact information.');
+  assert.equal(extractRuleBasedProperty(normalized, fixture.sourceUrl), null);
 });
 
 test('real listing snapshots cover houses, land, and alternate website layout', () => {

@@ -4,6 +4,7 @@ import { isIP } from 'node:net';
 import { requireAdmin } from '@/lib/require-admin';
 import { generateGeminiJson, listGeminiModels } from '@/lib/imports/gemini';
 import { normalizePropertyContent } from '@/lib/imports/page-content';
+import { extractRuleBasedProperty } from '@/lib/imports/rule-based-extraction';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -121,7 +122,26 @@ export async function POST(request: NextRequest) {
     if (!page) return NextResponse.json({ stage: 'input', ok: false, message: 'Paste the listing page text/HTML, or enable URL retrieval for a source that authorizes automated access.' }, { status: 400 });
     if (sourceUrl) { try { const parsedSourceUrl = new URL(sourceUrl); if (parsedSourceUrl.protocol !== 'https:') throw new Error(); } catch { return NextResponse.json({ stage: 'input', ok: false, message: 'Use a valid original listing URL beginning with https://.' }, { status: 400 }); } }
     const started = Date.now();
-    const result = await callGemini(key, promptFor(page.slice(0,24000), sourceUrl));
+    let result: Awaited<ReturnType<typeof callGemini>> | null = null;
+    let ruleBasedReason: string | null = null;
+    try {
+      result = await callGemini(key, promptFor(page.slice(0,24000), sourceUrl));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '';
+      if (!/HTTP (?:429|502|503|504)|timed out|network request failed/i.test(message)) throw error;
+      const ruleBased = extractRuleBasedProperty(page, sourceUrl);
+      if (!ruleBased) throw error;
+      ruleBasedReason = message;
+      result = {
+        parsed: ruleBased,
+        latencyMs: 0,
+        usage: null,
+        finishReason: null,
+        model: 'LOCAL_RULES',
+        attempts: 0,
+        fallbackUsed: false,
+      };
+    }
     const x = result.parsed;
     const checks = {
       validJson: true,
@@ -133,7 +153,7 @@ export async function POST(request: NextRequest) {
       descriptionPresent: typeof x.generatedDescription === 'string' && !!x.generatedDescription.trim(),
       priceSafe: x.price === null || (typeof x.price === 'number' && x.price > 0),
     };
-    return NextResponse.json({ stage: 'gemini_extraction', ok: Object.values(checks).every(Boolean), model: result.model, attempts: result.attempts, fallbackUsed: result.fallbackUsed, latencyMs: result.latencyMs, totalMs: Date.now()-started, acquisition, checks, extraction: x, usage: result.usage, finishReason: result.finishReason, sourceUrl }, { status: 200 });
+    return NextResponse.json({ stage: ruleBasedReason ? 'rule_based_extraction' : 'gemini_extraction', ok: Object.values(checks).every(Boolean), model: result.model, method: ruleBasedReason ? 'rule_based' : 'gemini', providerNotice: ruleBasedReason, attempts: result.attempts, fallbackUsed: result.fallbackUsed, latencyMs: result.latencyMs, totalMs: Date.now()-started, acquisition, checks, extraction: x, usage: result.usage, finishReason: result.finishReason, sourceUrl }, { status: 200 });
   } catch (error) {
     if (error instanceof Error && error.message === 'UNAUTHORIZED_ADMIN') return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     const message = error instanceof Error ? error.message : 'Diagnostic failed';
@@ -141,3 +161,4 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ stage: 'diagnostic', ok: false, message }, { status: 500 });
   }
 }
+
