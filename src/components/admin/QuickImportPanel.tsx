@@ -17,6 +17,7 @@ type Result = {
   missingFields: string[];
   confidence: Record<string, number>;
   sourceUrl: string;
+  acquisitionMethod?: string;
 };
 
 export default function QuickImportPanel({ onImported }: { onImported: () => void }) {
@@ -93,7 +94,7 @@ export default function QuickImportPanel({ onImported }: { onImported: () => voi
         </div>
         {result.missingFields?.length > 0 && <p className="mt-3 text-xs leading-5 text-amber-800"><strong>Missing information:</strong> {result.missingFields.join(", ")}</p>}
         <a href={result.sourceUrl} target="_blank" rel="noreferrer" className="mt-3 inline-block break-all text-xs font-semibold text-[#477653] underline underline-offset-2">Open original property page ↗</a>
-        <p className="mt-2 text-[11px] text-[#829087]">The listing has been saved privately. Refresh the review queue below to inspect it before approval.</p>
+        <p className="mt-2 text-[11px] text-[#829087]">Retrieved by {result.acquisitionMethod === "PLAYWRIGHT_BROWSERLESS" ? "managed Playwright" : result.acquisitionMethod === "SERVER_FETCH" ? "direct page retrieval" : "pasted page content"}. The listing has been saved privately. Refresh the review queue below to inspect it before approval.</p>
       </div>}
     </section>
   );

@@ -38,7 +38,7 @@ export default function ImportDiagnosticPanel() {
         <div>
           <p className="text-xs font-semibold uppercase tracking-[.16em] text-amber-700">Temporary diagnostic · admin only</p>
           <h2 className="mt-1 text-xl font-semibold">AI Importer System Test</h2>
-          <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-600">Tests field extraction separately from source access. Paste listing text/HTML for a no-fetch test; if Gemini is unavailable, clearly evidenced facts can be parsed locally. URL retrieval is only appropriate for sources that authorize it.</p>
+          <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-600">Tests source access and field extraction separately. Accessible JavaScript-rendered pages can use managed Playwright when configured. Paste listing text/HTML to test extraction without requesting the source website.</p>
         </div>
         <span className="rounded-full bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-800">No listing saved</span>
       </div>
@@ -48,7 +48,7 @@ export default function ImportDiagnosticPanel() {
         </label>
         <label className="flex items-center gap-2 text-xs text-slate-600">
           <input type="checkbox" checked={tryUrl} onChange={e => setTryUrl(e.target.checked)} />
-          Try server retrieval instead of pasted content (only for sources that permit automated access)
+          Try URL retrieval (Playwright is used only for accessible JavaScript-rendered pages and when configured)
         </label>
         <label className="block text-xs font-semibold text-slate-600">Paste property page text or HTML (recommended; takes priority and skips URL retrieval)
           <textarea value={content} onChange={e => setContent(e.target.value)} rows={5} placeholder="Paste the listing text or HTML copied from a page you are authorized to use. This runs Gemini directly without requesting the source website." className="mt-1.5 w-full rounded-lg border border-slate-300 p-3 text-sm font-normal" />
@@ -57,7 +57,7 @@ export default function ImportDiagnosticPanel() {
           <button onClick={() => run("connection")} disabled={!!busy} className="rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-semibold disabled:opacity-50">{busy === "connection" ? "Testing…" : "1. Test Gemini connection"}</button>
           <button onClick={() => run("extract")} disabled={!!busy || (!tryUrl && !content.trim())} className="rounded-lg bg-[#284b35] px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50">{busy === "extract" ? "Running extraction…" : "2. Test property extraction"}</button>
         </div>
-        <p className="text-xs text-slate-500">Connection test sends a small JSON prompt. Extraction uses pasted content directly when present; otherwise it can optionally fetch an accessible, authorized URL. It never bypasses HTTP 403 and never writes to the database. JavaScript-only pages must be copied from the rendered browser page; this tool does not run website JavaScript.</p>
+        <p className="text-xs text-slate-500">Connection test sends a small JSON prompt. Extraction uses pasted content directly when present; otherwise it tries normal retrieval and managed Playwright for a successful but empty JavaScript shell when configured. It stops on HTTP 403, CAPTCHA, login walls, and never writes to the database.</p>
       </div>
       {error && <pre className="mt-4 max-h-72 overflow-auto whitespace-pre-wrap rounded-lg border border-red-200 bg-red-50 p-3 text-xs text-red-800">{error}</pre>}
       {report && <div className="mt-4 space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-4">

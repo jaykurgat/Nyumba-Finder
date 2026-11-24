@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { test } from 'node:test';
 import { normalizePropertyContent } from '../../src/lib/imports/page-content.ts';
-import { assertPublicHttpsUrl, fetchListingPage } from '../../src/lib/imports/source-fetch.ts';
+import { acquireListingPage, assertPublicHttpsUrl, fetchListingPage, needsBrowserRendering } from '../../src/lib/imports/source-fetch.ts';
 import { generateGeminiJson } from '../../src/lib/imports/gemini.ts';
 import { isLikelyDuplicateProperty } from '../../src/lib/imports/duplicates.ts';
 import { normalizeExtractionEvidence } from '../../src/lib/imports/evidence.ts';
@@ -19,7 +19,6 @@ const htmlResponse = (html, init = {}) => new Response(html, {
   headers: { 'content-type': 'text/html; charset=utf-8', ...init.headers },
   ...init,
 });
-
 test('selected PropertyPro listing snapshot retains manually verified facts', () => {
   const normalized = normalizePropertyContent(propertyProSnapshot);
   const { expected } = fixture;
@@ -154,6 +153,70 @@ test('direct acquisition returns HTML and the final URL', async () => {
   assert.match(result.html, /Apartment for sale/);
 });
 
+test('rich static pages stay on direct retrieval without opening a browser session', async () => {
+  const html = '<html><head><title>2 Bedroom Apartment for sale</title><script type="application/ld+json">{"@type":"Apartment","numberOfBedrooms":2,"offers":{"price":9900000}}</script></head><body><h1>2 Bedroom Apartment for sale in Kilimani</h1><p>KSh 9,900,000 · Kilimani Nairobi. Spacious apartment near shops and schools.</p></body></html>';
+  assert.equal(needsBrowserRendering(html), false);
+  let browserCalls = 0;
+  const result = await acquireListingPage(new URL('https://listing.example/property/42'), {
+    resolve: publicDns,
+    fetcher: async () => htmlResponse(html),
+    browserRenderer: async () => { browserCalls += 1; throw new Error('must not open browser'); },
+  });
+  assert.equal(result.method, 'SERVER_FETCH');
+  assert.equal(browserCalls, 0);
+});
+
+test('accessible JavaScript shells select the managed Playwright retrieval path', async () => {
+  const shell = '<html><body><div id="app"></div><script src="/bundle.js"></script></body></html>';
+  const rendered = '<html><head><title>2 Bedroom Apartment for sale</title></head><body><h1>2 Bedroom Apartment for sale</h1><p>KSh 9,900,000 in Kilimani Nairobi. A bright apartment with a balcony and parking.</p></body></html>';
+  assert.equal(needsBrowserRendering(shell), true);
+  let browserCalls = 0;
+  const result = await acquireListingPage(new URL('https://listing.example/property/42'), {
+    resolve: publicDns,
+    fetcher: async () => htmlResponse(shell),
+    browserRenderer: async (url) => { browserCalls += 1; assert.equal(url, 'https://listing.example/property/42'); return { html: rendered, finalUrl: url }; },
+  });
+  assert.equal(result.method, 'PLAYWRIGHT_BROWSERLESS');
+  assert.match(result.html, /KSh 9,900,000/);
+  assert.equal(browserCalls, 1);
+});
+
+test('a successful JavaScript shell gives a clear setup message when managed browser credentials are absent', async () => {
+  const previous = process.env.BROWSERLESS_API_TOKEN;
+  const previousEnabled = process.env.BROWSERLESS_ENABLE;
+  delete process.env.BROWSERLESS_API_TOKEN;
+  delete process.env.BROWSERLESS_ENABLE;
+  try {
+    await assert.rejects(acquireListingPage(new URL('https://listing.example/property/42'), {
+      resolve: publicDns,
+      fetcher: async () => htmlResponse('<html><body><div id="app"></div><script src="/bundle.js"></script></body></html>'),
+    }), /managed Playwright is not enabled/);
+  } finally {
+    if (previous === undefined) delete process.env.BROWSERLESS_API_TOKEN;
+    else process.env.BROWSERLESS_API_TOKEN = previous;
+    if (previousEnabled === undefined) delete process.env.BROWSERLESS_ENABLE;
+    else process.env.BROWSERLESS_ENABLE = previousEnabled;
+  }
+});
+
+test('an explicitly enabled browser without a token fails closed', async () => {
+  const previous = process.env.BROWSERLESS_API_TOKEN;
+  const previousEnabled = process.env.BROWSERLESS_ENABLE;
+  delete process.env.BROWSERLESS_API_TOKEN;
+  process.env.BROWSERLESS_ENABLE = 'true';
+  try {
+    await assert.rejects(acquireListingPage(new URL('https://listing.example/property/42'), {
+      resolve: publicDns,
+      fetcher: async () => htmlResponse('<html><body><div id="app"></div><script src="/bundle.js"></script></body></html>'),
+    }), /BROWSERLESS_API_TOKEN is not configured/);
+  } finally {
+    if (previous === undefined) delete process.env.BROWSERLESS_API_TOKEN;
+    else process.env.BROWSERLESS_API_TOKEN = previous;
+    if (previousEnabled === undefined) delete process.env.BROWSERLESS_ENABLE;
+    else process.env.BROWSERLESS_ENABLE = previousEnabled;
+  }
+});
+
 test('HTTP 403 is reported as denied access and not retried', async () => {
   let calls = 0;
   await assert.rejects(fetchListingPage(new URL('https://listing.example/flat'), {
@@ -161,6 +224,16 @@ test('HTTP 403 is reported as denied access and not retried', async () => {
     fetcher: async () => { calls += 1; return new Response('Forbidden', { status: 403 }); },
   }), /denied access \(HTTP 403\)/);
   assert.equal(calls, 1);
+});
+
+test('an HTTP 403 never invokes the managed browser fallback', async () => {
+  let browserCalls = 0;
+  await assert.rejects(acquireListingPage(new URL('https://listing.example/flat'), {
+    resolve: publicDns,
+    fetcher: async () => new Response('Forbidden', { status: 403 }),
+    browserRenderer: async () => { browserCalls += 1; return { html: '', finalUrl: '' }; },
+  }), /denied access \(HTTP 403\)/);
+  assert.equal(browserCalls, 0);
 });
 
 test('source timeout is surfaced without retrying or changing access method', async () => {
@@ -257,5 +330,3 @@ test('Gemini outage uses only the explicitly allowlisted free-tier fallback', as
     else process.env.GOOGLE_GENAI_API_KEY = previousKey;
   }
 });
-
-

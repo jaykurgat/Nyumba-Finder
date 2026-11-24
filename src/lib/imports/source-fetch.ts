@@ -82,3 +82,113 @@ export async function fetchListingPage(
   throw new Error('The source redirected too many times.');
 }
 
+export type ListingAcquisitionMethod = 'SERVER_FETCH' | 'PLAYWRIGHT_BROWSERLESS';
+
+type BrowserRenderer = (url: string) => Promise<{ html: string; finalUrl: string }>;
+
+function visibleHtmlText(html: string) {
+  return html
+    .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<noscript\b[^>]*>[\s\S]*?<\/noscript>/gi, ' ')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;|&#160;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;|&apos;/gi, "'")
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/** A cheap check that decides whether an allowed 200 page looks like an empty JS shell. */
+export function needsBrowserRendering(html: string) {
+  const visible = visibleHtmlText(html);
+  const structuredData = /application\/ld\+json/i.test(html);
+  const listingFacts = /(?:for\s+sale|for\s+rent|KSh|KES|\b\d+\s*(?:bed(?:room)?s?|bath(?:room)?s?|sqm|m²)\b)/i.test(visible);
+  if (structuredData && listingFacts) return false;
+  return visible.length < 350 || (!structuredData && !listingFacts && visible.length < 1_200);
+}
+
+function browserlessEndpoint() {
+  if (process.env.BROWSERLESS_ENABLE !== 'true') return null;
+  const token = process.env.BROWSERLESS_API_TOKEN?.trim();
+  if (!token) throw new Error('Managed Playwright is enabled but BROWSERLESS_API_TOKEN is not configured.');
+  const region = (process.env.BROWSERLESS_REGION || 'production-sfo').trim();
+  if (!/^(?:production-sfo|production-lon|production-ams)$/.test(region)) {
+    throw new Error('Browser retrieval is misconfigured. Set BROWSERLESS_REGION to a supported Browserless region.');
+  }
+  const endpoint = new URL(`wss://${region}.browserless.io/chromium/playwright`);
+  endpoint.searchParams.set('token', token);
+  return endpoint.toString();
+}
+
+async function renderWithBrowserless(url: string): Promise<{ html: string; finalUrl: string }> {
+  const endpoint = browserlessEndpoint();
+  if (!endpoint) throw new Error('This page loaded as a JavaScript shell, but managed Playwright is not enabled. Paste the rendered page text/HTML or enable it after confirming the Browserless plan and costs.');
+
+  let browser: { newContext: (options?: unknown) => Promise<any>; close: () => Promise<void> } | undefined;
+  try {
+    // Loaded only when explicitly configured, keeping the browser dependency out of ordinary requests.
+    const playwright = await import('playwright-core') as { chromium: { connect: (endpoint: string, options?: unknown) => Promise<typeof browser> } };
+    browser = await playwright.chromium.connect(endpoint, { timeout: 8_000 });
+    if (!browser) throw new Error('Browserless did not return a browser session.');
+    const context = await browser.newContext({ serviceWorkers: 'block' });
+    await context.routeWebSocket(/.*/, (socket: any) => socket.close());
+    const page = await context.newPage();
+    page.setDefaultNavigationTimeout(18_000);
+
+    // Validate every browser request and redirect to prevent private-network access.
+    await page.route('**/*', async (route: any) => {
+      const requestUrl = route.request().url();
+      if (requestUrl.startsWith('data:') || requestUrl.startsWith('blob:')) return route.continue();
+      try {
+        await assertPublicHttpsUrl(requestUrl);
+        return route.continue();
+      } catch {
+        return route.abort('blockedbyclient');
+      }
+    });
+
+    const response = await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 18_000 });
+    const status = response?.status() ?? 0;
+    if (status === 403) throw new Error('The source website denied access (HTTP 403). Browser retrieval stopped without retrying or bypassing the denial.');
+    if (status === 401 || status === 429) throw new Error(`The source website denied automated access (HTTP ${status}). Browser retrieval stopped.`);
+    if (status >= 400) throw new Error(`The source website returned HTTP ${status} during browser retrieval.`);
+    await page.waitForLoadState('networkidle', { timeout: 2_000 }).catch(() => undefined);
+    const title = await page.title().catch(() => '');
+    const text = await page.locator('body').innerText({ timeout: 3_000 }).catch(() => '');
+    if (/captcha|verify you are human|unusual traffic|access denied|automated requests/i.test(`${title}\n${text.slice(0, 2_000)}`)) {
+      throw new Error('The source requires verification or denies automated access. Browser retrieval stopped; paste page content you are authorized to use.');
+    }
+    const finalUrl = page.url();
+    await assertPublicHttpsUrl(finalUrl);
+    const html = await page.content();
+    if (html.length > 1_500_000) throw new Error('The rendered property page is larger than the 1.5 MB import limit.');
+    if (!visibleHtmlText(html)) throw new Error('The browser did not find readable listing content.');
+    return { html, finalUrl };
+  } catch (error) {
+    if (error instanceof Error && /denied access|denied automated access|requires verification|returned HTTP|larger than|did not find|managed Playwright|misconfigured/.test(error.message)) throw error;
+    // Do not expose the Browserless endpoint because its query string contains the secret token.
+    throw new Error('Managed Playwright retrieval failed or timed out. Try again later or paste the rendered listing content.');
+  } finally {
+    if (browser) await browser.close().catch(() => undefined);
+  }
+}
+
+export async function acquireListingPage(
+  initialUrl: URL,
+  dependencies: {
+    resolve?: Resolver;
+    fetcher?: Fetcher;
+    timeoutMs?: number;
+    maxBytes?: number;
+    browserRenderer?: BrowserRenderer;
+  } = {},
+) {
+  const direct = await fetchListingPage(initialUrl, dependencies);
+  if (!needsBrowserRendering(direct.html)) return { ...direct, method: 'SERVER_FETCH' as const };
+
+  const renderer = dependencies.browserRenderer ?? renderWithBrowserless;
+  const rendered = await renderer(direct.finalUrl);
+  return { ...rendered, method: 'PLAYWRIGHT_BROWSERLESS' as const };
+}

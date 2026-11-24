@@ -4,7 +4,7 @@ import { requireAdmin } from '@/lib/require-admin';
 import { importListing } from '@/lib/imports/importer';
 import { generateGeminiJson } from '@/lib/imports/gemini';
 import { normalizePropertyContent } from '@/lib/imports/page-content';
-import { fetchListingPage } from '@/lib/imports/source-fetch';
+import { acquireListingPage, type ListingAcquisitionMethod } from '@/lib/imports/source-fetch';
 import { normalizeExtractionEvidence } from '@/lib/imports/evidence';
 import { extractRuleBasedProperty } from '@/lib/imports/rule-based-extraction';
 
@@ -111,13 +111,16 @@ export async function POST(request: NextRequest) {
     if (suppliedContent.length > 150_000) throw new Error('Pasted page content must be 150,000 characters or fewer.');
     let finalUrl = sourceUrl;
     let pageContent: string;
+    let acquisitionMethod: 'USER_SUPPLIED_CONTENT' | ListingAcquisitionMethod;
     if (suppliedContent) {
       // User-supplied content is used directly; do not make a request to the source URL.
       pageContent = normalizePropertyContent(suppliedContent);
+      acquisitionMethod = 'USER_SUPPLIED_CONTENT';
     } else {
-      const fetched = await fetchListingPage(parsedUrl);
+      const fetched = await acquireListingPage(parsedUrl);
       finalUrl = fetched.finalUrl;
       pageContent = normalizePropertyContent(fetched.html);
+      acquisitionMethod = fetched.method;
     }
     const host = new URL(finalUrl).hostname.replace(/^www\./, '');
     const sourceName = 'Quick URL import — ' + host;
@@ -169,7 +172,7 @@ export async function POST(request: NextRequest) {
           seoTitle: extracted.seoTitle || extracted.generatedTitle,
           metaDescription: extracted.metaDescription || extracted.generatedDescription.slice(0, 160),
           originalUrl: sourceUrl,
-          acquisitionMethod: suppliedContent ? 'USER_SUPPLIED_CONTENT' : 'SERVER_FETCH',
+          acquisitionMethod,
         },
       },
     };
@@ -177,7 +180,7 @@ export async function POST(request: NextRequest) {
     const saved = await prisma.externalListing.findUnique({ where: { sourceId_externalId: { sourceId: source.id, externalId: finalUrl } }, select: { id: true, status: true } });
     return NextResponse.json({
       message: result.possibleDuplicate ? 'Extracted and saved for duplicate review.' : 'Extracted and saved to the private review queue.',
-      acquisitionMethod: suppliedContent ? 'USER_SUPPLIED_CONTENT' : 'SERVER_FETCH',
+      acquisitionMethod,
       listingId: saved?.id,
       status: result.status,
       duplicate: result.possibleDuplicate,
