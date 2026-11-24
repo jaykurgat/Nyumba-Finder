@@ -4,7 +4,8 @@ import { useState } from "react";
 
 type Report = {
   stage?: string; ok?: boolean; message?: string; model?: string; latencyMs?: number;
-  totalMs?: number; acquisition?: { ok: boolean; method: string; error?: string; bytes?: number; finalUrl?: string };
+  totalMs?: number; method?: "gemini" | "rule_based"; providerNotice?: string;
+  acquisition?: { ok: boolean; method: string; error?: string; bytes?: number; finalUrl?: string };
   checks?: Record<string, boolean>; extraction?: Record<string, any>; usage?: any; finishReason?: string;
 };
 
@@ -37,7 +38,7 @@ export default function ImportDiagnosticPanel() {
         <div>
           <p className="text-xs font-semibold uppercase tracking-[.16em] text-amber-700">Temporary diagnostic · admin only</p>
           <h2 className="mt-1 text-xl font-semibold">AI Importer System Test</h2>
-          <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-600">Tests Gemini independently from source access. Paste listing text/HTML to test extraction directly; URL retrieval is optional and only appropriate for sources that authorize it.</p>
+          <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-600">Tests field extraction separately from source access. Paste listing text/HTML for a no-fetch test; if Gemini is unavailable, clearly evidenced facts can be parsed locally. URL retrieval is only appropriate for sources that authorize it.</p>
         </div>
         <span className="rounded-full bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-800">No listing saved</span>
       </div>
@@ -65,15 +66,17 @@ export default function ImportDiagnosticPanel() {
           <span className={report.ok ? "rounded-full bg-green-100 px-2.5 py-1 text-xs font-semibold text-green-800" : "rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-800"}>{report.ok ? "Passed checks" : "Needs attention"}</span>
         </div>
         <div className="grid gap-2 text-xs sm:grid-cols-3">
-          <div className="rounded-lg bg-white p-3"><span className="text-slate-500">Model</span><p className="mt-1 font-semibold">{report.model || "—"}</p></div>
-          <div className="rounded-lg bg-white p-3"><span className="text-slate-500">Gemini latency</span><p className="mt-1 font-semibold">{report.latencyMs == null ? "—" : report.latencyMs + " ms"}</p></div>
+          <div className="rounded-lg bg-white p-3"><span className="text-slate-500">Extraction method</span><p className="mt-1 font-semibold">{report.method === "rule_based" ? "Local evidence parser" : report.model || "—"}</p></div>
+          <div className="rounded-lg bg-white p-3"><span className="text-slate-500">{report.method === "rule_based" ? "Local extraction time" : "Gemini latency"}</span><p className="mt-1 font-semibold">{report.latencyMs == null ? "—" : report.latencyMs + " ms"}</p></div>
           <div className="rounded-lg bg-white p-3"><span className="text-slate-500">Total time</span><p className="mt-1 font-semibold">{report.totalMs == null ? "—" : report.totalMs + " ms"}</p></div>
         </div>
         {report.acquisition && <div className="rounded-lg bg-white p-3 text-xs"><strong>Page acquisition:</strong> {report.acquisition.ok ? "Succeeded" : "Failed"} · {report.acquisition.method}{report.acquisition.bytes ? " · " + report.acquisition.bytes + " bytes" : ""}{report.acquisition.error ? <p className="mt-1 text-red-700">{report.acquisition.error}</p> : null}</div>}
         {report.checks && <div className="rounded-lg bg-white p-3"><strong className="text-xs">Extraction validation</strong><div className="mt-2 grid gap-1 sm:grid-cols-2">{Object.entries(report.checks).map(([key, value]) => <p key={key} className="text-xs"><span className={value ? "text-green-700" : "text-red-700"}>{value ? "✓" : "✕"}</span> {key}</p>)}</div></div>}
-        {extraction && <div className="rounded-lg bg-white p-3"><strong className="text-xs">Gemini's actual response</strong><pre className="mt-2 max-h-96 overflow-auto whitespace-pre-wrap break-words text-xs">{JSON.stringify(extraction, null, 2)}</pre></div>}
+        {report.providerNotice && <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">Gemini was unavailable; this result was produced locally from source evidence: {report.providerNotice}</p>}
+        {extraction && <div className="rounded-lg bg-white p-3"><strong className="text-xs">{report.method === "rule_based" ? "Evidence-based extraction result" : "Gemini's actual response"}</strong><pre className="mt-2 max-h-96 overflow-auto whitespace-pre-wrap break-words text-xs">{JSON.stringify(extraction, null, 2)}</pre></div>}
         {report.message && <p className="text-xs text-red-700">{report.message}</p>}
       </div>}
     </section>
   );
 }
+
