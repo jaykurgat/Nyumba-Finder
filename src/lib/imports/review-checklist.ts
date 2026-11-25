@@ -1,11 +1,11 @@
-export type ReviewImage = { url: string; kind: 'PROPERTY' | 'LOGO' | 'BANNER' | 'UNRELATED'; permission: boolean };
+export type ReviewImage = { id?: string; url?: string; kind: 'PROPERTY' | 'LOGO' | 'BANNER' | 'UNRELATED'; permission: boolean };
 
 export function reviewChecklist(input: {
   title?: string | null; description?: string | null; propertyType?: string | null; price?: number | null;
   location?: string | null; sourceUrl?: string | null; manualSourceException?: boolean;
   images?: ReviewImage[]; duplicateChecked?: boolean; administratorVerified?: boolean;
 }) {
-  const propertyPhotos = (input.images ?? []).filter((image) => image.kind === 'PROPERTY' && /^https:\/\//i.test(image.url));
+  const propertyPhotos = (input.images ?? []).filter((image) => image.kind === 'PROPERTY' && image.permission && (!!image.id || /^https:\/\//i.test(image.url ?? '')));
   const checks = [
     ['Title', !!input.title?.trim()], ['Description', !!input.description?.trim()],
     ['Property type', !!input.propertyType?.trim()], ['Valid price', input.price != null && Number.isFinite(input.price) && input.price > 0],

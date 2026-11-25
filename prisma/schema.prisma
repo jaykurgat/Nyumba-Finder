@@ -330,6 +330,7 @@ model ExternalListing {
   importedAt         DateTime?
   propertyId         String?     @db.Uuid
   property           Property?  @relation(fields: [propertyId], references: [id], onDelete: SetNull)
+  reviewImages       ImportedListingImage[]
   createdAt           DateTime    @default(now())
   updatedAt           DateTime    @updatedAt
 
@@ -338,6 +339,21 @@ model ExternalListing {
   @@index([propertyId])
   @@index([lastSeenAt])
   @@index([location])
+}
+
+model ImportedListingImage {
+  id                String         @id @default(uuid()) @db.Uuid
+  externalListingId String         @db.Uuid
+  listing           ExternalListing @relation(fields: [externalListingId], references: [id], onDelete: Cascade)
+  data              Bytes
+  mimeType          String
+  kind              String         @default("PROPERTY")
+  reusePermitted    Boolean        @default(false)
+  position          Int            @default(0)
+  sourceUrl         String?
+  createdAt         DateTime       @default(now())
+
+  @@index([externalListingId, position])
 }
 
 model PartnerContact {

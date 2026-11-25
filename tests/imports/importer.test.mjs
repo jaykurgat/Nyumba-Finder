@@ -8,6 +8,7 @@ import { isLikelyDuplicateProperty } from '../../src/lib/imports/duplicates.ts';
 import { normalizeExtractionEvidence } from '../../src/lib/imports/evidence.ts';
 import { extractRuleBasedProperty } from '../../src/lib/imports/rule-based-extraction.ts';
 import { reviewChecklist } from '../../src/lib/imports/review-checklist.ts';
+import { discoverPropertyImages, downloadPublicImage } from '../../src/lib/imports/source-images.ts';
 
 const fixtureRoot = new URL('../fixtures/', import.meta.url);
 const fixture = JSON.parse(await readFile(new URL('propertypro-3bssv.expected.json', fixtureRoot), 'utf8'));
@@ -356,11 +357,11 @@ test('logos, banners, unrelated and non-HTTPS images never satisfy the photo req
     assert.equal(reviewChecklist({ ...base, images: [{ url: 'https://img.example/a.jpg', kind, permission: true }] }).complete, false);
   }
   assert.equal(reviewChecklist({ ...base, images: [{ url: 'data:image/png;base64,AA', kind: 'PROPERTY', permission: true }] }).complete, false);
-  assert.equal(reviewChecklist({ ...base, images: [{ url: 'https://img.example/a.jpg', kind: 'PROPERTY', permission: false }] }).complete, true);
+  assert.equal(reviewChecklist({ ...base, images: [{ url: 'https://img.example/a.jpg', kind: 'PROPERTY', permission: false }] }).complete, false);
 });
 
 test('photo reuse permission is retained separately and lack of a photo blocks approval', () => {
-  const checklist = reviewChecklist({ title: 'Home', description: 'Description', propertyType: 'House', price: 100, location: 'Nairobi', sourceUrl: 'https://source.example/1', duplicateChecked: true, administratorVerified: true, images: [{ url: 'https://img.example/a.jpg', kind: 'PROPERTY', permission: false }] });
+  const checklist = reviewChecklist({ title: 'Home', description: 'Description', propertyType: 'House', price: 100, location: 'Nairobi', sourceUrl: 'https://source.example/1', duplicateChecked: true, administratorVerified: true, images: [{ url: 'https://img.example/a.jpg', kind: 'PROPERTY', permission: true }] });
   assert.equal(checklist.complete, true);
   assert.equal(checklist.photoCount, 1);
   assert.equal(reviewChecklist({ title: 'Home', description: 'Description', propertyType: 'House', price: 100, location: 'Nairobi', sourceUrl: 'https://source.example/1', duplicateChecked: true, administratorVerified: true, images: [] }).complete, false);
@@ -378,4 +379,37 @@ test('saving extracted data does not make another Gemini request', async () => {
   const source = await readFile(new URL('../../src/app/api/admin/ai-importer/quick-import/route.ts', import.meta.url), 'utf8');
   assert.equal((source.match(/analyseWithAi\(pageContent/g) || []).length, 1);
   assert.match(source, /await importListing\(source\.id, listing, false\)/);
+});
+
+test('source image discovery resolves relative links and flags logos and banners', () => {
+  const html = '<img src="/media/home-1.jpg" alt="Living room"><img src="/brand/logo.png" alt="Company logo"><img src="https://cdn.example/banner.jpg" class="hero-banner" alt="Promotion"><meta property="og:image" content="/media/cover.png">';
+  const candidates = discoverPropertyImages(html, 'https://homes.example/listing/9');
+  assert.equal(candidates.length, 4);
+  assert.equal(candidates[0].url, 'https://homes.example/media/home-1.jpg');
+  assert.equal(candidates[0].kind, 'PROPERTY');
+  assert.ok(candidates.some(image => image.kind === 'LOGO'));
+  assert.ok(candidates.some(image => image.kind === 'BANNER'));
+  assert.equal(candidates.at(-1).url, 'https://homes.example/media/cover.png');
+});
+
+test('retrieved images validate redirects, MIME type, file signature and size', async () => {
+  const validPng = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x01]);
+  let calls = 0;
+  const result = await downloadPublicImage('https://images.example/a', { resolve: publicDns, fetcher: async (url) => {
+    calls += 1;
+    if (calls === 1) return new Response(null, { status: 302, headers: { location: '/b.png' } });
+    assert.equal(String(url), 'https://images.example/b.png');
+    return new Response(validPng, { headers: { 'content-type': 'image/png' } });
+  } });
+  assert.equal(result.mimeType, 'image/png');
+  assert.equal(result.data.length, validPng.length);
+  await assert.rejects(downloadPublicImage('https://images.example/a', { resolve: publicDns, fetcher: async () => new Response('<svg/>', { headers: { 'content-type': 'image/svg+xml' } }) }), /Only JPEG, PNG or WebP/);
+  await assert.rejects(downloadPublicImage('https://images.example/a', { resolve: publicDns, maxBytes: 8, fetcher: async () => new Response(validPng, { headers: { 'content-type': 'image/png' } }) }), /3 MB or smaller/);
+});
+
+test('uploaded and retrieved review photos count only after permission and property classification', () => {
+  const base = { title: 'Home', description: 'Description', propertyType: 'House', price: 1, location: 'Nairobi', sourceUrl: 'https://source.example/1', duplicateChecked: true, administratorVerified: true };
+  assert.equal(reviewChecklist({ ...base, images: [{ id: 'db-image-id', kind: 'PROPERTY', permission: true }] }).complete, true);
+  assert.equal(reviewChecklist({ ...base, images: [{ id: 'db-image-id', kind: 'PROPERTY', permission: false }] }).complete, false);
+  assert.equal(reviewChecklist({ ...base, images: [{ id: 'db-image-id', kind: 'LOGO', permission: true }] }).complete, false);
 });

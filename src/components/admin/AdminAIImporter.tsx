@@ -16,6 +16,7 @@ type Listing = {
   id: string; title: string; description: string; price: number | null; bedrooms: number | null;
   bathrooms: number | null; propertyType: string | null; location: string; sourceUrl: string;
   imageUrls: string[]; status: string; source: { name: string; redisplayAllowed: boolean };
+  reviewImages: { id: string; kind: "PROPERTY" | "LOGO" | "BANNER" | "UNRELATED"; reusePermitted: boolean; position: number; mimeType: string; sourceUrl: string | null }[];
   rawData: Record<string, unknown> | null;
 };
 

@@ -8,6 +8,7 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 const clean = (value: unknown) => typeof value === 'string' ? value.trim() : '';
+const kindsForReview = ['PROPERTY', 'LOGO', 'BANNER', 'UNRELATED'];
 const int = (value: unknown, fallback: number, min: number, max: number) => {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? Math.min(max, Math.max(min, Math.trunc(parsed))) : fallback;
@@ -20,7 +21,7 @@ export async function GET() {
       prisma.importSource.findMany({ orderBy: { name: 'asc' } }),
       prisma.externalListing.findMany({
         where: { status: { in: ['PENDING_REVIEW', 'POSSIBLE_DUPLICATE'] } },
-        include: { source: { select: { name: true, baseUrl: true, redisplayAllowed: true } } },
+        include: { source: { select: { name: true, baseUrl: true, redisplayAllowed: true } }, reviewImages: { select: { id: true, kind: true, reusePermitted: true, position: true, mimeType: true, sourceUrl: true }, orderBy: { position: 'asc' } } },
         orderBy: { updatedAt: 'desc' },
         take: 100,
       }),
@@ -181,12 +182,21 @@ export async function PATCH(request: NextRequest) {
         try { parsed = new URL(sourceUrl); } catch { return NextResponse.json({ message: 'Enter a valid HTTPS source URL.' }, { status: 400 }); }
         if (parsed.protocol !== 'https:' || parsed.username || parsed.password) return NextResponse.json({ message: 'Use a public HTTPS source URL.' }, { status: 400 });
       }
-      const imageAssets = Array.isArray(body.imageAssets) ? body.imageAssets.slice(0, 20).map((asset: any) => ({ url: clean(asset?.url), kind: clean(asset?.kind), permission: asset?.permission === true })).filter((asset: any) => asset.url) : quick.imageAssets ?? [];
+      const imageAssets = Array.isArray(body.imageAssets) ? body.imageAssets.slice(0, 20).map((asset: any) => ({ ...(typeof asset?.id === 'string' ? { id: asset.id } : {}), url: clean(asset?.url), sourceUrl: clean(asset?.sourceUrl), kind: clean(asset?.kind), permission: asset?.permission === true })).filter((asset: any) => asset.url) : quick.imageAssets ?? [];
+      const requestedImages = Array.isArray(body.imageAssets) ? body.imageAssets.slice(0, 20) : [];
+      const reviewImageIds = requestedImages.filter((asset: any) => typeof asset?.id === 'string').map((asset: any) => asset.id);
+      if (reviewImageIds.length) {
+        const ownedImages = await prisma.importedListingImage.findMany({ where: { id: { in: reviewImageIds }, externalListingId: id }, select: { id: true } });
+        if (ownedImages.length !== reviewImageIds.length) return NextResponse.json({ message: 'One or more selected images do not belong to this listing.' }, { status: 400 });
+      }
+      await Promise.all(requestedImages.filter((asset: any) => typeof asset?.id === 'string').map((asset: any, position: number) => prisma.importedListingImage.update({
+        where: { id: asset.id }, data: { kind: kindsForReview.includes(asset.kind) ? asset.kind : 'UNRELATED', reusePermitted: asset.permission === true, position },
+      })));
       const manualSourceException = body.manualSourceException === true;
       const imageReusePermission = body.imageReusePermission === true;
       await prisma.externalListing.update({ where: { id }, data: {
         ...(sourceUrl ? { sourceUrl } : {}),
-        imageUrls: imageAssets.filter((asset: any) => asset.kind === 'PROPERTY' && asset.permission).map((asset: any) => asset.url),
+        imageUrls: requestedImages.filter((asset: any) => !asset.id && asset.kind === 'PROPERTY' && asset.permission && /^https:\/\//i.test(asset.url || '')).map((asset: any) => asset.url),
         rawData: { ...previous, quickImport: { ...quick, imageAssets, imageReusePermission, manualSourceException, administratorVerified: body.administratorVerified === true, duplicateChecked: body.duplicateChecked === true } } as any,
       } });
       return NextResponse.json({ message: 'Review checklist saved.' });
@@ -196,7 +206,7 @@ export async function PATCH(request: NextRequest) {
 
     const external = await prisma.externalListing.findUnique({
       where: { id },
-      include: { source: true },
+      include: { source: true, reviewImages: { orderBy: { position: 'asc' } } },
     });
     if (!external) return NextResponse.json({ message: 'Imported listing not found.' }, { status: 404 });
     if (action === 'reject') {
@@ -205,9 +215,12 @@ export async function PATCH(request: NextRequest) {
     }
     if (external.status === 'POSSIBLE_DUPLICATE') return NextResponse.json({ message: 'Review the possible duplicate against the existing property before importing it.' }, { status: 409 });
     const review = external.rawData && typeof external.rawData === 'object' ? (external.rawData as any).quickImport ?? {} : {};
-    const recordedImages = Array.isArray(review.imageAssets) ? review.imageAssets as ReviewImage[] : external.source.redisplayAllowed ? external.imageUrls.map(url => ({ url, kind: 'PROPERTY' as const, permission: true })) : [];
+    const recordedImages: ReviewImage[] = [
+      ...(external.reviewImages ?? []).map(image => ({ id: image.id, kind: image.kind as ReviewImage['kind'], permission: image.reusePermitted })),
+      ...(Array.isArray(review.imageAssets) ? (review.imageAssets as ReviewImage[]).filter(image => image.url) : external.source.redisplayAllowed ? external.imageUrls.map(url => ({ url, kind: 'PROPERTY' as const, permission: true })) : []),
+    ];
     const checklist = reviewChecklist({ ...external, manualSourceException: review.manualSourceException, images: recordedImages, duplicateChecked: review.duplicateChecked, administratorVerified: review.administratorVerified });
-    if (!checklist.complete || external.imageUrls.length < 1) return NextResponse.json({ message: 'Complete every review checklist item, including one property photo, before approval.', checklist }, { status: 400 });
+    if (!checklist.complete) return NextResponse.json({ message: 'Complete every review checklist item, including one permitted property photo, before approval.', checklist }, { status: 400 });
     if (!external.price || external.price <= 0) return NextResponse.json({ message: 'A valid asking price is required before approval.' }, { status: 400 });
     if (!external.location?.trim()) return NextResponse.json({ message: 'A verified location is required before approval.' }, { status: 400 });
 
@@ -256,7 +269,10 @@ export async function PATCH(request: NextRequest) {
         bathrooms: Math.max(1, Math.trunc(external.bathrooms ?? 1)),
         sizeSqm: external.sizeSqm,
         amenities: external.amenities,
-        images: external.source.redisplayAllowed ? external.imageUrls : [],
+        images: external.imageUrls,
+        propertyImages: external.reviewImages.filter(image => image.kind === 'PROPERTY' && image.reusePermitted).length ? {
+          create: external.reviewImages.filter(image => image.kind === 'PROPERTY' && image.reusePermitted).map(image => ({ data: image.data, mimeType: image.mimeType })),
+        } : undefined,
         propertyCategory,
         propertyType,
         status: 'ACTIVE',
