@@ -3,6 +3,7 @@
 import Link from "next/link";
 import QuickImportPanel from "./QuickImportPanel";
 import ImportDiagnosticPanel from "./ImportDiagnosticPanel";
+import ReviewCompletionPanel from "./ReviewCompletionPanel";
 import { useEffect, useState } from "react";
 
 type Source = {
@@ -198,7 +199,7 @@ export default function AdminAIImporter() {
         {error && <p role="alert" className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>}
         {notice && <p role="status" className="mb-4 rounded-lg border border-[#cbdcc9] bg-[#f0f6ee] px-4 py-3 text-sm text-[#426c49]">{notice}</p>}
         <ImportDiagnosticPanel />
-        <QuickImportPanel onImported={() => { void load(); setNotice("Quick import saved. Review the generated listing below before approving it."); }} />
+        <QuickImportPanel onImported={() => { void load(); setNotice("Quick import saved to the review queue. Continue with property images and listing checks before choosing whether to publish."); }} />
 
         <section className="grid gap-5 xl:grid-cols-[minmax(0,1.1fr)_minmax(320px,.9fr)]">
           <div className="rounded-2xl border border-[#e1e7df] bg-white p-5 shadow-[0_2px_8px_rgba(31,48,35,.035)]">
@@ -286,6 +287,7 @@ export default function AdminAIImporter() {
                     </details>}
                   </div>;
                 })()}
+                <ReviewCompletionPanel listing={item} onSaved={() => { void load(); setNotice("Review progress saved. Continue completing the listing; publishing remains optional."); }} onPublish={() => void review(item.id, "approve")} />
                 {editingListingId === item.id ? <div className="mt-3 space-y-2 rounded-lg bg-[#f7f9f6] p-3">
                   <label className="block text-[11px] font-semibold text-[#59675d]">Nyumba-Finder title<input value={editTitle} onChange={e => setEditTitle(e.target.value)} className="mt-1 w-full rounded border border-[#dce4da] bg-white px-2 py-2 text-xs font-normal" /></label>
                   <label className="block text-[11px] font-semibold text-[#59675d]">Description<textarea rows={4} value={editDescription} onChange={e => setEditDescription(e.target.value)} className="mt-1 w-full rounded border border-[#dce4da] bg-white px-2 py-2 text-xs font-normal" /></label>
@@ -298,7 +300,6 @@ export default function AdminAIImporter() {
                 </div> : <button disabled={!!busy} onClick={() => beginListingEdit(item)} className="mt-3 rounded-lg border border-[#dce4da] px-3 py-2 text-xs font-semibold text-[#365f40] disabled:opacity-40">Edit extracted details</button>}
                 {item.status === "POSSIBLE_DUPLICATE" && <p className="mt-2 text-xs text-amber-800">Compare this with existing listings before deciding. Automatic approval is disabled for possible duplicates.</p>}
                 <div className="mt-4 flex gap-2 border-t border-[#edf0eb] pt-3">
-                  <button disabled={!!busy || item.status === "POSSIBLE_DUPLICATE"} onClick={() => void review(item.id, "approve")} className="flex-1 rounded-lg bg-[#284b35] px-3 py-2.5 text-xs font-semibold text-white disabled:opacity-40">{busy === item.id ? "Saving…" : "Approve & publish"}</button>
                   <button disabled={!!busy} onClick={() => void review(item.id, "reject")} className="rounded-lg border border-[#e4d8d4] px-3 py-2.5 text-xs font-semibold text-[#986254] disabled:opacity-40">Reject</button>
                 </div>
               </div>
@@ -308,4 +309,3 @@ export default function AdminAIImporter() {
     </main>
   );
 }
-

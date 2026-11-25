@@ -102,27 +102,29 @@ export async function POST(request: NextRequest) {
     await requireAdmin();
     const body = await request.json().catch(() => ({}));
     const sourceUrl = typeof body.url === 'string' ? body.url.trim() : '';
-    const suppliedContent = typeof body.content === 'string' ? body.content.trim() : '';
-    if (!sourceUrl) return NextResponse.json({ message: 'Enter the original individual property URL so the source can be recorded.' }, { status: 400 });
+    const suppliedContent = typeof body.content === 'string' ? body.content : '';
     if (body.authorized !== true) return NextResponse.json({ message: 'Confirm that you are authorised to access and use this listing information.' }, { status: 400 });
-    let parsedUrl: URL;
-    try { parsedUrl = new URL(sourceUrl); } catch { throw new Error('Enter a valid original property URL.'); }
-    if (parsedUrl.protocol !== 'https:' || parsedUrl.username || parsedUrl.password) throw new Error('Only public HTTPS property URLs are supported.');
+    let parsedUrl: URL | null = null;
+    if (sourceUrl) {
+      try { parsedUrl = new URL(sourceUrl); } catch { throw new Error('Enter a valid original property URL.'); }
+      if (parsedUrl.protocol !== 'https:' || parsedUrl.username || parsedUrl.password) throw new Error('Only public HTTPS property URLs are supported.');
+    }
+    if (!sourceUrl && !suppliedContent.trim()) throw new Error('Paste property text or HTML, or provide a property URL.');
     if (suppliedContent.length > 150_000) throw new Error('Pasted page content must be 150,000 characters or fewer.');
     let finalUrl = sourceUrl;
     let pageContent: string;
     let acquisitionMethod: 'USER_SUPPLIED_CONTENT' | ListingAcquisitionMethod;
-    if (suppliedContent) {
+    if (suppliedContent.trim()) {
       // User-supplied content is used directly; do not make a request to the source URL.
       pageContent = normalizePropertyContent(suppliedContent);
       acquisitionMethod = 'USER_SUPPLIED_CONTENT';
     } else {
-      const fetched = await acquireListingPage(parsedUrl);
+      const fetched = await acquireListingPage(parsedUrl!);
       finalUrl = fetched.finalUrl;
       pageContent = normalizePropertyContent(fetched.html);
       acquisitionMethod = fetched.method;
     }
-    const host = new URL(finalUrl).hostname.replace(/^www\./, '');
+    const host = finalUrl ? new URL(finalUrl).hostname.replace(/^www\./, '') : 'manual review';
     const sourceName = 'Quick URL import — ' + host;
     const priorSource = await prisma.importSource.findUnique({ where: { name: sourceName }, select: { mappingTemplate: true } });
     const aiResult = await analyseWithAi(pageContent, finalUrl, priorSource?.mappingTemplate ?? undefined);
@@ -138,11 +140,11 @@ export async function POST(request: NextRequest) {
     };
     const source = await prisma.importSource.upsert({
       where: { name: sourceName },
-      update: { baseUrl: new URL(finalUrl).origin, enabled: false, accessApproved: false, accessMethod: 'MANUAL', redisplayAllowed: false, mappingTemplate },
-      create: { name: sourceName, baseUrl: new URL(finalUrl).origin, listingUrl: finalUrl, enabled: false, accessApproved: false, accessMethod: 'MANUAL', redisplayAllowed: false, mappingTemplate },
+      update: { baseUrl: parsedUrl?.origin ?? 'https://manual.invalid', enabled: false, accessApproved: false, accessMethod: 'MANUAL', redisplayAllowed: false, mappingTemplate },
+      create: { name: sourceName, baseUrl: parsedUrl?.origin ?? 'https://manual.invalid', listingUrl: finalUrl || null, enabled: false, accessApproved: false, accessMethod: 'MANUAL', redisplayAllowed: false, mappingTemplate },
     });
     const listing = {
-      externalId: finalUrl,
+      externalId: finalUrl || `manual:${crypto.randomUUID()}`,
       sourceUrl: finalUrl,
       title: extracted.generatedTitle.trim(),
       description: extracted.generatedDescription.trim(),
@@ -172,12 +174,17 @@ export async function POST(request: NextRequest) {
           seoTitle: extracted.seoTitle || extracted.generatedTitle,
           metaDescription: extracted.metaDescription || extracted.generatedDescription.slice(0, 160),
           originalUrl: sourceUrl,
+          originalContent: suppliedContent,
+          manualSourceException: false,
+          imageAssets: [],
+          imageReusePermission: false,
+          administratorVerified: false,
           acquisitionMethod,
         },
       },
     };
     const result = await importListing(source.id, listing, false);
-    const saved = await prisma.externalListing.findUnique({ where: { sourceId_externalId: { sourceId: source.id, externalId: finalUrl } }, select: { id: true, status: true } });
+    const saved = await prisma.externalListing.findUnique({ where: { sourceId_externalId: { sourceId: source.id, externalId: listing.externalId } }, select: { id: true, status: true } });
     return NextResponse.json({
       message: result.possibleDuplicate ? 'Extracted and saved for duplicate review.' : 'Extracted and saved to the private review queue.',
       acquisitionMethod,
@@ -206,4 +213,3 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ message }, { status: /HTTP 403|HTTP 4\d\d|valid property URL|authorised|Private and local/.test(message) ? 422 : 500 });
   }
 }
-

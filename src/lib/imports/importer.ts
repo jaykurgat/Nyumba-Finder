@@ -48,7 +48,9 @@ export async function importListing(sourceId: string, listing: ImportedListing, 
 
   const title = listing.title.trim();
   if (!title) throw new Error('A property title is required.');
-  if (!/^https:\/\//i.test(listing.sourceUrl)) throw new Error('A secure HTTPS source URL is required.');
+  const manualPreliminary = (listing.rawData as any)?.quickImport?.acquisitionMethod === 'USER_SUPPLIED_CONTENT';
+  if (listing.sourceUrl && !/^https:\/\//i.test(listing.sourceUrl)) throw new Error('A secure HTTPS source URL is required.');
+  if (!listing.sourceUrl && !manualPreliminary) throw new Error('A secure HTTPS source URL is required.');
 
   const locationNode = await resolveLocation(listing.location);
   const linkedPropertyId = existingExternal?.propertyId ?? null;
@@ -76,7 +78,7 @@ export async function importListing(sourceId: string, listing: ImportedListing, 
       importer: 'AI_ASSISTED',
       possibleDuplicatePropertyId: possibleDuplicate?.id ?? null,
       currency: (listing.rawData as any)?.currency ?? null,
-      listingType: 'FOR_SALE',
+      listingType: (listing.rawData as any)?.quickImport?.listingType ?? 'FOR_SALE',
     } as any,
     status,
     lastSeenAt: new Date(),
@@ -162,4 +164,3 @@ export async function runAuthorizedSourceImport(sourceName: string) {
     errors,
   };
 }
-

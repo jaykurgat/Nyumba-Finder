@@ -7,6 +7,7 @@ import { generateGeminiJson } from '../../src/lib/imports/gemini.ts';
 import { isLikelyDuplicateProperty } from '../../src/lib/imports/duplicates.ts';
 import { normalizeExtractionEvidence } from '../../src/lib/imports/evidence.ts';
 import { extractRuleBasedProperty } from '../../src/lib/imports/rule-based-extraction.ts';
+import { reviewChecklist } from '../../src/lib/imports/review-checklist.ts';
 
 const fixtureRoot = new URL('../fixtures/', import.meta.url);
 const fixture = JSON.parse(await readFile(new URL('propertypro-3bssv.expected.json', fixtureRoot), 'utf8'));
@@ -329,4 +330,52 @@ test('Gemini outage uses only the explicitly allowlisted free-tier fallback', as
     if (previousKey === undefined) delete process.env.GOOGLE_GENAI_API_KEY;
     else process.env.GOOGLE_GENAI_API_KEY = previousKey;
   }
+});
+
+test('paste-only extraction can be queued without a source URL and retains the source content', async () => {
+  const input = '<h1>Two bedroom apartment for rent</h1><p>Kilimani Nairobi. KSh 80,000 monthly. Bright apartment near shops and schools.</p>';
+  const normalized = normalizePropertyContent(input);
+  assert.match(normalized, /Kilimani Nairobi/);
+  const quickRoute = await readFile(new URL('../../src/app/api/admin/ai-importer/quick-import/route.ts', import.meta.url), 'utf8');
+  assert.match(quickRoute, /!sourceUrl && !suppliedContent/);
+  assert.match(quickRoute, /originalContent: suppliedContent/);
+  assert.match(quickRoute, /await importListing\(source\.id, listing, false\)/);
+});
+
+test('review can add a source URL later, while manual-source exception is explicit', () => {
+  const route = 'src/app/api/admin/ai-importer/route.ts';
+  return readFile(new URL('../../' + route, import.meta.url), 'utf8').then((source) => {
+    assert.match(source, /action === 'complete-listing'/);
+    assert.match(source, /manualSourceException/);
+  });
+});
+
+test('logos, banners, unrelated and non-HTTPS images never satisfy the photo requirement', () => {
+  const base = { title: 'Home', description: 'Description', propertyType: 'House', price: 100, location: 'Nairobi', sourceUrl: 'https://source.example/1', duplicateChecked: true, administratorVerified: true };
+  for (const kind of ['LOGO', 'BANNER', 'UNRELATED']) {
+    assert.equal(reviewChecklist({ ...base, images: [{ url: 'https://img.example/a.jpg', kind, permission: true }] }).complete, false);
+  }
+  assert.equal(reviewChecklist({ ...base, images: [{ url: 'data:image/png;base64,AA', kind: 'PROPERTY', permission: true }] }).complete, false);
+  assert.equal(reviewChecklist({ ...base, images: [{ url: 'https://img.example/a.jpg', kind: 'PROPERTY', permission: false }] }).complete, true);
+});
+
+test('photo reuse permission is retained separately and lack of a photo blocks approval', () => {
+  const checklist = reviewChecklist({ title: 'Home', description: 'Description', propertyType: 'House', price: 100, location: 'Nairobi', sourceUrl: 'https://source.example/1', duplicateChecked: true, administratorVerified: true, images: [{ url: 'https://img.example/a.jpg', kind: 'PROPERTY', permission: false }] });
+  assert.equal(checklist.complete, true);
+  assert.equal(checklist.photoCount, 1);
+  assert.equal(reviewChecklist({ title: 'Home', description: 'Description', propertyType: 'House', price: 100, location: 'Nairobi', sourceUrl: 'https://source.example/1', duplicateChecked: true, administratorVerified: true, images: [] }).complete, false);
+});
+
+test('approval checklist requires fields, source or exception, duplicate review and admin verification', () => {
+  const full = { title: 'Home', description: 'Description', propertyType: 'House', price: 100, location: 'Nairobi', manualSourceException: true, images: [{ url: 'https://img.example/a.jpg', kind: 'PROPERTY', permission: true }], duplicateChecked: true, administratorVerified: true };
+  assert.equal(reviewChecklist(full).complete, true);
+  assert.equal(reviewChecklist({ ...full, manualSourceException: false, sourceUrl: '' }).complete, false);
+  assert.equal(reviewChecklist({ ...full, duplicateChecked: false }).complete, false);
+  assert.equal(reviewChecklist({ ...full, administratorVerified: false }).complete, false);
+});
+
+test('saving extracted data does not make another Gemini request', async () => {
+  const source = await readFile(new URL('../../src/app/api/admin/ai-importer/quick-import/route.ts', import.meta.url), 'utf8');
+  assert.equal((source.match(/analyseWithAi\(pageContent/g) || []).length, 1);
+  assert.match(source, /await importListing\(source\.id, listing, false\)/);
 });

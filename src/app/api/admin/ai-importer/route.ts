@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireAdmin } from '@/lib/require-admin';
+import { reviewChecklist, type ReviewImage } from '@/lib/imports/review-checklist';
+import { isLikelyDuplicateProperty } from '@/lib/imports/duplicates';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -167,6 +169,29 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ message: 'Listing corrections saved.' });
     }
 
+    if (action === 'complete-listing') {
+      if (!id) return NextResponse.json({ message: 'Listing ID is required.' }, { status: 400 });
+      const external = await prisma.externalListing.findUnique({ where: { id } });
+      if (!external) return NextResponse.json({ message: 'Imported listing not found.' }, { status: 404 });
+      const previous = external.rawData && typeof external.rawData === 'object' && !Array.isArray(external.rawData) ? external.rawData as Record<string, any> : {};
+      const quick = previous.quickImport && typeof previous.quickImport === 'object' ? previous.quickImport : {};
+      const sourceUrl = clean(body.sourceUrl);
+      if (sourceUrl) {
+        let parsed: URL;
+        try { parsed = new URL(sourceUrl); } catch { return NextResponse.json({ message: 'Enter a valid HTTPS source URL.' }, { status: 400 }); }
+        if (parsed.protocol !== 'https:' || parsed.username || parsed.password) return NextResponse.json({ message: 'Use a public HTTPS source URL.' }, { status: 400 });
+      }
+      const imageAssets = Array.isArray(body.imageAssets) ? body.imageAssets.slice(0, 20).map((asset: any) => ({ url: clean(asset?.url), kind: clean(asset?.kind), permission: asset?.permission === true })).filter((asset: any) => asset.url) : quick.imageAssets ?? [];
+      const manualSourceException = body.manualSourceException === true;
+      const imageReusePermission = body.imageReusePermission === true;
+      await prisma.externalListing.update({ where: { id }, data: {
+        ...(sourceUrl ? { sourceUrl } : {}),
+        imageUrls: imageAssets.filter((asset: any) => asset.kind === 'PROPERTY' && asset.permission).map((asset: any) => asset.url),
+        rawData: { ...previous, quickImport: { ...quick, imageAssets, imageReusePermission, manualSourceException, administratorVerified: body.administratorVerified === true, duplicateChecked: body.duplicateChecked === true } } as any,
+      } });
+      return NextResponse.json({ message: 'Review checklist saved.' });
+    }
+
     if (!id || !['approve', 'reject'].includes(action)) return NextResponse.json({ message: 'Invalid review action.' }, { status: 400 });
 
     const external = await prisma.externalListing.findUnique({
@@ -179,8 +204,18 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ message: 'Imported listing rejected.' });
     }
     if (external.status === 'POSSIBLE_DUPLICATE') return NextResponse.json({ message: 'Review the possible duplicate against the existing property before importing it.' }, { status: 409 });
+    const review = external.rawData && typeof external.rawData === 'object' ? (external.rawData as any).quickImport ?? {} : {};
+    const recordedImages = Array.isArray(review.imageAssets) ? review.imageAssets as ReviewImage[] : external.source.redisplayAllowed ? external.imageUrls.map(url => ({ url, kind: 'PROPERTY' as const, permission: true })) : [];
+    const checklist = reviewChecklist({ ...external, manualSourceException: review.manualSourceException, images: recordedImages, duplicateChecked: review.duplicateChecked, administratorVerified: review.administratorVerified });
+    if (!checklist.complete || external.imageUrls.length < 1) return NextResponse.json({ message: 'Complete every review checklist item, including one property photo, before approval.', checklist }, { status: 400 });
     if (!external.price || external.price <= 0) return NextResponse.json({ message: 'A valid asking price is required before approval.' }, { status: 400 });
     if (!external.location?.trim()) return NextResponse.json({ message: 'A verified location is required before approval.' }, { status: 400 });
+
+    const candidates = await prisma.property.findMany({
+      where: { status: { in: ['ACTIVE', 'EXPIRED', 'SUSPENDED'] }, price: { gte: external.price * 0.95, lte: external.price * 1.05 }, ...(external.bedrooms != null ? { bedrooms: external.bedrooms } : {}) },
+      select: { title: true, location: true, price: true, bedrooms: true }, take: 100,
+    });
+    if (candidates.some(candidate => isLikelyDuplicateProperty(candidate, external))) return NextResponse.json({ message: 'A matching property exists. Resolve the possible duplicate before approval.' }, { status: 409 });
 
     const locationText = external.location.trim();
     const locationNode = await prisma.locationNode.findFirst({
