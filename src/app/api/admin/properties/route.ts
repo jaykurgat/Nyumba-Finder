@@ -5,25 +5,47 @@ import { requireAdmin } from '@/lib/require-admin';
 export async function GET(request: NextRequest) {
   try {
     await requireAdmin();
-    const q = new URL(request.url).searchParams.get('q')?.trim();
+    const params = new URL(request.url).searchParams;
+    const q = params.get('q')?.trim() || '';
+    const status = params.get('status') || '';
+    const availability = params.get('availability') || '';
+    const pageSizes = [20, 50, 100, 200];
+    const pageSizeValue = Number(params.get('pageSize'));
+    const pageSize = pageSizes.includes(pageSizeValue) ? pageSizeValue : 20;
+    const requestedPage = Math.max(1, Number.parseInt(params.get('page') || '1', 10) || 1);
+    const where = {
+      ...(status && ['DRAFT', 'PENDING_REVIEW', 'ACTIVE', 'REJECTED', 'SUSPENDED', 'EXPIRED'].includes(status) ? { status: status as never } : {}),
+      ...(availability && ['AVAILABLE', 'UNAVAILABLE', 'SOLD'].includes(availability) ? { availability: availability as never } : {}),
+      ...(q ? { OR: [
+        { title: { contains: q, mode: 'insensitive' as const } },
+        { location: { contains: q, mode: 'insensitive' as const } },
+        { propertyType: { contains: q, mode: 'insensitive' as const } },
+        { owner: { is: { email: { contains: q, mode: 'insensitive' as const } } } },
+        { owner: { is: { profile: { is: { displayName: { contains: q, mode: 'insensitive' as const } } } } } },
+      ] } : {}),
+    };
+    const total = await prisma.property.count({ where });
+    const page = params.get('format') === 'csv' ? 1 : Math.min(requestedPage, Math.max(1, Math.ceil(total / pageSize)));
     const properties = await prisma.property.findMany({
-      where: q ? {
-        OR: [
-          { title: { contains: q, mode: 'insensitive' } },
-          { location: { contains: q, mode: 'insensitive' } },
-          { propertyType: { contains: q, mode: 'insensitive' } },
-        ],
-      } : undefined,
+      where,
       include: {
-        partnerContact: { select: { id: true, companyName: true, contactName: true, phone: true, whatsapp: true, email: true } },
-        propertyImages: { select: { id: true }, orderBy: { createdAt: 'asc' } },
-        promotions: { orderBy: { createdAt: 'desc' }, take: 1 },
         owner: { select: { id: true, email: true, createdAt: true, profile: { select: { displayName: true, firstName: true, lastName: true } } } },
       },
       orderBy: { updatedAt: 'desc' },
-      take: 200,
+      ...(params.get('format') === 'csv' ? {} : { skip: (page - 1) * pageSize, take: pageSize }),
     });
-    return NextResponse.json(properties.map((property) => ({
+    if (params.get('format') === 'csv') {
+      const cell = (value: unknown) => '"' + (value == null ? '' : value instanceof Date ? value.toISOString() : String(value)).replaceAll('"', '""') + '"';
+      const header = ['Property', 'Location', 'Price KES', 'Type', 'Bedrooms', 'Review status', 'Availability', 'Listed at', 'Updated at', 'Listing owner', 'Owner email', 'Listing ID'];
+      const lines = properties.map((property) => {
+        const ownerName = property.owner?.profile?.displayName || [property.owner?.profile?.firstName, property.owner?.profile?.lastName].filter(Boolean).join(' ') || '';
+        return [property.title, property.location, property.price, property.propertyType, property.bedrooms === 0 ? 'Studio' : property.bedrooms, property.status, property.availability, property.createdAt, property.updatedAt, ownerName || (property.owner ? 'Account holder' : 'Unlinked'), property.owner?.email || '', property.id].map(cell).join(',');
+      });
+      return new NextResponse([header.map(cell).join(','), ...lines].join('\r\n'), {
+        headers: { 'Content-Type': 'text/csv; charset=utf-8', 'Content-Disposition': 'attachment; filename="nyumbafinder-listings.csv"', 'Cache-Control': 'no-store' },
+      });
+    }
+    return NextResponse.json({ rows: properties.map((property) => ({
       id: property.id,
       title: property.title,
       location: property.location,
@@ -34,17 +56,6 @@ export async function GET(request: NextRequest) {
       availability: property.availability,
       listingCreatedAt: property.createdAt,
       listingUpdatedAt: property.updatedAt,
-      partnerContactId: property.partnerContactId,
-      partnerContact: property.partnerContact,
-      images: property.propertyImages.map((image) => '/api/properties/' + property.id + '?image=' + image.id),
-      promotion: property.promotions[0] ? {
-        id: property.promotions[0].id,
-        package: property.promotions[0].package,
-        status: property.promotions[0].status,
-        boost: property.promotions[0].boost,
-        startsAt: property.promotions[0].startsAt,
-        endsAt: property.promotions[0].endsAt,
-      } : null,
       createdAt: property.createdAt,
       updatedAt: property.updatedAt,
       owner: property.owner ? {
@@ -53,7 +64,7 @@ export async function GET(request: NextRequest) {
         name: property.owner.profile?.displayName || [property.owner.profile?.firstName, property.owner.profile?.lastName].filter(Boolean).join(' ') || null,
         accountCreatedAt: property.owner.createdAt,
       } : null,
-    })));
+    })), total, page, pageSize });
   } catch (error) {
     if (error instanceof Error && error.message === 'UNAUTHORIZED_ADMIN') return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     console.error('ADMIN_PROPERTIES_GET', error);
