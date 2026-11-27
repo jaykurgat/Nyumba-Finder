@@ -50,7 +50,7 @@ export function AccountMenu({ name, email, superlandlord }: Props) {
     <div ref={rootRef} className="relative" onMouseEnter={() => setOpen(true)} onMouseLeave={() => setOpen(false)} onFocus={() => setOpen(true)} onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setOpen(false); }}>
       <button type="button" aria-haspopup="true" aria-expanded={open} onClick={() => setOpen(true)} className="inline-flex h-10 items-center gap-2 rounded-full border border-[#e2e7df] bg-white px-2.5 text-[#3e4e42] shadow-sm transition hover:border-[#cbd6c8] hover:bg-[#f8faf7] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f28c28] sm:gap-2.5 sm:px-3">
         <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#edf3ed] text-[#315c3d]"><UserRound className="h-4 w-4" aria-hidden="true" /></span>
-        <span className="hidden max-w-28 truncate text-xs font-semibold sm:inline">{name}</span>
+        <span className="hidden max-w-28 truncate text-xs font-semibold xl:inline">{name}</span>
         <ChevronDown className={'hidden h-3.5 w-3.5 text-[#879388] transition-transform sm:block ' + (open ? 'rotate-180' : '')} aria-hidden="true" />
       </button>
 

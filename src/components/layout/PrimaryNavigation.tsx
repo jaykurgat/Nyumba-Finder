@@ -62,7 +62,7 @@ export function PrimaryNavigation({ signedIn }: Props) {
     <nav aria-label="Primary navigation" className="flex items-center gap-1">
       <NavigationMenu label="Find a home" links={exploreLinks} active={exploreActive} />
       <NavigationMenu label="For landlords" links={landlordLinks} active={landlordActive} />
-      <Link href="/info/how-it-works" aria-current={pathname === '/info/how-it-works' ? 'page' : undefined} className="inline-flex min-h-10 items-center gap-2 rounded-full px-3 text-[13px] font-semibold text-[#626b60] transition hover:bg-[#f0f2ec] hover:text-[#244c2c] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f28c28] focus-visible:ring-offset-2">
+      <Link href="/info/how-it-works" aria-current={pathname === '/info/how-it-works' ? 'page' : undefined} className="hidden min-h-10 items-center gap-2 rounded-full px-3 text-[13px] font-semibold text-[#626b60] transition hover:bg-[#f0f2ec] hover:text-[#244c2c] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f28c28] focus-visible:ring-offset-2 lg:inline-flex">
         <CircleHelp aria-hidden="true" className="h-4 w-4" />How it works
       </Link>
     </nav>

@@ -29,7 +29,7 @@ export async function Header() {
             </Link>
           </Button>}
           <Button className="h-9 rounded-none bg-[#244c2c] px-3 text-xs font-semibold text-white hover:bg-[#193c21] sm:h-10 sm:px-4 sm:text-sm" asChild>
-            <Link href="/list-property" aria-label="List your property"><Plus className="mr-1.5 h-4 w-4 sm:mr-2" /><span className="sm:hidden">List</span><span className="hidden sm:inline">List your property</span><ArrowRight className="ml-2 hidden h-3.5 w-3.5 lg:inline" /></Link>
+            <Link href="/list-property" aria-label="List your property"><Plus className="mr-1.5 h-4 w-4 sm:mr-2" /><span className="lg:hidden">List</span><span className="hidden lg:inline">List your property</span><ArrowRight className="ml-2 hidden h-3.5 w-3.5 lg:inline" /></Link>
           </Button>
         </div>
       </div>
