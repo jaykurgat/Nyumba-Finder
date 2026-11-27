@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, Plus, UserRound } from 'lucide-react';
+import { Plus, UserRound } from 'lucide-react';
 import { getCurrentUser } from '@/lib/user-auth';
 import { PrimaryNavigation } from '@/components/layout/PrimaryNavigation';
 import { AccountMenu } from '@/components/layout/AccountMenu';
@@ -28,8 +28,8 @@ export async function Header() {
               <UserRound className="h-[17px] w-[17px] sm:mr-2" /><span className="hidden max-w-28 truncate text-sm sm:inline">Sign in</span>
             </Link>
           </Button>}
-          <Button className="h-9 rounded-none bg-[#244c2c] px-3 text-xs font-semibold text-white hover:bg-[#193c21] sm:h-10 sm:px-4 sm:text-sm" asChild>
-            <Link href="/list-property" aria-label="List your property"><Plus className="mr-1.5 h-4 w-4 sm:mr-2" /><span className="lg:hidden">List</span><span className="hidden lg:inline">List your property</span><ArrowRight className="ml-2 hidden h-3.5 w-3.5 lg:inline" /></Link>
+          <Button className="h-10 shrink-0 gap-1.5 rounded-full bg-[#244c2c] px-3.5 text-xs font-semibold text-white shadow-sm transition hover:bg-[#193c21] focus-visible:ring-2 focus-visible:ring-[#f28c28] sm:px-4 sm:text-[13px]" asChild>
+            <Link href="/list-property" aria-label="List a property"><Plus className="h-4 w-4 shrink-0" /><span className="lg:hidden">List</span><span className="hidden lg:inline">List property</span></Link>
           </Button>
         </div>
       </div>
