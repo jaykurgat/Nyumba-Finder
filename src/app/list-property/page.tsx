@@ -1,1134 +1,165 @@
-
-"use client";
-
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
-import * as z from "zod";
-import { useRouter, useSearchParams } from 'next/navigation';
-import { useState, useEffect, use } from 'react';
-import { PropertyImage } from "@/components/properties/PropertyImage";
-import { trackGoogleAdsConversion } from "@/components/analytics/GoogleAnalytics";
-import { InteractiveLocationMap } from "@/components/properties/InteractiveLocationMap";
-
-import { Button } from "@/components/ui/button";
-import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useToast } from "@/hooks/use-toast";
-import { Loader2, Trash2, Home, MapPin, Navigation, Search, X, Sparkles } from "lucide-react";
-import type { Property } from "@/types/property";
-
-const amenitiesList = ["Parking", "Swimming Pool", "Gym", "Security", "Balcony", "Garden", "Internet Ready", "Servant Quarters", "Lift", "Water Included", "Beach Access", "Air Conditioning"] as const;
-
-const phoneRegex = new RegExp(
-  /^([+]?[\s0-9]+)?(\d{3}|[(]?[0-9]+[)])?([-]?[\s]?[0-9])+$/
-);
-
-const formSchema = z.object({
-  title: z.string().min(5, "Title must be at least 5 characters.").max(100, "Title cannot exceed 100 characters."),
-  description: z.string().min(20, "Description must be at least 20 characters.").max(1000, "Description cannot exceed 1000 characters."),
-  countyId: z.string().min(1, "Please select a county."),
-  location: z.string().min(2, "Please specify a location."),
-  locationNodeId: z.string().min(1, "Please select a town, city or estate."),
-  propertyCategory: z.enum(["RESIDENTIAL", "COMMERCIAL", "LAND"]),
-  propertyType: z.string().min(2, "Please select a property type."),
-  listingType: z.enum(["FOR_RENT", "FOR_SALE", "SHORT_STAY"]),
-  price: z.coerce.number().positive("Price must be a positive number."),
-  shortStayMinNights: z.coerce.number().int().positive().optional().or(z.literal("")),
-  shortStayMaxNights: z.coerce.number().int().positive().optional().or(z.literal("")),
-  cleaningFee: z.preprocess((val) => (val === undefined || val === null || String(val).trim() === "" ? undefined : Number(val)), z.number().nonnegative().optional()),
-  securityDeposit: z.preprocess((val) => (val === undefined || val === null || String(val).trim() === "" ? undefined : Number(val)), z.number().nonnegative().optional()),
-  maxGuests: z.coerce.number().int().positive().optional().or(z.literal("")),
-  bedrooms: z.coerce.number().int().min(0, "Number of bedrooms cannot be negative."),
-  bathrooms: z.coerce.number().int().min(0, "Bathrooms cannot be negative."),
-  area: z.preprocess(
-    (val) => (String(val).trim() === "" || val === undefined || val === null ? undefined : Number(val)),
-    z.number().positive("Area must be a positive number if provided.").optional()
-  ),
-  phoneNumber: z.string()
-    .refine(val => val === "" || val === undefined || val === null || phoneRegex.test(val), { message: "Invalid phone number format." })
-    .optional()
-    .or(z.literal('')),
-  amenities: z.array(z.string()).optional().default([]),
-  images: z.array(z.string()).optional().default([]), // For client-side preview only
-}).superRefine((values, context) => {
-  if (values.propertyCategory === "RESIDENTIAL" && values.propertyType !== "Land" && values.bathrooms < 1) {
-    context.addIssue({ code: z.ZodIssueCode.custom, path: ["bathrooms"], message: "Must have at least 1 bathroom." });
-  }
-});
-
-type FormSchemaType = z.infer<typeof formSchema>;
-
-export default function ListPropertyPage() {
-  const router = useRouter();
-  const searchParamsHook = useSearchParams();
-  const { toast } = useToast();
-
-  const [isLoading, setIsLoading] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
-  const [isEditMode, setIsEditMode] = useState(false);
-  const [propertyIdToEdit, setPropertyIdToEdit] = useState<string | null>(null);
-  const [pageTitle, setPageTitle] = useState("List Your Property");
-  const [locationSuggestions, setLocationSuggestions] = useState<any[]>([]);
-  const [showLocationSuggestions, setShowLocationSuggestions] = useState(false);
-  const [locationSearching, setLocationSearching] = useState(false);
-  const [counties, setCounties] = useState<any[]>([]);
-  const [countiesLoading, setCountiesLoading] = useState(true);
-  const [countiesError, setCountiesError] = useState<string | null>(null);
-  const [selectedTownId, setSelectedTownId] = useState("");
-  const [towns, setTowns] = useState<any[]>([]);
-  const [townsLoading, setTownsLoading] = useState(false);
-  const [areas, setAreas] = useState<any[]>([]);
-  const [areasLoading, setAreasLoading] = useState(false);
-  const [mapPosition, setMapPosition] = useState<{ lat: number; lng: number } | null>(null);
-  const [locationSource, setLocationSource] = useState<"USER_SELECTED" | "BROWSER_GEOLOCATION">("USER_SELECTED");
-  const [partnerContacts, setPartnerContacts] = useState<{id:string; companyName:string; contactName:string; phone:string|null; whatsapp:string|null; email:string|null}[]>([]);
-  const [canManagePartnerContacts, setCanManagePartnerContacts] = useState(false);
-  const [selectedPartnerContactId, setSelectedPartnerContactId] = useState("");
-  const [partnerMode, setPartnerMode] = useState<"none" | "existing" | "new">("none");
-  const [partnerDetails, setPartnerDetails] = useState({ companyName: "", contactName: "", phone: "", whatsapp: "", email: "" });
-
-  const form = useForm<FormSchemaType>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      title: "",
-      description: "",
-      countyId: "",
-      location: "",
-      locationNodeId: "",
-      propertyCategory: "RESIDENTIAL",
-      propertyType: "Apartment",
-      listingType: "FOR_RENT",
-      shortStayMinNights: "",
-      shortStayMaxNights: "",
-      maxGuests: "",
-      price: "" as unknown as number, // Keep as empty string for controlled input
-      bedrooms: "" as unknown as number,
-      bathrooms: "" as unknown as number,
-      area: "" as unknown as number,
-      phoneNumber: "",
-      amenities: [],
-      images: [],
-    },
-  });
-
-  const watchedImages = form.watch('images');
-  const watchedLocation = form.watch('location');
-  const watchedCountyId = form.watch('countyId');
-  const watchedListingType = form.watch('listingType');
-  const watchedPropertyType = form.watch('propertyType');
-  const watchedPropertyCategory = form.watch('propertyCategory');
-
-  useEffect(() => {
-    let cancelled = false;
-    fetch("/api/partner-contacts/options", { cache: "no-store" })
-      .then(async (response) => response.ok ? response.json() : { contacts: [] })
-      .then((data) => { if (!cancelled) { setCanManagePartnerContacts(data.authorized === true); setPartnerContacts(Array.isArray(data.contacts) ? data.contacts : []); } })
-      .catch(() => { if (!cancelled) { setCanManagePartnerContacts(false); setPartnerContacts([]); } });
-    return () => { cancelled = true; };
-  }, []);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function loadCounties() {
-      setCountiesLoading(true);
-      setCountiesError(null);
-
-      try {
-        const response = await fetch('/api/counties', { cache: 'no-store' });
-        const data = await response.json().catch(() => ({}));
-
-        if (!response.ok) {
-          throw new Error(data.message || 'County request failed (' + response.status + ')');
-        }
-
-        if (!Array.isArray(data.counties)) {
-          throw new Error('County API returned an invalid response.');
-        }
-
-        if (!cancelled) setCounties(data.counties);
-      } catch (error) {
-        console.error('Failed to load counties:', error);
-        if (!cancelled) {
-          setCounties([]);
-          setCountiesError(error instanceof Error ? error.message : 'Could not load counties.');
-        }
-      } finally {
-        if (!cancelled) setCountiesLoading(false);
-      }
-    }
-
-    loadCounties();
-    return () => { cancelled = true; };
-  }, []);
-
-  useEffect(() => {
-    if (!watchedCountyId) {
-      setTowns([]);
-      setAreas([]);
-      setSelectedTownId("");
-      form.setValue('location', '', { shouldValidate: true, shouldDirty: true });
-      form.setValue('locationNodeId', '', { shouldValidate: true, shouldDirty: true });
-      return;
-    }
-
-    let cancelled = false;
-    setTownsLoading(true);
-
-    fetch('/api/locations?' + new URLSearchParams({
-      countyId: watchedCountyId,
-      level: 'TOWN',
-    }).toString(), { cache: 'no-store' })
-      .then(async (response) => {
-        const data = await response.json().catch(() => ({}));
-        if (!response.ok) throw new Error(data.message || 'Failed to load towns and cities.');
-        return data;
-      })
-      .then((data) => {
-        if (!cancelled) setTowns(Array.isArray(data.locations) ? data.locations : []);
-      })
-      .catch((error) => {
-        console.error('Failed to load towns and cities:', error);
-        if (!cancelled) setTowns([]);
-      })
-      .finally(() => {
-        if (!cancelled) setTownsLoading(false);
-      });
-
-    return () => { cancelled = true; };
-  }, [watchedCountyId, form]);
-
-  useEffect(() => {
-    if (!selectedTownId) {
-      setAreas([]);
-      return;
-    }
-    let cancelled = false;
-    setAreasLoading(true);
-    fetch('/api/locations?' + new URLSearchParams({ parentId: selectedTownId, level: 'RESIDENTIAL' }).toString(), { cache: 'no-store' })
-      .then(async (response) => {
-        const data = await response.json().catch(() => ({}));
-        if (!response.ok) throw new Error(data.message || 'Failed to load area suggestions.');
-        return data;
-      })
-      .then((data) => {
-        if (!cancelled) setAreas(Array.isArray(data.locations) ? data.locations : []);
-      })
-      .catch((error) => {
-        console.error('Failed to load area suggestions:', error);
-        if (!cancelled) setAreas([]);
-      })
-      .finally(() => { if (!cancelled) setAreasLoading(false); });
-    return () => { cancelled = true; };
-  }, [selectedTownId]);
-
-  useEffect(() => {
-    const editId = searchParamsHook.get('edit');
-    if (editId) {
-      setIsEditMode(true);
-      setPropertyIdToEdit(editId);
-      setPageTitle("Edit Property");
-      setIsLoading(true);
-      const fetchPropertyData = async () => {
-        try {
-          const response = await fetch(`/api/properties/${editId}`);
-          if (!response.ok) {
-            throw new Error("Failed to fetch property data for editing.");
-          }
-          const data: Property = await response.json();
-          if (!data.canEdit) {
-            throw new Error("You can only edit a property listed from your own account. If this is your listing and you cannot access it, contact NyumbaFinder support.");
-          }
-          form.reset({
-            ...data,
-            countyId: data.countyId || "",
-            price: data.price || ("" as unknown as number),
-            bedrooms: data.bedrooms === undefined || data.bedrooms === null ? ("" as unknown as number) : data.bedrooms,
-            bathrooms: data.bathrooms || ("" as unknown as number),
-            area: data.area === undefined || data.area === null ? ("" as unknown as number) : data.area,
-            phoneNumber: data.phoneNumber || "",
-            images: data.images || [],
-            locationNodeId: data.locationNodeId || "",
-          });
-          setSelectedTownId(data.locationNodeId || "");
-          setSelectedPartnerContactId(typeof (data as any).partnerContactId === "string" ? (data as any).partnerContactId : "");
-          const savedPartner = (data as any).partnerContact;
-          setPartnerMode(savedPartner ? "existing" : "none");
-          setPartnerDetails({ companyName: savedPartner?.companyName || "", contactName: savedPartner?.contactName || "", phone: savedPartner?.phone || "", whatsapp: savedPartner?.whatsapp || "", email: savedPartner?.email || "" });
-          setMapPosition(data.latitude != null && data.longitude != null ? { lat: data.latitude, lng: data.longitude } : null);
-          setLocationSource("USER_SELECTED");
-        } catch (error) {
-          console.error("Error fetching property to edit:", error);
-          toast({
-            title: "Error Loading Property",
-            description: "Could not load property data for editing. Please try again.",
-            variant: "destructive",
-          });
-          router.push('/list-property'); // Or perhaps back to the properties page
-        } finally {
-          setIsLoading(false);
-        }
-      };
-      fetchPropertyData();
-    } else {
-        setIsEditMode(false);
-        setPropertyIdToEdit(null);
-        setSelectedPartnerContactId("");
-        setPartnerMode("none");
-        setPartnerDetails({ companyName: "", contactName: "", phone: "", whatsapp: "", email: "" });
-        setPageTitle("List Your Property");
-        form.reset({ // Reset to default empty values if not in edit mode
-             title: "",
-             description: "",
-             countyId: "",
-             location: "",
-             locationNodeId: "",
-             propertyCategory: "RESIDENTIAL",
-             propertyType: "Apartment",
-             listingType: "FOR_RENT",
-             shortStayMinNights: "",
-             shortStayMaxNights: "",
-             cleaningFee: undefined,
-             securityDeposit: undefined,
-             maxGuests: "",
-             price: "" as unknown as number,
-             bedrooms: "" as unknown as number,
-             bathrooms: "" as unknown as number,
-             area: "" as unknown as number,
-             phoneNumber: "",
-             amenities: [],
-             images: [],
-        });
-    }
-  }, [searchParamsHook, form, router, toast]);
-
-
-  const compressImage = (file: File): Promise<string> =>
-    new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        const image = new Image();
-        image.onload = () => {
-          // Resize without cropping: the complete property photo remains visible.
-          const maxDimension = 2000;
-          const scale = Math.min(1, maxDimension / Math.max(image.width, image.height));
-          let width = Math.max(1, Math.round(image.width * scale));
-          let height = Math.max(1, Math.round(image.height * scale));
-          const targetBytes = 600 * 1024;
-          const qualityLevels = [0.84, 0.78, 0.72, 0.66, 0.60];
-
-          for (let resizePass = 0; resizePass < 4; resizePass += 1) {
-            const canvas = document.createElement('canvas');
-            canvas.width = width;
-            canvas.height = height;
-            const context = canvas.getContext('2d');
-            if (!context) {
-              reject(new Error('Could not process image.'));
-              return;
-            }
-            context.imageSmoothingEnabled = true;
-            context.imageSmoothingQuality = 'high';
-            context.drawImage(image, 0, 0, width, height);
-
-            let bestResult = '';
-            for (const quality of qualityLevels) {
-              const result = canvas.toDataURL('image/jpeg', quality);
-              const headerEnd = result.indexOf(',') + 1;
-              const estimatedBytes = Math.ceil((result.length - headerEnd) * 0.75);
-              bestResult = result;
-              if (estimatedBytes <= targetBytes) {
-                resolve(result);
-                return;
-              }
-            }
-
-            if (Math.max(width, height) <= 1000 || resizePass === 3) {
-              resolve(bestResult);
-              return;
-            }
-
-            // If quality reduction alone is insufficient, scale down proportionally.
-            width = Math.max(1, Math.round(width * 0.85));
-            height = Math.max(1, Math.round(height * 0.85));
-          }
-        };
-        image.onerror = () => reject(new Error('Could not load image.'));
-        image.src = reader.result as string;
-      };
-      reader.onerror = () => reject(new Error('Could not read image.'));
-      reader.readAsDataURL(file);
-    });
-
-  const processImageFiles = async (selectedFiles: File[]) => {
-    const imageFiles = selectedFiles.filter((file) => file.type.startsWith('image/'));
-    if (!imageFiles.length) return;
-
-    const currentImages = form.getValues('images') || [];
-    const remainingSlots = 10 - currentImages.length;
-    if (remainingSlots <= 0) {
-      toast({ title: "Maximum images reached", description: "A property can have up to 10 photos.", variant: "destructive" });
-      return;
-    }
-
-    const filesToProcess = imageFiles.slice(0, remainingSlots);
-    if (filesToProcess.length < imageFiles.length) {
-      toast({ title: "Photo limit", description: `Only ${remainingSlots} more photo(s) can be added. The first ${remainingSlots} selected image(s) will be used.` });
-    }
-
-    setIsUploading(true);
-    try {
-      const dataUris = await Promise.all(filesToProcess.map(compressImage));
-      form.setValue('images', [...(form.getValues('images') || []), ...dataUris].slice(0, 10), { shouldValidate: true, shouldDirty: true });
-    } catch (error) {
-      console.error("Error processing images:", error);
-      toast({ title: "Image Processing Error", description: "Could not process the selected image(s). Please try again.", variant: "destructive" });
-    } finally {
-      setIsUploading(false);
-    }
-  };
-
-  const handleImageChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(event.target.files || []);
-    await processImageFiles(files);
-    event.target.value = '';
-  };
-
-  const moveImage = (fromIndex: number, toIndex: number) => {
-    const images = [...(form.getValues('images') || [])];
-    if (toIndex < 0 || toIndex >= images.length || fromIndex === toIndex) return;
-    const [moved] = images.splice(fromIndex, 1);
-    images.splice(toIndex, 0, moved);
-    form.setValue('images', images, { shouldValidate: true, shouldDirty: true });
-  };
-
-  const handleImageDrop = (event: React.DragEvent<HTMLDivElement>) => {
-    event.preventDefault();
-    const files = Array.from(event.dataTransfer.files || []);
-    if (files.length) {
-      void processImageFiles(files);
-      return;
-    }
-    const fromIndex = Number(event.dataTransfer.getData('text/plain'));
-    const targetIndex = Number(event.currentTarget.dataset.imageIndex);
-    if (Number.isInteger(fromIndex) && Number.isInteger(targetIndex) && event.dataTransfer.getData('application/x-nyumbafinder-image-order') === 'true') {
-      moveImage(fromIndex, targetIndex);
-    }
-  };
-
-  async function onSubmit(values: FormSchemaType) {
-    setIsLoading(true);
-
-    try {
-      const apiUrl = isEditMode && propertyIdToEdit
-        ? `/api/properties/${propertyIdToEdit}`
-        : '/api/properties';
-
-      const formData = new FormData();
-      formData.append('title', values.title);
-      formData.append('description', values.description);
-      formData.append('countyId', values.countyId);
-      formData.append('location', values.location);
-      formData.append('locationNodeId', values.locationNodeId);
-      if (mapPosition) {
-        formData.append('latitude', String(mapPosition.lat));
-        formData.append('longitude', String(mapPosition.lng));
-      }
-      formData.append('locationSource', locationSource);
-      formData.append('propertyCategory', values.propertyCategory);
-      formData.append('propertyType', values.propertyType);
-      formData.append('listingType', values.listingType);
-      formData.append('pricePeriod', values.listingType === 'FOR_SALE' ? 'ONE_TIME' : values.listingType === 'SHORT_STAY' ? 'NIGHT' : 'MONTH');
-      formData.append('price', String(Number(values.price)));
-      formData.append('bedrooms', String(Number(values.bedrooms)));
-      formData.append('bathrooms', String(Number(values.bathrooms)));
-      if (values.shortStayMinNights !== '' && values.shortStayMinNights !== undefined) formData.append('shortStayMinNights', String(Number(values.shortStayMinNights)));
-      if (values.shortStayMaxNights !== '' && values.shortStayMaxNights !== undefined) formData.append('shortStayMaxNights', String(Number(values.shortStayMaxNights)));
-      if (values.cleaningFee !== undefined && String(values.cleaningFee) !== '') formData.append('cleaningFee', String(Number(values.cleaningFee)));
-      if (values.securityDeposit !== undefined && String(values.securityDeposit) !== '') formData.append('securityDeposit', String(Number(values.securityDeposit)));
-      if (values.maxGuests !== '' && values.maxGuests !== undefined) formData.append('maxGuests', String(Number(values.maxGuests)));
-      if (values.area !== undefined && values.area !== null && String(values.area) !== '') formData.append('area', String(Number(values.area)));
-      formData.append('phoneNumber', values.phoneNumber || '');
-      formData.append('partnerContactId', partnerMode === "existing" ? selectedPartnerContactId : "");
-      formData.append('partnerMode', partnerMode);
-      if (partnerMode === "new" || (partnerMode === "existing" && selectedPartnerContactId)) formData.append('partnerContact', JSON.stringify(partnerDetails));
-      formData.append('amenities', JSON.stringify(values.amenities || []));
-
-      const existingImages: string[] = [];
-      const imageOrder: ({ type: 'existing'; url: string } | { type: 'upload'; index: number })[] = [];
-      let uploadIndex = 0;
-      for (const image of values.images || []) {
-        if (image.startsWith('data:')) {
-          const [meta, base64] = image.split(',');
-          const mimeType = meta.match(/data:(.*?);base64/)?.[1] || 'image/jpeg';
-          const binary = atob(base64);
-          const bytes = new Uint8Array(binary.length);
-          for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-          formData.append('images', new File([bytes], `property-image-${Date.now()}-${uploadIndex}.jpg`, { type: mimeType }));
-          imageOrder.push({ type: 'upload', index: uploadIndex });
-          uploadIndex += 1;
-        } else if (image) {
-          existingImages.push(image);
-          imageOrder.push({ type: 'existing', url: image });
-        }
-      }
-
-      if (isEditMode) {
-        formData.append('existingImages', JSON.stringify(existingImages));
-        formData.append('imageOrder', JSON.stringify(imageOrder));
-      }
-
-      const response = await fetch(apiUrl, {
-        method: isEditMode ? 'PUT' : 'POST',
-        body: formData,
-      });
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ message: "An unknown error occurred with the server." }));
-        throw new Error(errorData.message || `Server responded with ${response.status}`);
-      }
-
-      const result = await response.json();
-      if (!isEditMode) {
-        trackGoogleAdsConversion(process.env.NEXT_PUBLIC_GOOGLE_ADS_PROPERTY_LISTING_LABEL);
-      }
-      toast({
-        title: isEditMode ? "Property Updated!" : "Property Listed!",
-        description: result.message || `Your property has been successfully ${isEditMode ? 'updated' : 'submitted'}.`,
-      });
-
-      const adminPromotionFlow = searchParamsHook.get('adminPromote') === '1';
-      const savedPropertyId = isEditMode && propertyIdToEdit ? propertyIdToEdit : result.propertyId || '';
-      router.push(adminPromotionFlow && savedPropertyId ? `/admin/promotions?property=${savedPropertyId}` : `/properties/${savedPropertyId}`);
-      router.refresh();
-    } catch (error) {
-      console.error(`Failed to ${isEditMode ? 'update' : 'list'} property via API:`, error);
-      toast({
-        title: isEditMode ? "Update Failed" : "Listing Failed",
-        description: error instanceof Error ? error.message : `Could not ${isEditMode ? 'update' : 'list'} your property. Please try again.`,
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  }
-
-  // Show loading state specifically when fetching data for edit mode before form is dirty or submitted
-  if (isEditMode && isLoading && !form.formState.isDirty && !form.formState.isSubmitted) {
-    return (
-      <div className="container mx-auto px-4 py-8 max-w-3xl flex flex-col justify-center items-center min-h-[50vh]">
-        <Home className="h-16 w-16 text-primary animate-pulse-slow" />
-      </div>
-    );
-  }
-
-  return (
-    <div className="min-h-screen bg-[#fbfaf6]">
-      <div className="container mx-auto max-w-4xl px-4 py-8 md:py-12">
-        <div className="mb-8 max-w-2xl">
-          <p className="mb-2 text-sm font-medium text-primary">NyumbaFinder</p>
-          <h1 className="text-3xl font-semibold tracking-tight md:text-4xl">{pageTitle}</h1>
-          <p className="mt-2 text-sm leading-6 text-muted-foreground md:text-base">Add the details tenants need to discover and compare your property. Weâ€™ll use the location you choose to make it easier to find in relevant searches.</p>
-        </div>
-        <Card className="overflow-hidden rounded-none border bg-background shadow-sm">
-          <CardHeader className="border-b bg-background px-5 py-5 md:px-7">
-            <CardTitle className="text-base font-semibold">Property information</CardTitle>
-          </CardHeader>
-          <CardContent className="px-5 py-6 md:px-7 md:py-8">
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6" suppressHydrationWarning>
-                  <FormField
-                    control={form.control}
-                    name="title"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Property Title</FormLabel>
-                        <FormControl>
-                          <Input placeholder="e.g., Modern 3 Bedroom Apartment in Kileleshwa" {...field} suppressHydrationWarning />
-                        </FormControl>
-                        <FormDescription>A catchy title for your listing.</FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                   <FormField
-                    control={form.control}
-                    name="description"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Description</FormLabel>
-                        <FormControl>
-                          <Textarea
-                            placeholder="Describe the property in detail..."
-                            className="resize-y min-h-[100px]"
-                            {...field}
-                            suppressHydrationWarning
-                          />
-                        </FormControl>
-                         <FormDescription>Highlight key features and selling points.</FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <div className="rounded-none border bg-card p-5 shadow-sm md:p-6">
-                    <div className="mb-5 flex items-start gap-3">
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-none bg-primary/10 text-primary"><MapPin className="h-5 w-5" /></div>
-                      <div>
-                        <h2 className="text-lg font-semibold tracking-tight">Where is the property?</h2>
-                        <p className="mt-1 text-sm text-muted-foreground">Choose the county, then select the town or city and enter the local area.</p>
-                      </div>
-                    </div>
-
-                    <div className="space-y-5">
-                      <FormField control={form.control} name="countyId" render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-foreground">County <span className="text-primary">*</span></FormLabel>
-                          <select
-                            value={field.value}
-                            disabled={countiesLoading || !!countiesError}
-                            onChange={(event) => {
-                              const value = event.target.value;
-                              field.onChange(value);
-                              setSelectedTownId("");
-                              setTowns([]);
-                              form.setValue('location', '', { shouldValidate: true, shouldDirty: true });
-                              form.setValue('locationNodeId', '', { shouldValidate: true, shouldDirty: true });
-                              setMapPosition(null);
-                            }}
-                            className="flex h-11 w-full rounded-none border bg-background px-3 text-sm outline-none transition focus:ring-2 focus:ring-primary/20"
-                          >
-                            <option value="">{countiesLoading ? 'Loading counties...' : countiesError ? 'Unable to load counties' : 'Select a county'}</option>
-                            {counties.map((county) => <option key={county.id} value={county.id}>{county.name}</option>)}
-                          </select>
-                          {countiesError && <p className="text-xs text-destructive">{countiesError}</p>}
-                          {!countiesLoading && !countiesError && counties.length === 0 && <p className="text-xs text-destructive">No counties were returned by the server.</p>}
-                          <FormMessage />
-                        </FormItem>
-                      )} />
-
-                      <div className="grid gap-5 md:grid-cols-2">
-                        <div className="space-y-2">
-                          <FormLabel>Town / City <span className="text-primary">*</span></FormLabel>
-                          <select
-                            value={selectedTownId}
-                            disabled={!watchedCountyId || townsLoading}
-                            onChange={(event) => {
-                              const townId = event.target.value;
-                              const town = towns.find((item) => item.id === townId);
-                              setSelectedTownId(townId);
-                              form.setValue('locationNodeId', townId, { shouldValidate: true, shouldDirty: true });
-                              // Town / City and Area / Estate are separate fields.
-                              // Selecting a town must never copy the town name into the area field.
-                              form.setValue('location', '', { shouldValidate: true, shouldDirty: true });
-                              setMapPosition(town?.latitude != null && town?.longitude != null ? { lat: town.latitude, lng: town.longitude } : null);
-                              setLocationSource("USER_SELECTED");
-                            }}
-                            className="flex h-11 w-full rounded-none border bg-background px-3 text-sm outline-none transition focus:ring-2 focus:ring-primary/20"
-                          >
-                            <option value="">{!watchedCountyId ? 'Select county first' : townsLoading ? 'Loading towns and cities...' : towns.length ? 'Select a town or city' : 'No towns or cities available'}</option>
-                            {towns.map((town) => (
-                              <option key={town.id} value={town.id}>{town.name}</option>
-                            ))}
-                          </select>
-                          <p className="text-xs text-muted-foreground">Choose the town or city where the property is located.</p>
-                          {form.formState.errors.locationNodeId && (
-                            <p className="text-xs text-primary">
-                              {form.formState.errors.locationNodeId.message}
-                            </p>
-                          )}
-                        </div>
-
-                        <FormField control={form.control} name="location" render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-foreground">Area / Estate / Neighborhood <span className="text-primary">*</span></FormLabel>
-                            <FormControl>
-                              <Input
-                                list="property-area-suggestions"
-                                placeholder={areasLoading ? "Loading area suggestions..." : "e.g., Kilimani, Kapsoya, Milimani"}
-                                value={field.value}
-                                disabled={!selectedTownId}
-                                onChange={(event) => field.onChange(event.target.value)}
-                              />
-                            </FormControl>
-                            {areas.length > 0 && (
-                              <datalist id="property-area-suggestions">
-                                {areas.map((area) => <option key={area.id} value={area.name} />)}
-                              </datalist>
-                            )}
-                            <FormDescription>
-                              Enter the local area tenants would normally use when describing the property. If it is not in our verified suggestions, it will be flagged for admin verification â€” your listing can still go live.
-                            </FormDescription>
-                            {form.formState.errors.location?.message && (
-                              <p className="text-xs text-primary">
-                                {form.formState.errors.location.message}
-                              </p>
-                            )}
-                          </FormItem>
-                        )} />
-                      </div>
-
-                      <div className="rounded-none border bg-[#fbfaf6] p-4">
-                        <div className="flex items-start justify-between gap-4">
-                          <div className="flex gap-3">
-                            <div className="mt-0.5 flex h-9 w-9 items-center justify-center rounded-none bg-background text-primary shadow-sm">
-                              <Navigation className="h-4 w-4" />
-                            </div>
-                            <div>
-                              <p className="text-sm font-medium">Property map location <span className="font-normal text-muted-foreground">(Optional)</span></p>
-                              <p className="mt-1 text-xs leading-5 text-muted-foreground">Place the pin where the property is located. You can use your current location or move the pin manually. The map location helps tenants find the property in the right area.</p>
-                            </div>
-                          </div>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            className="shrink-0 rounded-none"
-                            onClick={() => {
-                              if (!navigator.geolocation) {
-                                toast({ title: "Location unavailable", description: "Your browser does not support location access.", variant: "destructive" });
-                                return;
-                              }
-                              navigator.geolocation.getCurrentPosition(
-                                (position) => {
-                                  setMapPosition({ lat: position.coords.latitude, lng: position.coords.longitude });
-                                  setLocationSource("BROWSER_GEOLOCATION");
-                                },
-                                () => toast({ title: "Location not available", description: "Allow location access or continue using the selected area.", variant: "destructive" }),
-                                { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
-                              );
-                            }}
-                          >
-                            Use my location
-                          </Button>
-                        </div>
-
-                        <div className="mt-4">
-                          <InteractiveLocationMap
-                            value={mapPosition}
-                            onChange={(position) => {
-                              setMapPosition(position);
-                              setLocationSource("USER_SELECTED");
-                            }}
-                            heightClassName="h-64 md:h-72"
-                          />
-                        </div>
-
-                        <div className="mt-3 flex items-center justify-between gap-3 text-xs text-muted-foreground">
-                          <span>{mapPosition ? "Location pin selected. Drag the pin to adjust it." : "Set the property location by dragging the pin or tapping the map."}</span>
-                          {mapPosition && (
-                            <button type="button" className="shrink-0 hover:text-foreground" onClick={() => setMapPosition(null)}>
-                              Remove pin
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-
-                  <FormField
-                    control={form.control}
-                    name="listingType"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Listing Type</FormLabel>
-                        <FormControl>
-                          <select {...field} className="h-11 w-full rounded-none border bg-background px-3 text-sm">
-                            <option value="FOR_RENT">For Rent</option>
-                            <option value="FOR_SALE">For Sale</option>
-                            <option value="SHORT_STAY">Short Stay</option>
-                          </select>
-                        </FormControl>
-                        <FormDescription>
-                          Choose whether you are renting, selling, or offering the property for short stays.
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="propertyCategory"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Property category</FormLabel>
-                        <FormControl>
-                          <select {...field} onChange={(event) => {
-                            const category = event.target.value as "RESIDENTIAL" | "COMMERCIAL" | "LAND";
-                            field.onChange(category);
-                            const firstType = category === "RESIDENTIAL" ? "Apartment" : category === "COMMERCIAL" ? "Office Space" : "Land";
-                            form.setValue("propertyType", firstType, { shouldValidate: true });
-                            if (category === "LAND") {
-                              form.setValue("bedrooms", 0, { shouldValidate: true });
-                              form.setValue("bathrooms", 0, { shouldValidate: true });
-                            } else if (watchedPropertyCategory !== "RESIDENTIAL") {
-                              form.setValue("bedrooms", "" as unknown as number, { shouldValidate: true });
-                              form.setValue("bathrooms", "" as unknown as number, { shouldValidate: true });
-                            }
-                          }} className="h-11 w-full border border-[#d9ded4] bg-white px-3 text-sm outline-none focus:border-[#244c2c]">
-                            <option value="RESIDENTIAL">Residential</option>
-                            <option value="COMMERCIAL">Commercial</option>
-                            <option value="LAND">Land</option>
-                          </select>
-                        </FormControl>
-                        <FormDescription>Choose the category that best describes this listing.</FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="propertyType"
-                    render={({ field }) => {
-                      const options = watchedPropertyCategory === "COMMERCIAL"
-                        ? ["Office Space", "Retail Shop", "Showroom", "Warehouse", "Industrial Space", "Co-working Space", "Business Premises"]
-                        : watchedPropertyCategory === "LAND"
-                          ? ["Land"]
-                          : ["Apartment", "Bedsitter", "Single Room", "Maisonette", "Townhouse", "Bungalow", "Villa", "House", "Shared accommodation"];
-                      return <FormItem>
-                        <FormLabel>Property type</FormLabel>
-                        <FormControl>
-                          <select {...field} onChange={(event) => {
-                            const nextType = event.target.value;
-                            field.onChange(nextType);
-                            if (nextType === "Land") {
-                              form.setValue("bedrooms", 0, { shouldValidate: true });
-                              form.setValue("bathrooms", 0, { shouldValidate: true });
-                            } else if (field.value === "Land") {
-                              form.setValue("bedrooms", "" as unknown as number, { shouldValidate: true });
-                              form.setValue("bathrooms", "" as unknown as number, { shouldValidate: true });
-                            }
-                          }} className="h-11 w-full border border-[#d9ded4] bg-white px-3 text-sm outline-none focus:border-[#244c2c]">
-                            {options.map((type) => <option key={type} value={type}>{type}</option>)}
-                          </select>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>;
-                    }}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="phoneNumber"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Phone Number <span className="text-muted-foreground">(Optional)</span></FormLabel>
-                        <FormControl>
-                          <Input type="tel" placeholder="e.g., 0712345678 or +254712345678" {...field} value={field.value ?? ""} suppressHydrationWarning />
-                        </FormControl>
-                        <FormDescription>Contact phone number for interested parties.</FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  {canManagePartnerContacts && (
-                    <section className="relative overflow-hidden rounded-2xl border-2 border-[#b38b43] bg-gradient-to-br from-[#fff8e8] via-[#fffdf7] to-[#f1e7d2] p-5 shadow-[0_12px_35px_rgba(91,65,25,0.13)] md:p-7">
-                      <div className="absolute inset-y-0 left-0 w-1.5 bg-gradient-to-b from-[#d9b96e] via-[#a87c32] to-[#725020]" />
-                      <h2 className="text-lg font-semibold text-[#382b18]">Property partner details <span className="text-xs uppercase tracking-widest text-[#76551e]">Optional Â· Internal</span></h2>
-                      <p className="mt-2 text-sm leading-6 text-[#6b5b42]">Private to Nyumba-Finder and never shown on public listings.</p>
-                      <div className="mt-5 grid gap-3 sm:grid-cols-3">
-                        <button type="button" onClick={() => { setPartnerMode("none"); setSelectedPartnerContactId(""); }} className="rounded-xl border border-[#d9c9a9] bg-white p-3 text-left text-sm text-[#44351e]">No partner<span className="block text-xs">Leave blank</span></button>
-                        <button type="button" onClick={() => setPartnerMode("existing")} className="rounded-xl border border-[#d9c9a9] bg-white p-3 text-left text-sm text-[#44351e]">Use existing<span className="block text-xs">Reuse or update</span></button>
-                        <button type="button" onClick={() => { setPartnerMode("new"); setSelectedPartnerContactId(""); setPartnerDetails({ companyName: "", contactName: "", phone: "", whatsapp: "", email: "" }); }} className="rounded-xl border border-[#d9c9a9] bg-white p-3 text-left text-sm text-[#44351e]">Add new contact<span className="block text-xs">Enter details here</span></button>
-                      </div>
-                      {partnerMode === "existing" && <div className="mt-4"><label className="mb-2 block text-sm font-medium text-[#44351e]">Saved partner contact</label><select value={selectedPartnerContactId} onChange={(event) => { const id = event.target.value; setSelectedPartnerContactId(id); const contact = partnerContacts.find((item) => item.id === id); if (contact) setPartnerDetails({ companyName: contact.companyName || "", contactName: contact.contactName || "", phone: contact.phone || "", whatsapp: contact.whatsapp || "", email: contact.email || "" }); }} className="h-11 w-full rounded-lg border border-[#d4c29d] bg-white px-3 text-sm"><option value="">Choose a contact</option>{partnerContacts.map((contact) => <option key={contact.id} value={contact.id}>{contact.companyName}{contact.contactName ? " â€” " + contact.contactName : ""}</option>)}</select>{partnerContacts.length === 0 && <p className="mt-2 text-sm text-[#796342]">No saved contacts yet. Choose Add new contact to create one here.</p>}</div>}
-                      {(partnerMode === "new" || (partnerMode === "existing" && selectedPartnerContactId)) && <div className="mt-4 grid gap-4 rounded-xl border border-[#d8c49a] bg-white/90 p-4 sm:grid-cols-2">{([{key:"companyName",label:"Agency / company name",required:true},{key:"contactName",label:"Contact person",required:false},{key:"phone",label:"Phone number",required:false},{key:"whatsapp",label:"WhatsApp number",required:false},{key:"email",label:"Email address",required:false}] as const).map((field) => <label key={field.key} className="block space-y-1.5 text-sm font-medium text-[#44351e]">{field.label}{field.required && " *"}<input required={!!field.required} type={field.key === "email" ? "email" : "text"} value={partnerDetails[field.key]} onChange={(event) => setPartnerDetails((current) => ({ ...current, [field.key]: event.target.value }))} className="h-11 w-full rounded-lg border border-[#d4c29d] bg-white px-3 text-sm" /></label>)}</div>}
-                      <p className="mt-4 rounded-lg border border-[#c7b07f]/60 bg-[#f7edd7]/80 px-3 py-2.5 text-xs leading-5 text-[#6d5937]">ğŸ”’ Private internal information â€” never shown to tenants.</p>
-                    </section>
-                  )}
-                   <div className={`grid grid-cols-1 gap-4 ${watchedPropertyType === "Land" || watchedPropertyCategory === "COMMERCIAL" ? "md:grid-cols-2" : "md:grid-cols-3"}`}>
-                       <FormField
-                        control={form.control}
-                        name="price"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>{watchedListingType === 'FOR_SALE' ? 'Sale Price (KES)' : watchedListingType === 'SHORT_STAY' ? 'Nightly Price (KES)' : 'Monthly Rent (KES)'}</FormLabel>
-                            <FormControl>
-                              <Input type="number" placeholder={watchedListingType === 'FOR_SALE' ? 'e.g., 15000000' : watchedListingType === 'SHORT_STAY' ? 'e.g., 5000' : 'e.g., 50000'} {...field} value={field.value ?? ""} suppressHydrationWarning />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                       {watchedPropertyCategory === "RESIDENTIAL" && watchedPropertyType !== "Land" && <FormField
-                        control={form.control}
-                        name="bedrooms"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Bedrooms</FormLabel>
-                            <FormControl>
-                              <Input type="number" placeholder="e.g., 2 (0 for Studio)" {...field} min="0" value={field.value ?? ""} suppressHydrationWarning/>
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />}
-                       {watchedPropertyType !== "Land" && <FormField
-                        control={form.control}
-                        name="bathrooms"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Bathrooms</FormLabel>
-                            <FormControl>
-                              <Input type="number" placeholder="e.g., 1" {...field} min="1" value={field.value ?? ""} suppressHydrationWarning/>
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />}
-                   </div>
-
-                   {watchedListingType === 'SHORT_STAY' && (
-                    <div className="rounded-none border bg-card p-5 shadow-sm md:p-6">
-                      <h2 className="text-base font-semibold">Short-stay details</h2>
-                      <p className="mt-1 text-sm text-muted-foreground">Optional details for furnished, holiday, serviced, or Airbnb-style stays.</p>
-                      <div className="mt-5 grid gap-4 md:grid-cols-3">
-                        <FormField control={form.control} name="shortStayMinNights" render={({ field }) => (
-                          <FormItem><FormLabel>Minimum nights</FormLabel><FormControl><Input type="number" min="1" placeholder="e.g., 1" {...field} value={field.value ?? ""} /></FormControl><FormMessage /></FormItem>
-                        )} />
-                        <FormField control={form.control} name="shortStayMaxNights" render={({ field }) => (
-                          <FormItem><FormLabel>Maximum nights <span className="text-muted-foreground">(Optional)</span></FormLabel><FormControl><Input type="number" min="1" placeholder="e.g., 30" {...field} value={field.value ?? ""} /></FormControl><FormMessage /></FormItem>
-                        )} />
-                        <FormField control={form.control} name="maxGuests" render={({ field }) => (
-                          <FormItem><FormLabel>Maximum guests <span className="text-muted-foreground">(Optional)</span></FormLabel><FormControl><Input type="number" min="1" placeholder="e.g., 4" {...field} value={field.value ?? ""} /></FormControl><FormMessage /></FormItem>
-                        )} />
-                        <FormField control={form.control} name="cleaningFee" render={({ field }) => (
-                          <FormItem><FormLabel>Cleaning fee (KES) <span className="text-muted-foreground">(Optional)</span></FormLabel><FormControl><Input type="number" min="0" placeholder="e.g., 1000" {...field} value={field.value ?? ""} /></FormControl><FormMessage /></FormItem>
-                        )} />
-                        <FormField control={form.control} name="securityDeposit" render={({ field }) => (
-                          <FormItem><FormLabel>Security deposit (KES) <span className="text-muted-foreground">(Optional)</span></FormLabel><FormControl><Input type="number" min="0" placeholder="e.g., 5000" {...field} value={field.value ?? ""} /></FormControl><FormMessage /></FormItem>
-                        )} />
-                      </div>
-                    </div>
-                  )}
-
-                  <FormField
-                    control={form.control}
-                    name="area"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>{watchedPropertyCategory === "LAND" ? "Land size (Square Meters)" : watchedPropertyCategory === "COMMERCIAL" ? "Floor area (Square Meters)" : "Area (Square Meters)"} <span className="text-muted-foreground">(Optional)</span></FormLabel>
-                        <FormControl>
-                           <Input type="number" placeholder="e.g., 100" {...field} value={field.value ?? ""} suppressHydrationWarning />
-                        </FormControl>
-                        <FormDescription>Enter the size of the property.</FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                   <FormField
-                      control={form.control}
-                      name="amenities"
-                      render={() => (
-                        <FormItem>
-                          <div className="mb-4">
-                            <FormLabel className="text-base">Amenities</FormLabel>
-                            <FormDescription>Select all available amenities.</FormDescription>
-                          </div>
-                          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                          {amenitiesList.map((item) => (
-                            <FormField
-                              key={item}
-                              control={form.control}
-                              name="amenities"
-                              render={({ field }) => {
-                                return (
-                                  <FormItem
-                                    key={item}
-                                    className="flex flex-row items-start space-x-3 space-y-0"
-                                  >
-                                    <FormControl>
-                                      <Checkbox
-                                        checked={field.value?.includes(item)}
-                                        onCheckedChange={(checked) => {
-                                          return checked
-                                            ? field.onChange([...(field.value || []), item])
-                                            : field.onChange(
-                                                field.value?.filter(
-                                                  (value) => value !== item
-                                                )
-                                              )
-                                        }}
-                                        suppressHydrationWarning
-                                      />
-                                    </FormControl>
-                                    <FormLabel className="font-normal">
-                                      {item}
-                                    </FormLabel>
-                                  </FormItem>
-                                )
-                              }}
-                            />
-                          ))}
-                          </div>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                        control={form.control}
-                        name="images"
-                        render={() => (
-                          <FormItem>
-                            <FormLabel>Property Images</FormLabel>
-                            <FormControl>
-                              <div
-                                tabIndex={0}
-                                onDragOver={(event) => { event.preventDefault(); event.dataTransfer.dropEffect = 'copy'; }}
-                                onDrop={(event) => { event.preventDefault(); void processImageFiles(Array.from(event.dataTransfer.files || [])); }}
-                                onPaste={(event) => {
-                                  const pastedFiles = Array.from(event.clipboardData.items)
-                                    .filter((item) => item.kind === 'file' && item.type.startsWith('image/'))
-                                    .map((item) => item.getAsFile())
-                                    .filter((file): file is File => Boolean(file));
-                                  if (pastedFiles.length) {
-                                    event.preventDefault();
-                                    void processImageFiles(pastedFiles);
-                                  }
-                                }}
-                                className="rounded-xl border-2 border-dashed border-muted-foreground/30 bg-muted/20 p-6 text-center outline-none transition-colors focus:border-primary hover:border-primary/60"
-                              >
-                                <div className="mx-auto flex max-w-xl flex-col items-center gap-2">
-                                  <div className="rounded-full bg-primary/10 p-3 text-primary"><Home className="h-6 w-6" /></div>
-                                  <p className="font-medium">Drop property photos here</p>
-                                  <p className="text-sm text-muted-foreground">Or paste a copied image here with Ctrl+V / âŒ˜V</p>
-                                  <p className="text-xs text-muted-foreground">Up to 10 photos Â· JPG, PNG, WebP and other image formats</p>
-                                  <Input
-                                    type="file"
-                                    multiple
-                                    accept="image/*"
-                                    onChange={handleImageChange}
-                                    disabled={isUploading || (watchedImages && watchedImages.length >= 10)}
-                                    className="mt-2 max-w-xs"
-                                    suppressHydrationWarning
-                                  />
-                                </div>
-                              </div>
-                            </FormControl>
-                            <FormDescription>
-                              Photos are resized and compressed without cropping. Drag thumbnails below to reorder them; the first photo is the main image.
-                              {watchedImages && watchedImages.length >= 10 && " Maximum images reached."}
-                            </FormDescription>
-                            <FormMessage />
-                             {isUploading && (
-                                <div className="flex items-center text-sm text-muted-foreground">
-                                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                  Processing images...
-                                </div>
-                            )}
-                          </FormItem>
-                        )}
-                      />
-
-                    {watchedImages && watchedImages.length > 0 && (
-                      <div className="space-y-2">
-                        <div className="flex justify-between items-center">
-                          <p className="text-sm font-medium">Property Images ({watchedImages.length} selected):</p>
-                          <Button variant="outline" size="sm" type="button" onClick={() => form.setValue('images', [], { shouldValidate: true, shouldDirty: true })}>
-                            <Trash2 className="mr-2 h-4 w-4" /> Clear All Images
-                          </Button>
-                        </div>
-                        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
-                          {watchedImages.map((uri, index) => (
-                            <div
-                              key={uri + index}
-                              draggable
-                              data-image-index={index}
-                              onDragStart={(event) => {
-                                event.dataTransfer.setData('text/plain', String(index));
-                                event.dataTransfer.setData('application/x-nyumbafinder-image-order', 'true');
-                                event.dataTransfer.effectAllowed = 'move';
-                              }}
-                              onDragOver={(event) => { event.preventDefault(); event.dataTransfer.dropEffect = 'move'; }}
-                              onDrop={handleImageDrop}
-                              className="relative cursor-grab overflow-hidden rounded-lg border bg-background shadow-sm active:cursor-grabbing"
-                              aria-label={`Photo ${index + 1}; drag to reorder`}
-                            >
-                              <PropertyImage
-                                src={uri}
-                                alt={`Property photo ${index + 1}`}
-                                sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, 25vw"
-                                minHeightClassName="min-h-[150px]"
-                                maxHeightClassName="max-h-[240px]"
-                              />
-                              {index === 0 && (
-                                <span className="absolute left-2 top-2 rounded-full bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground shadow">
-                                  Main photo
-                                </span>
-                              )}
-                              <Button
-                                type="button"
-                                variant="destructive"
-                                size="icon"
-                                className="absolute right-2 top-2 h-8 w-8"
-                                onClick={() => {
-                                  const nextImages = (form.getValues('images') || []).filter((_, imageIndex) => imageIndex !== index);
-                                  form.setValue('images', nextImages, { shouldValidate: true, shouldDirty: true });
-                                }}
-                                aria-label={`Remove photo ${index + 1}`}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                              {index !== 0 && (
-                                <Button
-                                  type="button"
-                                  variant="secondary"
-                                  size="sm"
-                                  className="absolute bottom-2 left-2 right-2 h-8 text-xs"
-                                  onClick={() => moveImage(index, 0)}
-                                >
-                                  Set as main
-                                </Button>
-                              )}
-                              <div className="absolute bottom-2 right-2 rounded-full bg-black/70 px-2 py-1 text-xs text-white">{index + 1}</div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-
-                  <div className="mb-5 rounded-none border border-primary/15 bg-gradient-to-br from-primary/[0.05] via-background to-accent/[0.06] p-5">
-                    <div className="flex items-start gap-3">
-                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-none bg-primary/10 text-primary"><Sparkles className="h-4 w-4" /></div>
-                      <div>
-                        <p className="text-sm font-semibold">Want more visibility?</p>
-                        <p className="mt-1 text-sm leading-6 text-muted-foreground">Once your listing is active, you can request Sponsored placement to give it additional visibility in relevant searches.</p>
-                        <a href={propertyIdToEdit ? '/promote?property=' + propertyIdToEdit : '/promote'} className="mt-3 inline-flex text-sm font-semibold text-primary underline-offset-4 hover:underline">View sponsored placement options</a>
-                      </div>
-                    </div>
-                  </div>
-
-                  <Button type="submit" className="w-full" disabled={isLoading || isUploading}>
-                    {isLoading ? (
-                        <>
-                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                         {isEditMode ? 'Updating Property...' : 'Listing Property...'}
-                        </>
-                    ) : (
-                       isEditMode ? 'Update Property' : 'List Property'
-                    )}
-                  </Button>
-                </form>
-              </Form>
-          </CardContent>
-        </Card>
-      </div>
-    </div>
-  );
-}
+YªçŠx-®éÜj×¢ëiºÚ+Š§j[h‘éÜ¢éíÛn:á:-jZ.¶›­–)Ş³PĞ¢'W6R6Æ–VçB#°Ğ Ğ¦–×÷'B²¦öE&W6öÇfW"Òg&öÒ$†öö¶f÷&Ò÷&W6öÇfW'2÷¦öB#°Ğ¦–×÷'B²W6Tf÷&ÒÒg&öÒ'&V7BÖ†öö²Öf÷&Ò#°Ğ¦–×÷'B¢2¢g&öÒ'¦öB#°Ğ¦–×÷'B²W6U&÷WFW"ÂW6U6V&6…&×2Òg&öÒvæW‡Böæf–vF–öâs°Ğ¦–×÷'B²W6U7FFRÂW6TVffV7BÂW6RÒg&öÒw&V7Bs°Ğ¦–×÷'B²&÷W'G”–ÖvRÒg&öÒ$ö6ö×öæVçG2÷&÷W'F–W2õ&÷W'G”–ÖvR#°Ğ¦–×÷'B²G&6´vöövÆTG46öçfW'6–öâÒg&öÒ$ö6ö×öæVçG2öæÇ—F–72ôvöövÆTæÇ—F–72#°Ğ¦–×÷'B²–çFW&7F—fTÆö6F–öäÖÒg&öÒ$ö6ö×öæVçG2÷&÷W'F–W2ô–çFW&7F—fTÆö6F–öäÖ#°Ğ Ğ¦–×÷'B²'WGFöâÒg&öÒ$ö6ö×öæVçG2÷V’ö'WGFöâ#°Ğ¦–×÷'B°Ğ¢f÷&ÒÀĞ¢f÷&Ô6öçG&öÂÀĞ¢f÷&ÔFW67&—F–öâÀĞ¢f÷&Ôf–VÆBÀĞ¢f÷&Ô—FVÒÀĞ¢f÷&ÔÆ&VÂÀĞ¢f÷&ÔÖW76vRÀĞ§Òg&öÒ$ö6ö×öæVçG2÷V’öf÷&Ò#°Ğ¦–×÷'B²–çWBÒg&öÒ$ö6ö×öæVçG2÷V’ö–çWB#°Ğ¦–×÷'B²FW‡F&VÒg&öÒ$ö6ö×öæVçG2÷V’÷FW‡F&V#°Ğ¦–×÷'B²6†V6¶&÷‚Òg&öÒ$ö6ö×öæVçG2÷V’ö6†V6¶&÷‚#°Ğ¦–×÷'B²6&BÂ6&D6öçFVçBÂ6&D†VFW"Â6&EF—FÆRÒg&öÒ$ö6ö×öæVçG2÷V’ö6&B#°Ğ¦–×÷'B²W6UFö7BÒg&öÒ$ö†öö·2÷W6R×Fö7B#°Ğ¦–×÷'B²ÆöFW#"ÂG&6ƒ"Â†öÖRÂÖ–âÂæf–vF–öâÂ6V&6‚Â‚Â7&¶ÆW2Òg&öÒ&ÇV6–FR×&V7B#°Ğ¦–×÷'BG—R²&÷W'G’Òg&öÒ$÷G—W2÷&÷W'G’#°Ğ Ğ¦6öç7BÖVæ—F–W4Æ—7BÒ²%&¶–ær"Â%7v–ÖÖ–ærööÂ"Â$w–Ò"Â%6V7W&—G’"Â$&Æ6öç’"Â$v&FVâ"Â$–çFW&æWB&VG’"Â%6W'fçBV'FW'2"Â$Æ–gB"Â%vFW"–æ6ÇVFVB"Â$&V6‚66W72"Â$—"6öæF—F–öæ–ær%Ò26öç7C°Ğ Ğ¦6öç7B†öæU&VvW‚ÒæWr&VtW‡€Ğ¢õâ…²µÓõµÇ3Ó•Ò²“ò…ÆG³7×Å²…Óõ³Ó•Òµ²•Ò“ò…²ÕÓõµÇ5Óõ³Ó•Ò’²BğĞ¢“°Ğ Ğ¦6öç7Bf÷&Õ66†VÖÒ¢æö&¦V7B‡°Ğ¢F—FÆS¢¢ç7G&–ær‚’æÖ–âƒRÂ%F—FÆR×W7B&RBÆV7BR6†&7FW'2â"’æÖ‚ƒÂ%F—FÆR6ææ÷BW†6VVB6†&7FW'2â"’ÀĞ¢FW67&—F–öã¢¢ç7G&–ær‚’æÖ–âƒ#Â$FW67&—F–öâ×W7B&RBÆV7B#6†&7FW'2â"’æÖ‚ƒÂ$FW67&—F–öâ6ææ÷BW†6VVB6†&7FW'2â"’ÀĞ¢6÷VçG”–C¢¢ç7G&–ær‚’æÖ–âƒÂ%ÆV6R6VÆV7B6÷VçG’â"’ÀĞ¢Æö6F–öã¢¢ç7G&–ær‚’æÖ–âƒ"Â%ÆV6R7V6–g’Æö6F–öââ"’ÀĞ¢Æö6F–öäæöFT–C¢¢ç7G&–ær‚’æÖ–âƒÂ%ÆV6R6VÆV7BF÷vâÂ6—G’÷"W7FFRâ"’ÀĞ¢&÷W'G”6FVv÷'“¢¢æVçVÒ…²%$U4”DTåD”Â"Â$4ôÔÔU$4”Â"Â$ÄäB%Ò’ÀĞ¢&÷W'G•G—S¢¢ç7G&–ær‚’æÖ–âƒ"Â%ÆV6R6VÆV7B&÷W'G’G—Râ"’ÀĞ¢Æ—7F–æuG—S¢¢æVçVÒ…²$dõ%õ$TåB"Â$dõ%õ4ÄR"Â%4„õ%Eõ5D’%Ò’ÀĞ¢f–Æ&–Æ—G“¢¢æVçVÒ…²$d”Ä$ÄR"Â%Täd”Ä$ÄR"Â%4ôÄB%Ò’ÀĞ¢&–6S¢¢æ6öW&6RæçVÖ&W"‚’ç÷6—F—fR‚%&–6R×W7B&R÷6—F—fRçVÖ&W"â"’ÀĞ¢6†÷'E7F”Ö–äæ–v‡G3¢¢æ6öW&6RæçVÖ&W"‚’æ–çB‚’ç÷6—F—fR‚’æ÷F–öæÂ‚’æ÷"‡¢æÆ—FW&Â‚""’’ÀĞ¢6†÷'E7F”Ö„æ–v‡G3¢¢æ6öW&6RæçVÖ&W"‚’æ–çB‚’ç÷6—F—fR‚’æ÷F–öæÂ‚’æ÷"‡¢æÆ—FW&Â‚""’’ÀĞ¢6ÆVæ–ætfVS¢¢ç&W&ö6W72‚‡fÂ’Óâ‡fÂÓÓÒVæFVf–æVBÇÂfÂÓÓÒçVÆÂÇÂ7G&–ær‡fÂ’çG&–Ò‚’ÓÓÒ""òVæFVf–æVB¢çVÖ&W"‡fÂ’’Â¢æçVÖ&W"‚’ææöææVvF—fR‚’æ÷F–öæÂ‚’’ÀĞ¢6V7W&—G”FW÷6—C¢¢ç&W&ö6W72‚‡fÂ’Óâ‡fÂÓÓÒVæFVf–æVBÇÂfÂÓÓÒçVÆÂÇÂ7G&–ær‡fÂ’çG&–Ò‚’ÓÓÒ""òVæFVf–æVB¢çVÖ&W"‡fÂ’’Â¢æçVÖ&W"‚’ææöææVvF—fR‚’æ÷F–öæÂ‚’’ÀĞ¢Ö„wVW7G3¢¢æ6öW&6RæçVÖ&W"‚’æ–çB‚’ç÷6—F—fR‚’æ÷F–öæÂ‚’æ÷"‡¢æÆ—FW&Â‚""’’ÀĞ¢&VG&öö×3¢¢æ6öW&6RæçVÖ&W"‚’æ–çB‚’æÖ–âƒÂ$çVÖ&W"öb&VG&öö×26ææ÷B&RæVvF—fRâ"’ÀĞ¢&F‡&öö×3¢¢æ6öW&6RæçVÖ&W"‚’æ–çB‚’æÖ–âƒÂ$&F‡&öö×26ææ÷B&RæVvF—fRâ"’ÀĞ¢&V¢¢ç&W&ö6W72€Ğ¢‡fÂ’Óâ…7G&–ær‡fÂ’çG&–Ò‚’ÓÓÒ""ÇÂfÂÓÓÒVæFVf–æVBÇÂfÂÓÓÒçVÆÂòVæFVf–æVB¢çVÖ&W"‡fÂ’’ÀĞ¢¢æçVÖ&W"‚’ç÷6—F—fR‚$&V×W7B&R÷6—F—fRçVÖ&W"–b&÷f–FVBâ"’æ÷F–öæÂ‚Ğ¢’ÀĞ¢†öæTçVÖ&W#¢¢ç7G&–ær‚Ğ¢ç&Vf–æR‡fÂÓâfÂÓÓÒ""ÇÂfÂÓÓÒVæFVf–æVBÇÂfÂÓÓÒçVÆÂÇÂ†öæU&VvW‚çFW7B‡fÂ’Â²ÖW76vS¢$–çfÆ–B†öæRçVÖ&W"f÷&ÖBâ"ÒĞ¢æ÷F–öæÂ‚Ğ¢æ÷"‡¢æÆ—FW&Â‚rr’’ÀĞ¢ÖVæ—F–W3¢¢æ'&’‡¢ç7G&–ær‚’’æ÷F–öæÂ‚’æFVfVÇB…µÒ’ÀĞ¢–ÖvW3¢¢æ'&’‡¢ç7G&–ær‚’’æ÷F–öæÂ‚’æFVfVÇB…µÒ’Âòòf÷"6Æ–VçB×6–FR&Wf–WröæÇĞ§Ò’ç7WW%&Vf–æR‚‡fÇVW2Â6öçFW‡B’Óâ°Ğ¢–b‡fÇVW2ç&÷W'G”6FVv÷'’ÓÓÒ%$U4”DTåD”Â"bbfÇVW2ç&÷W'G•G—RÓÒ$ÆæB"bbfÇVW2æ&F‡&öö×2Â’°Ğ¢6öçFW‡BæFD—77VR‡²6öFS¢¢å¦öD—77VT6öFRæ7W7FöÒÂFƒ¢²&&F‡&öö×2%ÒÂÖW76vS¢$×W7B†fRBÆV7B&F‡&ööÒâ"Ò“°Ğ¢ĞĞ§Ò“°Ğ Ğ§G—Rf÷&Õ66†VÖG—RÒ¢æ–æfW#ÇG—Vöbf÷&Õ66†VÖã°Ğ Ğ¦W‡÷'BFVfVÇBgVæ7F–öâÆ—7E&÷W'G•vR‚’°Ğ¢6öç7B&÷WFW"ÒW6U&÷WFW"‚“°Ğ¢6öç7B6V&6…&×4†öö²ÒW6U6V&6…&×2‚“°Ğ¢6öç7B²Fö7BÒÒW6UFö7B‚“°Ğ Ğ¢6öç7B¶—4ÆöF–ærÂ6WD—4ÆöF–æuÒÒW6U7FFR†fÇ6R“°Ğ¢6öç7B¶—5WÆöF–ærÂ6WD—5WÆöF–æuÒÒW6U7FFR†fÇ6R“°Ğ¢6öç7B¶—4VF—DÖöFRÂ6WD—4VF—DÖöFUÒÒW6U7FFR†fÇ6R“°Ğ¢6öç7B·&÷W'G”–EFôVF—BÂ6WE&÷W'G”–EFôVF—EÒÒW6U7FFSÇ7G&–ærÂçVÆÃâ†çVÆÂ“°Ğ¢6öç7B·vUF—FÆRÂ6WEvUF—FÆUÒÒW6U7FFR‚$Æ—7B–÷W"&÷W'G’"“°Ğ¢6öç7B¶Æö6F–öå7VvvW7F–öç2Â6WDÆö6F–öå7VvvW7F–öç5ÒÒW6U7FFSÆç•µÓâ…µÒ“°Ğ¢6öç7B·6†÷tÆö6F–öå7VvvW7F–öç2Â6WE6†÷tÆö6F–öå7VvvW7F–öç5ÒÒW6U7FFR†fÇ6R“°Ğ¢6öç7B¶Æö6F–öå6V&6†–ærÂ6WDÆö6F–öå6V&6†–æuÒÒW6U7FFR†fÇ6R“°Ğ¢6öç7B¶6÷VçF–W2Â6WD6÷VçF–W5ÒÒW6U7FFSÆç•µÓâ…µÒ“°Ğ¢6öç7B¶6÷VçF–W4ÆöF–ærÂ6WD6÷VçF–W4ÆöF–æuÒÒW6U7FFR‡G'VR“°Ğ¢6öç7B¶6÷VçF–W4W'&÷"Â6WD6÷VçF–W4W'&÷%ÒÒW6U7FFSÇ7G&–ærÂçVÆÃâ†çVÆÂ“°Ğ¢6öç7B·6VÆV7FVEF÷vä–BÂ6WE6VÆV7FVEF÷vä–EÒÒW6U7FFR‚""“°Ğ¢6öç7B·F÷vç2Â6WEF÷vç5ÒÒW6U7FFSÆç•µÓâ…µÒ“°Ğ¢6öç7B·F÷vç4ÆöF–ærÂ6WEF÷vç4ÆöF–æuÒÒW6U7FFR†fÇ6R“°Ğ¢6öç7B¶&V2Â6WD&V5ÒÒW6U7FFSÆç•µÓâ…µÒ“°Ğ¢6öç7B¶&V4ÆöF–ærÂ6WD&V4ÆöF–æuÒÒW6U7FFR†fÇ6R“°Ğ¢6öç7B¶Ö÷6—F–öâÂ6WDÖ÷6—F–öåÒÒW6U7FFSÇ²ÆC¢çVÖ&W#²Ææs¢çVÖ&W"ÒÂçVÆÃâ†çVÆÂ“°Ğ¢6öç7B¶Æö6F–öå6÷W&6RÂ6WDÆö6F–öå6÷W&6UÒÒW6U7FFSÂ%U4U%õ4TÄT5DTB"Â$%$õu4U%ôtTôÄô4D”ôâ#â‚%U4U%õ4TÄT5DTB"“°Ğ¢6öç7B·'FæW$6öçF7G2Â6WE'FæW$6öçF7G5ÒÒW6U7FFSÇ¶–C§7G&–æs²6ö×ç”æÖS§7G&–æs²6öçF7DæÖS§7G&–æs²†öæS§7G&–æwÆçVÆÃ²v†G6§7G&–æwÆçVÆÃ²VÖ–Ã§7G&–æwÆçVÆÇÕµÓâ…µÒ“°Ğ¢6öç7B¶6äÖævU'FæW$6öçF7G2Â6WD6äÖævU'FæW$6öçF7G5ÒÒW6U7FFR†fÇ6R“°Ğ¢6öç7B·6VÆV7FVE'FæW$6öçF7D–BÂ6WE6VÆV7FVE'FæW$6öçF7D–EÒÒW6U7FFR‚""“°Ğ¢6öç7B·'FæW$ÖöFRÂ6WE'FæW$ÖöFUÒÒW6U7FFSÂ&æöæR"Â&W†—7F–ær"Â&æWr#â‚&æöæR"“°Ğ¢6öç7B·'FæW$FWF–Ç2Â6WE'FæW$FWF–Ç5ÒÒW6U7FFR‡²6ö×ç”æÖS¢""Â6öçF7DæÖS¢""Â†öæS¢""Âv†G6¢""ÂVÖ–Ã¢""Ò“°Ğ Ğ¢6öç7Bf÷&ÒÒW6Tf÷&ÓÄf÷&Õ66†VÖG—Sâ‡°Ğ¢&W6öÇfW#¢¦öE&W6öÇfW"†f÷&Õ66†VÖ’ÀĞ¢FVfVÇEfÇVW3¢°Ğ¢F—FÆS¢""ÀĞ¢FW67&—F–öã¢""ÀĞ¢6÷VçG”–C¢""ÀĞ¢Æö6F–öã¢""ÀĞ¢Æö6F–öäæöFT–C¢""ÀĞ¢&÷W'G”6FVv÷'“¢%$U4”DTåD”Â"ÀĞ¢&÷W'G•G—S¢$'FÖVçB"ÀĞ¢Æ—7F–æuG—S¢$dõ%õ$TåB"ÀĞ¢f–Æ&–Æ—G“¢$d”Ä$ÄR"ÀĞ¢6†÷'E7F”Ö–äæ–v‡G3¢""ÀĞ¢6†÷'E7F”Ö„æ–v‡G3¢""ÀĞ¢Ö„wVW7G3¢""ÀĞ¢&–6S¢""2Væ¶æ÷vâ2çVÖ&W"Âòò¶VW2V×G’7G&–ærf÷"6öçG&öÆÆVB–çW@Ğ¢&VG&öö×3¢""2Væ¶æ÷vâ2çVÖ&W"ÀĞ¢&F‡&öö×3¢""2Væ¶æ÷vâ2çVÖ&W"ÀĞ¢&V¢""2Væ¶æ÷vâ2çVÖ&W"ÀĞ¢†öæTçVÖ&W#¢""ÀĞ¢ÖVæ—F–W3¢µÒÀĞ¢–ÖvW3¢µÒÀĞ¢ÒÀĞ¢Ò“°Ğ Ğ¢6öç7BvF6†VD–ÖvW2Òf÷&ÒçvF6‚‚v–ÖvW2r“°Ğ¢6öç7BvF6†VDÆö6F–öâÒf÷&ÒçvF6‚‚vÆö6F–öâr“°Ğ¢6öç7BvF6†VD6÷VçG”–BÒf÷&ÒçvF6‚‚v6÷VçG”–Br“°Ğ¢6öç7BvF6†VDÆ—7F–æuG—RÒf÷&ÒçvF6‚‚vÆ—7F–æuG—Rr“°Ğ¢6öç7BvF6†VE&÷W'G•G—RÒf÷&ÒçvF6‚‚w&÷W'G•G—Rr“°Ğ¢6öç7BvF6†VE&÷W'G”6FVv÷'’Òf÷&ÒçvF6‚‚w&÷W'G”6FVv÷'’r“°Ğ Ğ¢W6TVffV7B‚‚’Óâ°Ğ¢ÆWB6æ6VÆÆVBÒfÇ6S°Ğ¢fWF6‚‚"ö’÷'FæW"Ö6öçF7G2ö÷F–öç2"Â²66†S¢&æò×7F÷&R"ÒĞ¢çF†Vâ†7–æ2‡&W7öç6R’Óâ&W7öç6Ræö²ò&W7öç6Ræ§6öâ‚’¢²6öçF7G3¢µÒÒĞ¢çF†Vâ‚†FF’Óâ²–b‚6æ6VÆÆVB’²6WD6äÖævU'FæW$6öçF7G2†FFæWF†÷&—¦VBÓÓÒG'VR“²6WE'FæW$6öçF7G2„'&’æ—4'&’†FFæ6öçF7G2’òFFæ6öçF7G2¢µÒ“²ÒÒĞ¢æ6F6‚‚‚’Óâ²–b‚6æ6VÆÆVB’²6WD6äÖævU'FæW$6öçF7G2†fÇ6R“²6WE'FæW$6öçF7G2…µÒ“²ÒÒ“°Ğ¢&WGW&â‚’Óâ²6æ6VÆÆVBÒG'VS²Ó°Ğ¢ÒÂµÒ“°Ğ Ğ¢W6TVffV7B‚‚’Óâ°Ğ¢ÆWB6æ6VÆÆVBÒfÇ6S°Ğ Ğ¢7–æ2gVæ7F–öâÆöD6÷VçF–W2‚’°Ğ¢6WD6÷VçF–W4ÆöF–ær‡G'VR“°Ğ¢6WD6÷VçF–W4W'&÷"†çVÆÂ“°Ğ Ğ¢G'’°Ğ¢6öç7B&W7öç6RÒv—BfWF6‚‚rö’ö6÷VçF–W2rÂ²66†S¢væò×7F÷&RrÒ“°Ğ¢6öç7BFFÒv—B&W7öç6Ræ§6öâ‚’æ6F6‚‚‚’Óâ‡·Ò’“°Ğ Ğ¢–b‚&W7öç6Ræö²’°Ğ¢F‡&÷ræWrW'&÷"†FFæÖW76vRÇÂt6÷VçG’&WVW7Bf–ÆVB‚r²&W7öç6Rç7FGW2²r’r“°Ğ¢ĞĞ Ğ¢–b‚'&’æ—4'&’†FFæ6÷VçF–W2’’°Ğ¢F‡&÷ræWrW'&÷"‚t6÷VçG’’&WGW&æVBâ–çfÆ–B&W7öç6Râr“°Ğ¢ĞĞ Ğ¢–b‚6æ6VÆÆVB’6WD6÷VçF–W2†FFæ6÷VçF–W2“°Ğ¢Ò6F6‚†W'&÷"’°Ğ¢6öç6öÆRæW'&÷"‚tf–ÆVBFòÆöB6÷VçF–W3¢rÂW'&÷"“°Ğ¢–b‚6æ6VÆÆVB’°Ğ¢6WD6÷VçF–W2…µÒ“°Ğ¢6WD6÷VçF–W4W'&÷"†W'&÷"–ç7Fæ6VöbW'&÷"òW'&÷"æÖW76vR¢t6÷VÆBæ÷BÆöB6÷VçF–W2âr“°Ğ¢ĞĞ¢Òf–æÆÇ’°Ğ¢–b‚6æ6VÆÆVB’6WD6÷VçF–W4ÆöF–ær†fÇ6R“°Ğ¢ĞĞ¢ĞĞ Ğ¢ÆöD6÷VçF–W2‚“°Ğ¢&WGW&â‚’Óâ²6æ6VÆÆVBÒG'VS²Ó°Ğ¢ÒÂµÒ“°Ğ Ğ¢W6TVffV7B‚‚’Óâ°Ğ¢–b‚vF6†VD6÷VçG”–B’°Ğ¢6WEF÷vç2…µÒ“°Ğ¢6WD&V2…µÒ“°Ğ¢6WE6VÆV7FVEF÷vä–B‚""“°Ğ¢f÷&Òç6WEfÇVR‚vÆö6F–öârÂrrÂ²6†÷VÆEfÆ–FFS¢G'VRÂ6†÷VÆDF—'G“¢G'VRÒ“°Ğ¢f÷&Òç6WEfÇVR‚vÆö6F–öäæöFT–BrÂrrÂ²6†÷VÆEfÆ–FFS¢G'VRÂ6†÷VÆDF—'G“¢G'VRÒ“°Ğ¢&WGW&ã°Ğ¢ĞĞ Ğ¢ÆWB6æ6VÆÆVBÒfÇ6S°Ğ¢6WEF÷vç4ÆöF–ær‡G'VR“°Ğ Ğ¢fWF6‚‚rö’öÆö6F–öç3òr²æWrU$Å6V&6…&×2‡°Ğ¢6÷VçG”–C¢vF6†VD6÷VçG”–BÀĞ¢ÆWfVÃ¢uDõtârÀĞ¢Ò’çFõ7G&–ær‚’Â²66†S¢væò×7F÷&RrÒĞ¢çF†Vâ†7–æ2‡&W7öç6R’Óâ°Ğ¢6öç7BFFÒv—B&W7öç6Ræ§6öâ‚’æ6F6‚‚‚’Óâ‡·Ò’“°Ğ¢–b‚&W7öç6Ræö²’F‡&÷ræWrW'&÷"†FFæÖW76vRÇÂtf–ÆVBFòÆöBF÷vç2æB6—F–W2âr“°Ğ¢&WGW&âFF°Ğ¢ÒĞ¢çF†Vâ‚†FF’Óâ°Ğ¢–b‚6æ6VÆÆVB’6WEF÷vç2„'&’æ—4'&’†FFæÆö6F–öç2’òFFæÆö6F–öç2¢µÒ“°Ğ¢ÒĞ¢æ6F6‚‚†W'&÷"’Óâ°Ğ¢6öç6öÆRæW'&÷"‚tf–ÆVBFòÆöBF÷vç2æB6—F–W3¢rÂW'&÷"“°Ğ¢–b‚6æ6VÆÆVB’6WEF÷vç2…µÒ“°Ğ¢ÒĞ¢æf–æÆÇ’‚‚’Óâ°Ğ¢–b‚6æ6VÆÆVB’6WEF÷vç4ÆöF–ær†fÇ6R“°Ğ¢Ò“°Ğ Ğ¢&WGW&â‚’Óâ²6æ6VÆÆVBÒG'VS²Ó°Ğ¢ÒÂ·vF6†VD6÷VçG”–BÂf÷&ÕÒ“°Ğ Ğ¢W6TVffV7B‚‚’Óâ°Ğ¢–b‚6VÆV7FVEF÷vä–B’°Ğ¢6WD&V2…µÒ“°Ğ¢&WGW&ã°Ğ¢ĞĞ¢ÆWB6æ6VÆÆVBÒfÇ6S°Ğ¢6WD&V4ÆöF–ær‡G'VR“°Ğ¢fWF6‚‚rö’öÆö6F–öç3òr²æWrU$Å6V&6…&×2‡²&VçD–C¢6VÆV7FVEF÷vä–BÂÆWfVÃ¢u$U4”DTåD”ÂrÒ’çFõ7G&–ær‚’Â²66†S¢væò×7F÷&RrÒĞ¢çF†Vâ†7–æ2‡&W7öç6R’Óâ°Ğ¢6öç7BFFÒv—B&W7öç6Ræ§6öâ‚’æ6F6‚‚‚’Óâ‡·Ò’“°Ğ¢–b‚&W7öç6Ræö²’F‡&÷ræWrW'&÷"†FFæÖW76vRÇÂtf–ÆVBFòÆöB&V7VvvW7F–öç2âr“°Ğ¢&WGW&âFF°Ğ¢ÒĞ¢çF†Vâ‚†FF’Óâ°Ğ¢–b‚6æ6VÆÆVB’6WD&V2„'&’æ—4'&’†FFæÆö6F–öç2’òFFæÆö6F–öç2¢µÒ“°Ğ¢ÒĞ¢æ6F6‚‚†W'&÷"’Óâ°Ğ¢6öç6öÆRæW'&÷"‚tf–ÆVBFòÆöB&V7VvvW7F–öç3¢rÂW'&÷"“°Ğ¢–b‚6æ6VÆÆVB’6WD&V2…µÒ“°Ğ¢ÒĞ¢æf–æÆÇ’‚‚’Óâ²–b‚6æ6VÆÆVB’6WD&V4ÆöF–ær†fÇ6R“²Ò“°Ğ¢&WGW&â‚’Óâ²6æ6VÆÆVBÒG'VS²Ó°Ğ¢ÒÂ·6VÆV7FVEF÷vä–EÒ“°Ğ Ğ¢W6TVffV7B‚‚’Óâ°Ğ¢6öç7BVF—D–BÒ6V&6…&×4†öö²ævWB‚vVF—Br“°Ğ¢–b†VF—D–B’°Ğ¢6WD—4VF—DÖöFR‡G'VR“°Ğ¢6WE&÷W'G”–EFôVF—B†VF—D–B“°Ğ¢6WEvUF—FÆR‚$VF—B&÷W'G’"“°Ğ¢6WD—4ÆöF–ær‡G'VR“°Ğ¢6öç7BfWF6…&÷W'G”FFÒ7–æ2‚’Óâ°Ğ¢G'’°Ğ¢6öç7B&W7öç6RÒv—BfWF6‚†ö’÷&÷W'F–W2òG¶VF—D–GÖ“°Ğ¢–b‚&W7öç6Ræö²’°Ğ¢F‡&÷ræWrW'&÷"‚$f–ÆVBFòfWF6‚&÷W'G’FFf÷"VF—F–ærâ"“°Ğ¢ĞĞ¢6öç7BFF¢&÷W'G’Òv—B&W7öç6Ræ§6öâ‚“°Ğ¢–b‚FFæ6äVF—B’°Ğ¢F‡&÷ræWrW'&÷"‚%–÷R6âöæÇ’VF—B&÷W'G’Æ—7FVBg&öÒ–÷W"÷vâ66÷VçBâ–bF†—2—2–÷W"Æ—7F–æræB–÷R6ææ÷B66W72—BÂ6öçF7Bç—VÖ&f–æFW"7W÷'Bâ"“°Ğ¢ĞĞ¢f÷&Òç&W6WB‡°Ğ¢ââæFFÀĞ¢6÷VçG”–C¢FFæ6÷VçG”–BÇÂ""ÀĞ¢f–Æ&–Æ—G“¢FFæf–Æ&–Æ—G’ÇÂ$d”Ä$ÄR"ÀĞ¢&–6S¢FFç&–6RÇÂ‚""2Væ¶æ÷vâ2çVÖ&W"’ÀĞ¢&VG&öö×3¢FFæ&VG&öö×2ÓÓÒVæFVf–æVBÇÂFFæ&VG&öö×2ÓÓÒçVÆÂò‚""2Væ¶æ÷vâ2çVÖ&W"’¢FFæ&VG&öö×2ÀĞ¢&F‡&öö×3¢FFæ&F‡&öö×2ÇÂ‚""2Væ¶æ÷vâ2çVÖ&W"’ÀĞ¢&V¢FFæ&VÓÓÒVæFVf–æVBÇÂFFæ&VÓÓÒçVÆÂò‚""2Væ¶æ÷vâ2çVÖ&W"’¢FFæ&VÀĞ¢†öæTçVÖ&W#¢FFç†öæTçVÖ&W"ÇÂ""ÀĞ¢–ÖvW3¢FFæ–ÖvW2ÇÂµÒÀĞ¢Æö6F–öäæöFT–C¢FFæÆö6F–öäæöFT–BÇÂ""ÀĞ¢Ò“°Ğ¢6WE6VÆV7FVEF÷vä–B†FFæÆö6F–öäæöFT–BÇÂ""“°Ğ¢6WE6VÆV7FVE'FæW$6öçF7D–B‡G—Vöb†FF2ç’’ç'FæW$6öçF7D–BÓÓÒ'7G&–ær"ò†FF2ç’’ç'FæW$6öçF7D–B¢""“°Ğ¢6öç7B6fVE'FæW"Ò†FF2ç’’ç'FæW$6öçF7C°Ğ¢6WE'FæW$ÖöFR‡6fVE'FæW"ò&W†—7F–ær"¢&æöæR"“°Ğ¢6WE'FæW$FWF–Ç2‡²6ö×ç”æÖS¢6fVE'FæW#òæ6ö×ç”æÖRÇÂ""Â6öçF7DæÖS¢6fVE'FæW#òæ6öçF7DæÖRÇÂ""Â†öæS¢6fVE'FæW#òç†öæRÇÂ""Âv†G6¢6fVE'FæW#òçv†G6ÇÂ""ÂVÖ–Ã¢6fVE'FæW#òæVÖ–ÂÇÂ""Ò“°Ğ¢6WDÖ÷6—F–öâ†FFæÆF—GVFRÒçVÆÂbbFFæÆöæv—GVFRÒçVÆÂò²ÆC¢FFæÆF—GVFRÂÆæs¢FFæÆöæv—GVFRÒ¢çVÆÂ“°Ğ¢6WDÆö6F–öå6÷W&6R‚%U4U%õ4TÄT5DTB"“°Ğ¢Ò6F6‚†W'&÷"’°Ğ¢6öç6öÆRæW'&÷"‚$W'&÷"fWF6†–ær&÷W'G’FòVF—C¢"ÂW'&÷"“°Ğ¢Fö7B‡°Ğ¢F—FÆS¢$W'&÷"ÆöF–ær&÷W'G’"ÀĞ¢FW67&—F–öã¢$6÷VÆBæ÷BÆöB&÷W'G’FFf÷"VF—F–ærâÆV6RG'’v–ââ"ÀĞ¢f&–çC¢&FW7G'V7F—fR"ÀĞ¢Ò“°Ğ¢&÷WFW"çW6‚‚röÆ—7B×&÷W'G’r“²òò÷"W&†2&6²FòF†R&÷W'F–W2vPĞ¢Òf–æÆÇ’°Ğ¢6WD—4ÆöF–ær†fÇ6R“°Ğ¢ĞĞ¢Ó°Ğ¢fWF6…&÷W'G”FF‚“°Ğ¢ÒVÇ6R°Ğ¢6WD—4VF—DÖöFR†fÇ6R“°Ğ¢6WE&÷W'G”–EFôVF—B†çVÆÂ“°Ğ¢6WE6VÆV7FVE'FæW$6öçF7D–B‚""“°Ğ¢6WE'FæW$ÖöFR‚&æöæR"“°Ğ¢6WE'FæW$FWF–Ç2‡²6ö×ç”æÖS¢""Â6öçF7DæÖS¢""Â†öæS¢""Âv†G6¢""ÂVÖ–Ã¢""Ò“°Ğ¢6WEvUF—FÆR‚$Æ—7B–÷W"&÷W'G’"“°Ğ¢f÷&Òç&W6WB‡²òò&W6WBFòFVfVÇBV×G’fÇVW2–bæ÷B–âVF—BÖöFPĞ¢F—FÆS¢""ÀĞ¢FW67&—F–öã¢""ÀĞ¢6÷VçG”–C¢""ÀĞ¢Æö6F–öã¢""ÀĞ¢Æö6F–öäæöFT–C¢""ÀĞ¢&÷W'G”6FVv÷'“¢%$U4”DTåD”Â"ÀĞ¢&÷W'G•G—S¢$'FÖVçB"ÀĞ¢Æ—7F–æuG—S¢$dõ%õ$TåB"ÀĞ¢f–Æ&–Æ—G“¢$d”Ä$ÄR"ÀĞ¢6†÷'E7F”Ö–äæ–v‡G3¢""ÀĞ¢6†÷'E7F”Ö„æ–v‡G3¢""ÀĞ¢6ÆVæ–ætfVS¢VæFVf–æVBÀĞ¢6V7W&—G”FW÷6—C¢VæFVf–æVBÀĞ¢Ö„wVW7G3¢""ÀĞ¢&–6S¢""2Væ¶æ÷vâ2çVÖ&W"ÀĞ¢&VG&öö×3¢""2Væ¶æ÷vâ2çVÖ&W"ÀĞ¢&F‡&öö×3¢""2Væ¶æ÷vâ2çVÖ&W"ÀĞ¢&V¢""2Væ¶æ÷vâ2çVÖ&W"ÀĞ¢†öæTçVÖ&W#¢""ÀĞ¢ÖVæ—F–W3¢µÒÀĞ¢–ÖvW3¢µÒÀĞ¢Ò“°Ğ¢ĞĞ¢ÒÂ·6V&6…&×4†öö²Âf÷&ÒÂ&÷WFW"ÂFö7EÒ“°Ğ Ğ Ğ¢6öç7B6ö×&W74–ÖvRÒ†f–ÆS¢f–ÆR“¢&öÖ—6SÇ7G&–æsâÓàĞ¢æWr&öÖ—6R‚‡&W6öÇfRÂ&V¦V7B’Óâ°Ğ¢6öç7B&VFW"ÒæWrf–ÆU&VFW"‚“°Ğ¢&VFW"æöæÆöBÒ‚’Óâ°Ğ¢6öç7B–ÖvRÒæWr–ÖvR‚“°Ğ¢–ÖvRæöæÆöBÒ‚’Óâ°Ğ¢òò&W6—¦Rv—F†÷WB7&÷–æs¢F†R6ö×ÆWFR&÷W'G’†÷Fò&VÖ–ç2f—6–&ÆRàĞ¢6öç7BÖ„F–ÖVç6–öâÒ#°Ğ¢6öç7B66ÆRÒÖF‚æÖ–âƒÂÖ„F–ÖVç6–öâòÖF‚æÖ‚†–ÖvRçv–GF‚Â–ÖvRæ†V–v‡B’“°Ğ¢ÆWBv–GF‚ÒÖF‚æÖ‚ƒÂÖF‚ç&÷VæB†–ÖvRçv–GF‚¢66ÆR’“°Ğ¢ÆWB†V–v‡BÒÖF‚æÖ‚ƒÂÖF‚ç&÷VæB†–ÖvRæ†V–v‡B¢66ÆR’“°Ğ¢6öç7BF&vWD'—FW2Òc¢#C°Ğ¢6öç7BVÆ—G”ÆWfVÇ2Ò³ãƒBÂãs‚Âãs"ÂãcbÂãcÓ°Ğ Ğ¢f÷"†ÆWB&W6—¦U72Ò²&W6—¦U72ÂC²&W6—¦U72³Ò’°Ğ¢6öç7B6çf2ÒFö7VÖVçBæ7&VFTVÆVÖVçB‚v6çf2r“°Ğ¢6çf2çv–GF‚Òv–GFƒ°Ğ¢6çf2æ†V–v‡BÒ†V–v‡C°Ğ¢6öç7B6öçFW‡BÒ6çf2ævWD6öçFW‡B‚s&Br“°Ğ¢–b‚6öçFW‡B’°Ğ¢&V¦V7B†æWrW'&÷"‚t6÷VÆBæ÷B&ö6W72–ÖvRâr’“°Ğ¢&WGW&ã°Ğ¢ĞĞ¢6öçFW‡Bæ–ÖvU6Öö÷F†–ætVæ&ÆVBÒG'VS°Ğ¢6öçFW‡Bæ–ÖvU6Öö÷F†–æuVÆ—G’Òv†–v‚s°Ğ¢6öçFW‡BæG&t–ÖvR†–ÖvRÂÂÂv–GF‚Â†V–v‡B“°Ğ Ğ¢ÆWB&W7E&W7VÇBÒrs°Ğ¢f÷"†6öç7BVÆ—G’öbVÆ—G”ÆWfVÇ2’°Ğ¢6öç7B&W7VÇBÒ6çf2çFôFFU$Â‚v–ÖvRö§VrrÂVÆ—G’“°Ğ¢6öç7B†VFW$VæBÒ&W7VÇBæ–æFW„öb‚rÂr’²°Ğ¢6öç7BW7F–ÖFVD'—FW2ÒÖF‚æ6V–Â‚‡&W7VÇBæÆVæwF‚Ò†VFW$VæB’¢ãsR“°Ğ¢&W7E&W7VÇBÒ&W7VÇC°Ğ¢–b†W7F–ÖFVD'—FW2ÃÒF&vWD'—FW2’°Ğ¢&W6öÇfR‡&W7VÇB“°Ğ¢&WGW&ã°Ğ¢ĞĞ¢ĞĞ Ğ¢–b„ÖF‚æÖ‚‡v–GF‚Â†V–v‡B’ÃÒÇÂ&W6—¦U72ÓÓÒ2’°Ğ¢&W6öÇfR†&W7E&W7VÇB“°Ğ¢&WGW&ã°Ğ¢ĞĞ Ğ¢òò–bVÆ—G’&VGV7F–öâÆöæR—2–ç7Vff–6–VçBÂ66ÆRF÷vâ&÷÷'F–öæÆÇ’àĞ¢v–GF‚ÒÖF‚æÖ‚ƒÂÖF‚ç&÷VæB‡v–GF‚¢ãƒR’“°Ğ¢†V–v‡BÒÖF‚æÖ‚ƒÂÖF‚ç&÷VæB††V–v‡B¢ãƒR’“°Ğ¢ĞĞ¢Ó°Ğ¢–ÖvRæöæW'&÷"Ò‚’Óâ&V¦V7B†æWrW'&÷"‚t6÷VÆBæ÷BÆöB–ÖvRâr’“°Ğ¢–ÖvRç7&2Ò&VFW"ç&W7VÇB27G&–æs°Ğ¢Ó°Ğ¢&VFW"æöæW'&÷"Ò‚’Óâ&V¦V7B†æWrW'&÷"‚t6÷VÆBæ÷B&VB–ÖvRâr’“°Ğ¢&VFW"ç&VD4FFU$Â†f–ÆR“°Ğ¢Ò“°Ğ Ğ¢6öç7B&ö6W74–ÖvTf–ÆW2Ò7–æ2‡6VÆV7FVDf–ÆW3¢f–ÆUµÒ’Óâ°Ğ¢6öç7B–ÖvTf–ÆW2Ò6VÆV7FVDf–ÆW2æf–ÇFW"‚†f–ÆR’Óâf–ÆRçG—Rç7F'G5v—F‚‚v–ÖvRòr’“°Ğ¢–b‚–ÖvTf–ÆW2æÆVæwF‚’&WGW&ã°Ğ Ğ¢6öç7B7W'&VçD–ÖvW2Òf÷&ÒævWEfÇVW2‚v–ÖvW2r’ÇÂµÓ°Ğ¢6öç7B&VÖ–æ–æu6Æ÷G2ÒÒ7W'&VçD–ÖvW2æÆVæwFƒ°Ğ¢–b‡&VÖ–æ–æu6Æ÷G2ÃÒ’°Ğ¢Fö7B‡²F—FÆS¢$Ö†–×VÒ–ÖvW2&V6†VB"ÂFW67&—F–öã¢$&÷W'G’6â†fRWFò†÷F÷2â"Âf&–çC¢&FW7G'V7F—fR"Ò“°Ğ¢&WGW&ã°Ğ¢ĞĞ Ğ¢6öç7Bf–ÆW5Fõ&ö6W72Ò–ÖvTf–ÆW2ç6Æ–6RƒÂ&VÖ–æ–æu6Æ÷G2“°Ğ¢–b†f–ÆW5Fõ&ö6W72æÆVæwF‚Â–ÖvTf–ÆW2æÆVæwF‚’°Ğ¢Fö7B‡²F—FÆS¢%†÷FòÆ–Ö—B"ÂFW67&—F–öã¢öæÇ’G·&VÖ–æ–æu6Æ÷G7ÒÖ÷&R†÷Fò‡2’6â&RFFVBâF†Rf—'7BG·&VÖ–æ–æu6Æ÷G7Ò6VÆV7FVB–ÖvR‡2’v–ÆÂ&RW6VBæÒ“°Ğ¢ĞĞ Ğ¢6WD—5WÆöF–ær‡G'VR“°Ğ¢G'’°Ğ¢6öç7BFFW&—2Òv—B&öÖ—6RæÆÂ†f–ÆW5Fõ&ö6W72æÖ†6ö×&W74–ÖvR’“°Ğ¢f÷&Òç6WEfÇVR‚v–ÖvW2rÂ²âââ†f÷&ÒævWEfÇVW2‚v–ÖvW2r’ÇÂµÒ’ÂââæFFW&—5Òç6Æ–6RƒÂ’Â²6†÷VÆEfÆ–FFS¢G'VRÂ6†÷VÆDF—'G“¢G'VRÒ“°Ğ¢Ò6F6‚†W'&÷"’°Ğ¢6öç6öÆRæW'&÷"‚$W'&÷"&ö6W76–ær–ÖvW3¢"ÂW'&÷"“°Ğ¢Fö7B‡²F—FÆS¢$–ÖvR&ö6W76–ærW'&÷""ÂFW67&—F–öã¢$6÷VÆBæ÷B&ö6W72F†R6VÆV7FVB–ÖvR‡2’âÆV6RG'’v–ââ"Âf&–çC¢&FW7G'V7F—fR"Ò“°Ğ¢Òf–æÆÇ’°Ğ¢6WD—5WÆöF–ær†fÇ6R“°Ğ¢ĞĞ¢Ó°Ğ Ğ¢6öç7B†æFÆT–ÖvT6†ævRÒ7–æ2†WfVçC¢&V7Bä6†ævTWfVçCÄ…DÔÄ–çWDVÆVÖVçCâ’Óâ°Ğ¢6öç7Bf–ÆW2Ò'&’æg&öÒ†WfVçBçF&vWBæf–ÆW2ÇÂµÒ“°Ğ¢v—B&ö6W74–ÖvTf–ÆW2†f–ÆW2“°Ğ¢WfVçBçF&vWBçfÇVRÒrs°Ğ¢Ó°Ğ Ğ¢6öç7BÖ÷fT–ÖvRÒ†g&öÔ–æFWƒ¢çVÖ&W"ÂFô–æFWƒ¢çVÖ&W"’Óâ°Ğ¢6öç7B–ÖvW2Ò²âââ†f÷&ÒævWEfÇVW2‚v–ÖvW2r’ÇÂµÒ•Ó°Ğ¢–b‡Fô–æFW‚ÂÇÂFô–æFW‚ãÒ–ÖvW2æÆVæwF‚ÇÂg&öÔ–æFW‚ÓÓÒFô–æFW‚’&WGW&ã°Ğ¢6öç7B¶Ö÷fVEÒÒ–ÖvW2ç7Æ–6R†g&öÔ–æFW‚Â“°Ğ¢–ÖvW2ç7Æ–6R‡Fô–æFW‚ÂÂÖ÷fVB“°Ğ¢f÷&Òç6WEfÇVR‚v–ÖvW2rÂ–ÖvW2Â²6†÷VÆEfÆ–FFS¢G'VRÂ6†÷VÆDF—'G“¢G'VRÒ“°Ğ¢Ó°Ğ Ğ¢6öç7B†æFÆT–ÖvTG&÷Ò†WfVçC¢&V7BäG&tWfVçCÄ…DÔÄF—dVÆVÖVçCâ’Óâ°Ğ¢WfVçBç&WfVçDFVfVÇB‚“°Ğ¢6öç7Bf–ÆW2Ò'&’æg&öÒ†WfVçBæFFG&ç6fW"æf–ÆW2ÇÂµÒ“°Ğ¢–b†f–ÆW2æÆVæwF‚’°Ğ¢fö–B&ö6W74–ÖvTf–ÆW2†f–ÆW2“°Ğ¢&WGW&ã°Ğ¢ĞĞ¢6öç7Bg&öÔ–æFW‚ÒçVÖ&W"†WfVçBæFFG&ç6fW"ævWDFF‚wFW‡B÷Æ–âr’“°Ğ¢6öç7BF&vWD–æFW‚ÒçVÖ&W"†WfVçBæ7W'&VçEF&vWBæFF6WBæ–ÖvT–æFW‚“°Ğ¢–b„çVÖ&W"æ—4–çFVvW"†g&öÔ–æFW‚’bbçVÖ&W"æ—4–çFVvW"‡F&vWD–æFW‚’bbWfVçBæFFG&ç6fW"ævWDFF‚vÆ–6F–öâ÷‚Öç—VÖ&f–æFW"Ö–ÖvRÖ÷&FW"r’ÓÓÒwG'VRr’°Ğ¢Ö÷fT–ÖvR†g&öÔ–æFW‚ÂF&vWD–æFW‚“°Ğ¢ĞĞ¢Ó°Ğ Ğ¢7–æ2gVæ7F–öâöå7V&Ö—B‡fÇVW3¢f÷&Õ66†VÖG—R’°Ğ¢6WD—4ÆöF–ær‡G'VR“°Ğ Ğ¢G'’°Ğ¢6öç7B•W&ÂÒ—4VF—DÖöFRbb&÷W'G”–EFôVF—@Ğ¢òö’÷&÷W'F–W2òG·&÷W'G”–EFôVF—GÖ Ğ¢¢rö’÷&÷W'F–W2s°Ğ Ğ¢6öç7Bf÷&ÔFFÒæWrf÷&ÔFF‚“°Ğ¢f÷&ÔFFæVæB‚wF—FÆRrÂfÇVW2çF—FÆR“°Ğ¢f÷&ÔFFæVæB‚vFW67&—F–öârÂfÇVW2æFW67&—F–öâ“°Ğ¢f÷&ÔFFæVæB‚v6÷VçG”–BrÂfÇVW2æ6÷VçG”–B“°Ğ¢f÷&ÔFFæVæB‚vÆö6F–öârÂfÇVW2æÆö6F–öâ“°Ğ¢f÷&ÔFFæVæB‚vÆö6F–öäæöFT–BrÂfÇVW2æÆö6F–öäæöFT–B“°Ğ¢–b†Ö÷6—F–öâ’°Ğ¢f÷&ÔFFæVæB‚vÆF—GVFRrÂ7G&–ær†Ö÷6—F–öâæÆB’“°Ğ¢f÷&ÔFFæVæB‚vÆöæv—GVFRrÂ7G&–ær†Ö÷6—F–öâæÆær’“°Ğ¢ĞĞ¢f÷&ÔFFæVæB‚vÆö6F–öå6÷W&6RrÂÆö6F–öå6÷W&6R“°Ğ¢f÷&ÔFFæVæB‚w&÷W'G”6FVv÷'’rÂfÇVW2ç&÷W'G”6FVv÷'’“°Ğ¢f÷&ÔFFæVæB‚w&÷W'G•G—RrÂfÇVW2ç&÷W'G•G—R“°Ğ¢f÷&ÔFFæVæB‚vÆ—7F–æuG—RrÂfÇVW2æÆ—7F–æuG—R“°Ğ¢–b†—4VF—DÖöFR’f÷&ÔFFæVæB‚vf–Æ&–Æ—G’rÂfÇVW2æf–Æ&–Æ—G’“°Ğ¢f÷&ÔFFæVæB‚w&–6UW&–öBrÂfÇVW2æÆ—7F–æuG—RÓÓÒtdõ%õ4ÄRròtôäUõD”ÔRr¢fÇVW2æÆ—7F–æuG—RÓÓÒu4„õ%Eõ5D’ròtä”t…Br¢tÔôåD‚r“°Ğ¢f÷&ÔFFæVæB‚w&–6RrÂ7G&–ær„çVÖ&W"‡fÇVW2ç&–6R’’“°Ğ¢f÷&ÔFFæVæB‚v&VG&öö×2rÂ7G&–ær„çVÖ&W"‡fÇVW2æ&VG&öö×2’’“°Ğ¢f÷&ÔFFæVæB‚v&F‡&öö×2rÂ7G&–ær„çVÖ&W"‡fÇVW2æ&F‡&öö×2’’“°Ğ¢–b‡fÇVW2ç6†÷'E7F”Ö–äæ–v‡G2ÓÒrrbbfÇVW2ç6†÷'E7F”Ö–äæ–v‡G2ÓÒVæFVf–æVB’f÷&ÔFFæVæB‚w6†÷'E7F”Ö–äæ–v‡G2rÂ7G&–ær„çVÖ&W"‡fÇVW2ç6†÷'E7F”Ö–äæ–v‡G2’’“°Ğ¢–b‡fÇVW2ç6†÷'E7F”Ö„æ–v‡G2ÓÒrrbbfÇVW2ç6†÷'E7F”Ö„æ–v‡G2ÓÒVæFVf–æVB’f÷&ÔFFæVæB‚w6†÷'E7F”Ö„æ–v‡G2rÂ7G&–ær„çVÖ&W"‡fÇVW2ç6†÷'E7F”Ö„æ–v‡G2’’“°Ğ¢–b‡fÇVW2æ6ÆVæ–ætfVRÓÒVæFVf–æVBbb7G&–ær‡fÇVW2æ6ÆVæ–ætfVR’ÓÒrr’f÷&ÔFFæVæB‚v6ÆVæ–ætfVRrÂ7G&–ær„çVÖ&W"‡fÇVW2æ6ÆVæ–ætfVR’’“°Ğ¢–b‡fÇVW2ç6V7W&—G”FW÷6—BÓÒVæFVf–æVBbb7G&–ær‡fÇVW2ç6V7W&—G”FW÷6—B’ÓÒrr’f÷&ÔFFæVæB‚w6V7W&—G”FW÷6—BrÂ7G&–ær„çVÖ&W"‡fÇVW2ç6V7W&—G”FW÷6—B’’“°Ğ¢–b‡fÇVW2æÖ„wVW7G2ÓÒrrbbfÇVW2æÖ„wVW7G2ÓÒVæFVf–æVB’f÷&ÔFFæVæB‚vÖ„wVW7G2rÂ7G&–ær„çVÖ&W"‡fÇVW2æÖ„wVW7G2’’“°Ğ¢–b‡fÇVW2æ&VÓÒVæFVf–æVBbbfÇVW2æ&VÓÒçVÆÂbb7G&–ær‡fÇVW2æ&V’ÓÒrr’f÷&ÔFFæVæB‚v&VrÂ7G&–ær„çVÖ&W"‡fÇVW2æ&V’’“°Ğ¢f÷&ÔFFæVæB‚w†öæTçVÖ&W"rÂfÇVW2ç†öæTçVÖ&W"ÇÂrr“°Ğ¢f÷&ÔFFæVæB‚w'FæW$6öçF7D–BrÂ'FæW$ÖöFRÓÓÒ&W†—7F–ær"ò6VÆV7FVE'FæW$6öçF7D–B¢""“°Ğ¢f÷&ÔFFæVæB‚w'FæW$ÖöFRrÂ'FæW$ÖöFR“°Ğ¢–b‡'FæW$ÖöFRÓÓÒ&æWr"ÇÂ‡'FæW$ÖöFRÓÓÒ&W†—7F–ær"bb6VÆV7FVE'FæW$6öçF7D–B’’f÷&ÔFFæVæB‚w'FæW$6öçF7BrÂ¥4ôâç7G&–æv–g’‡'FæW$FWF–Ç2’“°Ğ¢f÷&ÔFFæVæB‚vÖVæ—F–W2rÂ¥4ôâç7G&–æv–g’‡fÇVW2æÖVæ—F–W2ÇÂµÒ’“°Ğ Ğ¢6öç7BW†—7F–æt–ÖvW3¢7G&–æuµÒÒµÓ°Ğ¢6öç7B–ÖvT÷&FW#¢‡²G—S¢vW†—7F–ærs²W&Ã¢7G&–ærÒÂ²G—S¢wWÆöBs²–æFWƒ¢çVÖ&W"Ò•µÒÒµÓ°Ğ¢ÆWBWÆöD–æFW‚Ò°Ğ¢f÷"†6öç7B–ÖvRöbfÇVW2æ–ÖvW2ÇÂµÒ’°Ğ¢–b†–ÖvRç7F'G5v—F‚‚vFF¢r’’°Ğ¢6öç7B¶ÖWFÂ&6ScEÒÒ–ÖvRç7Æ—B‚rÂr“°Ğ¢6öç7BÖ–ÖUG—RÒÖWFæÖF6‚‚öFF¢‚â£ò“¶&6ScBò“òå³ÒÇÂv–ÖvRö§Vrs°Ğ¢6öç7B&–æ'’ÒFö"†&6ScB“°Ğ¢6öç7B'—FW2ÒæWrV–çC„'&’†&–æ'’æÆVæwF‚“°Ğ¢f÷"†ÆWB’Ò²’Â&–æ'’æÆVæwFƒ²’²²’'—FW5¶•ÒÒ&–æ'’æ6†$6öFTB†’“°Ğ¢f÷&ÔFFæVæB‚v–ÖvW2rÂæWrf–ÆR…¶'—FW5ÒÂ&÷W'G’Ö–ÖvRÒG´FFRææ÷r‚—ÒÒG·WÆöD–æFW‡Òæ§vÂ²G—S¢Ö–ÖUG—RÒ’“°Ğ¢–ÖvT÷&FW"çW6‚‡²G—S¢wWÆöBrÂ–æFWƒ¢WÆöD–æFW‚Ò“°Ğ¢WÆöD–æFW‚³Ò°Ğ¢ÒVÇ6R–b†–ÖvR’°Ğ¢W†—7F–æt–ÖvW2çW6‚†–ÖvR“°Ğ¢–ÖvT÷&FW"çW6‚‡²G—S¢vW†—7F–ærrÂW&Ã¢–ÖvRÒ“°Ğ¢ĞĞ¢ĞĞ Ğ¢–b†—4VF—DÖöFR’°Ğ¢f÷&ÔFFæVæB‚vW†—7F–æt–ÖvW2rÂ¥4ôâç7G&–æv–g’†W†—7F–æt–ÖvW2’“°Ğ¢f÷&ÔFFæVæB‚v–ÖvT÷&FW"rÂ¥4ôâç7G&–æv–g’†–ÖvT÷&FW"’“°Ğ¢ĞĞ Ğ¢6öç7B&W7öç6RÒv—BfWF6‚†•W&ÂÂ°Ğ¢ÖWF†öC¢—4VF—DÖöFRòuUBr¢uõ5BrÀĞ¢&öG“¢f÷&ÔFFÀĞ¢Ò“°Ğ¢–b‚&W7öç6Ræö²’°Ğ¢6öç7BW'&÷$FFÒv—B&W7öç6Ræ§6öâ‚’æ6F6‚‚‚’Óâ‡²ÖW76vS¢$âVæ¶æ÷vâW'&÷"ö67W'&VBv—F‚F†R6W'fW"â"Ò’“°Ğ¢F‡&÷ræWrW'&÷"†W'&÷$FFæÖW76vRÇÂ6W'fW"&W7öæFVBv—F‚G·&W7öç6Rç7FGW7Ö“°Ğ¢ĞĞ Ğ¢6öç7B&W7VÇBÒv—B&W7öç6Ræ§6öâ‚“°Ğ¢–b‚—4VF—DÖöFR’°Ğ¢G&6´vöövÆTG46öçfW'6–öâ‡&ö6W72æVçbääU…EõT$Ä”5ôtôôtÄUôE5õ$õU%E•ôÄ•5D”äuôÄ$TÂ“°Ğ¢ĞĞ¢Fö7B‡°Ğ¢F—FÆS¢—4VF—DÖöFRò%&÷W'G’WFFVB"¢%&÷W'G’Æ—7FVB"ÀĞ¢FW67&—F–öã¢&W7VÇBæÖW76vRÇÂ–÷W"&÷W'G’†2&VVâ7V66W76gVÆÇ’G¶—4VF—DÖöFRòwWFFVBr¢w7V&Ö—GFVBwÒæÀĞ¢Ò“°Ğ Ğ¢6öç7BFÖ–å&öÖ÷F–öäfÆ÷rÒ6V&6…&×4†öö²ævWB‚vFÖ–å&öÖ÷FRr’ÓÓÒss°Ğ¢6öç7B6fVE&÷W'G”–BÒ—4VF—DÖöFRbb&÷W'G”–EFôVF—Bò&÷W'G”–EFôVF—B¢&W7VÇBç&÷W'G”–BÇÂrs°Ğ¢&÷WFW"çW6‚†FÖ–å&öÖ÷F–öäfÆ÷rbb6fVE&÷W'G”–BòöFÖ–â÷&öÖ÷F–öç3÷&÷W'G“ÒG·6fVE&÷W'G”–GÖ¢÷&÷W'F–W2òG·6fVE&÷W'G”–GÖ“°Ğ¢&÷WFW"ç&Vg&W6‚‚“°Ğ¢Ò6F6‚†W'&÷"’°Ğ¢6öç6öÆRæW'&÷"†f–ÆVBFòG¶—4VF—DÖöFRòwWFFRr¢vÆ—7BwÒ&÷W'G’f–“¦ÂW'&÷"“°Ğ¢Fö7B‡°Ğ¢F—FÆS¢—4VF—DÖöFRò%WFFRf–ÆVB"¢$Æ—7F–ærf–ÆVB"ÀĞ¢FW67&—F–öã¢W'&÷"–ç7Fæ6VöbW'&÷"òW'&÷"æÖW76vR¢6÷VÆBæ÷BG¶—4VF—DÖöFRòwWFFRr¢vÆ—7BwÒ–÷W"&÷W'G’âÆV6RG'’v–âæÀĞ¢f&–çC¢&FW7G'V7F—fR"ÀĞ¢Ò“°Ğ¢Òf–æÆÇ’°Ğ¢6WD—4ÆöF–ær†fÇ6R“°Ğ¢ĞĞ¢ĞĞ Ğ¢òò6†÷rÆöF–ær7FFR7V6–f–6ÆÇ’v†VâfWF6†–ærFFf÷"VF—BÖöFR&Vf÷&Rf÷&Ò—2F—'G’÷"7V&Ö—GFV@Ğ¢–b†—4VF—DÖöFRbb—4ÆöF–ærbbf÷&Òæf÷&Õ7FFRæ—4F—'G’bbf÷&Òæf÷&Õ7FFRæ—57V&Ö—GFVB’°Ğ¢&WGW&â€Ğ¢ÆF—b6Æ74æÖSÒ&6öçF–æW"×‚ÖWFò‚ÓB’Ó‚Ö‚×rÓ7†ÂfÆW‚fÆW‚Ö6öÂ§W7F–g’Ö6VçFW"—FV×2Ö6VçFW"Ö–âÖ‚Õ³Sf…Ò#àĞ¢Ä†öÖR6Æ74æÖSÒ&‚ÓbrÓbFW‡B×&–Ö'’æ–ÖFR×VÇ6R×6Æ÷r"óàĞ¢ÂöF—càĞ¢“°Ğ¢ĞĞ Ğ¢&WGW&â€Ğ¢ÆF—b6Æ74æÖSÒ&Ö–âÖ‚×67&VVâ&rÕ²6f&fceÒ#àĞ¢ÆF—b6Æ74æÖSÒ&6öçF–æW"×‚ÖWFòÖ‚×rÓG†Â‚ÓB’Ó‚ÖC§’Ó"#àĞ¢ÆF—b6Æ74æÖSÒ&Ö"Ó‚Ö‚×rÓ'†Â#àĞ¢Ç6Æ74æÖSÒ&Ö"Ó"FW‡B×6ÒföçBÖÖVF—VÒFW‡B×&–Ö'’#äç—VÖ&f–æFW#Â÷àĞ¢Æƒ6Æ74æÖSÒ'FW‡BÓ7†ÂföçB×6VÖ–&öÆBG&6¶–ær×F–v‡BÖC§FW‡BÓG†Â#ç·vUF—FÆWÓÂöƒàĞ¢Ç6Æ74æÖSÒ&×BÓ"FW‡B×6ÒÆVF–ærÓbFW‡BÖ×WFVBÖf÷&Vw&÷VæBÖC§FW‡BÖ&6R#äFBF†RFWF–Ç2FVæçG2æVVBFòF—66÷fW"æB6ö×&R–÷W"&÷W'G’âv^(	–ÆÂW6RF†RÆö6F–öâ–÷R6†ö÷6RFòÖ¶R—BV6–W"Fòf–æB–â&VÆWfçB6V&6†W2ãÂ÷àĞ¢ÂöF—càĞ¢Ä6&B6Æ74æÖSÒ&÷fW&fÆ÷rÖ†–FFVâ&÷VæFVBÖæöæR&÷&FW"&rÖ&6¶w&÷VæB6†F÷r×6Ò#àĞ¢Ä6&D†VFW"6Æ74æÖSÒ&&÷&FW"Ö"&rÖ&6¶w&÷VæB‚ÓR’ÓRÖC§‚Ór#àĞ¢Ä6&EF—FÆR6Æ74æÖSÒ'FW‡BÖ&6RföçB×6VÖ–&öÆB#å&÷W'G’–æf÷&ÖF–öãÂô6&EF—FÆSàĞ¢Âô6&D†VFW#àĞ¢Ä6&D6öçFVçB6Æ74æÖSÒ'‚ÓR’ÓbÖC§‚ÓrÖC§’Ó‚#àĞ¢Äf÷&Ò²ââæf÷&×ÓàĞ¢Æf÷&Òöå7V&Ö—C×¶f÷&Òæ†æFÆU7V&Ö—B†öå7V&Ö—B—Ò6Æ74æÖSÒ'76R×’Ób"7W&W74‡–G&F–öåv&æ–æsàĞ¢Äf÷&Ôf–VÆ@Ğ¢6öçG&öÃ×¶f÷&Òæ6öçG&öÇĞĞ¢æÖSÒ'F—FÆR Ğ¢&VæFW#×²‡²f–VÆBÒ’Óâ€Ğ¢Äf÷&Ô—FVÓàĞ¢Äf÷&ÔÆ&VÃå&÷W'G’F—FÆSÂôf÷&ÔÆ&VÃàĞ¢Äf÷&Ô6öçG&öÃàĞ¢Ä–çWBÆ6V†öÆFW#Ò&RærâÂÖöFW&â2&VG&ööÒ'FÖVçB–â¶–ÆVÆW6‡v"²ââæf–VÆGÒ7W&W74‡–G&F–öåv&æ–æróàĞ¢Âôf÷&Ô6öçG&öÃàĞ¢Äf÷&ÔFW67&—F–öãä6F6‡’F—FÆRf÷"–÷W"Æ—7F–ærãÂôf÷&ÔFW67&—F–öãàĞ¢Äf÷&ÔÖW76vRóàĞ¢Âôf÷&Ô—FVÓàĞ¢—ĞĞ¢óàĞ Ğ¢Äf÷&Ôf–VÆ@Ğ¢6öçG&öÃ×¶f÷&Òæ6öçG&öÇĞĞ¢æÖSÒ&FW67&—F–öâ Ğ¢&VæFW#×²‡²f–VÆBÒ’Óâ€Ğ¢Äf÷&Ô—FVÓàĞ¢Äf÷&ÔÆ&VÃäFW67&—F–öãÂôf÷&ÔÆ&VÃàĞ¢Äf÷&Ô6öçG&öÃàĞ¢ÅFW‡F&VĞ¢Æ6V†öÆFW#Ò$FW67&–&RF†R&÷W'G’–âFWF–Ââââ Ğ¢6Æ74æÖSÒ'&W6—¦R×’Ö–âÖ‚Õ³…Ò Ğ¢²ââæf–VÆGĞĞ¢7W&W74‡–G&F–öåv&æ–æpĞ¢óàĞ¢Âôf÷&Ô6öçG&öÃàĞ¢Äf÷&ÔFW67&—F–öãä†–v†Æ–v‡B¶W’fVGW&W2æB6VÆÆ–ærö–çG2ãÂôf÷&ÔFW67&—F–öãàĞ¢Äf÷&ÔÖW76vRóàĞ¢Âôf÷&Ô—FVÓàĞ¢—ĞĞ¢óàĞ Ğ¢ÆF—b6Æ74æÖSÒ'&÷VæFVBÖæöæR&÷&FW"&rÖ6&BÓR6†F÷r×6ÒÖC§Ób#àĞ¢ÆF—b6Æ74æÖSÒ&Ö"ÓRfÆW‚—FV×2×7F'BvÓ2#àĞ¢ÆF—b6Æ74æÖSÒ&fÆW‚‚ÓrÓ6‡&–æ²Ó—FV×2Ö6VçFW"§W7F–g’Ö6VçFW"&÷VæFVBÖæöæR&r×&–Ö'’óFW‡B×&–Ö'’#ãÄÖ–â6Æ74æÖSÒ&‚ÓRrÓR"óãÂöF—càĞ¢ÆF—càĞ¢Æƒ"6Æ74æÖSÒ'FW‡BÖÆrföçB×6VÖ–&öÆBG&6¶–ær×F–v‡B#åv†W&R—2F†R&÷W'G“óÂöƒ#àĞ¢Ç6Æ74æÖSÒ&×BÓFW‡B×6ÒFW‡BÖ×WFVBÖf÷&Vw&÷VæB#ä6†ö÷6RF†R6÷VçG’ÂF†Vâ6VÆV7BF†RF÷vâ÷"6—G’æBVçFW"F†RÆö6Â&VãÂ÷àĞ¢ÂöF—càĞ¢ÂöF—càĞ Ğ¢ÆF—b6Æ74æÖSÒ'76R×’ÓR#àĞ¢Äf÷&Ôf–VÆB6öçG&öÃ×¶f÷&Òæ6öçG&öÇÒæÖSÒ&6÷VçG”–B"&VæFW#×²‡²f–VÆBÒ’Óâ€Ğ¢Äf÷&Ô—FVÓàĞ¢Äf÷&ÔÆ&VÂ6Æ74æÖSÒ'FW‡BÖf÷&Vw&÷VæB#ä6÷VçG’Ç7â6Æ74æÖSÒ'FW‡B×&–Ö'’#â£Â÷7ããÂôf÷&ÔÆ&VÃàĞ¢Ç6VÆV7@Ğ¢fÇVS×¶f–VÆBçfÇVWĞĞ¢F—6&ÆVC×¶6÷VçF–W4ÆöF–ærÇÂ6÷VçF–W4W'&÷'ĞĞ¢öä6†ævS×²†WfVçB’Óâ°Ğ¢6öç7BfÇVRÒWfVçBçF&vWBçfÇVS°Ğ¢f–VÆBæöä6†ævR‡fÇVR“°Ğ¢6WE6VÆV7FVEF÷vä–B‚""“°Ğ¢6WEF÷vç2…µÒ“°Ğ¢f÷&Òç6WEfÇVR‚vÆö6F–öârÂrrÂ²6†÷VÆEfÆ–FFS¢G'VRÂ6†÷VÆDF—'G“¢G'VRÒ“°Ğ¢f÷&Òç6WEfÇVR‚vÆö6F–öäæöFT–BrÂrrÂ²6†÷VÆEfÆ–FFS¢G'VRÂ6†÷VÆDF—'G“¢G'VRÒ“°Ğ¢6WDÖ÷6—F–öâ†çVÆÂ“°Ğ¢×ĞĞ¢6Æ74æÖSÒ&fÆW‚‚ÓrÖgVÆÂ&÷VæFVBÖæöæR&÷&FW"&rÖ&6¶w&÷VæB‚Ó2FW‡B×6Ò÷WFÆ–æRÖæöæRG&ç6—F–öâfö7W3§&–ærÓ"fö7W3§&–ær×&–Ö'’ó# Ğ¢àĞ¢Æ÷F–öâfÇVSÒ"#ç¶6÷VçF–W4ÆöF–æròtÆöF–ær6÷VçF–W2âââr¢6÷VçF–W4W'&÷"òuVæ&ÆRFòÆöB6÷VçF–W2r¢u6VÆV7B6÷VçG’wÓÂöı¸ë‹h‘éì¶»§q«^u[ÛŠHOˆÃBˆÙ]X\ÜÚ][ÛŠÜÚ][ÛŠNÃBˆÙ]ØØ][Û”Ûİ\˜ÙJ•TÑT—ÔÑSPÕQŠNÃBˆ_CBˆZYÚÛ\ÜÓ˜[YOHšMYšMÌˆƒBˆÏƒBˆÙ]ƒBƒBˆ]ˆÛ\ÜÓ˜[YOH›]LÈ›^][\ËXÙ[\ˆ\İYKX™]ÙY[ˆØ\LÈ^^È^[]]YY›Ü™YÜ›İ[™ƒBˆÜ[ÛX\ÜÚ][ÛˆÈ“ØØ][Ûˆ[ˆÙ[XİYˆ˜YÈH[ˆÈY\İ]ˆˆˆ”Ù]H›Ü\HØØ][ÛˆH˜YÙÚ[™ÈH[ˆÜˆ\[™ÈHX\ˆŸOÜÜ[ƒBˆÛX\ÜÚ][Ûˆ	‰ˆ
+Bˆ]Ûˆ\OH˜]ÛˆˆÛ\ÜÓ˜[YOHœÚš[šËLİ™\^Y›Ü™YÜ›İ[™ˆÛÛXÚÏ^Ê
+HOˆÙ]X\ÜÚ][ÛŠ[
+_OƒBˆ™[[İ™H[ƒBˆØ]ÛƒBˆ
+_CBˆÙ]ƒBˆÙ]ƒBˆÙ]ƒBˆÙ]ƒBƒBƒBˆ›Ü›QšY[BˆÛÛ›Û^Ù›Ü›K˜ÛÛ›ÛCBˆ˜[YOH›\İ[™Õ\HƒBˆ™[™\^ÊÈšY[JHOˆ
+Bˆ›Ü›R][OƒBˆ›Ü›SX™[“\İ[™È\OÑ›Ü›SX™[ƒBˆ›Ü›PÛÛ›ÛƒBˆÙ[XİË‹‹™šY[HÛ\ÜÓ˜[YOHšLLHËY[›İ[™Y[›Û™H›Ü™\ˆ™ËX˜XÚÙÜ›İ[™LÈ^\ÛHƒBˆÜ[Ûˆ˜[YOH‘“Ô—Ô‘S•‘›Üˆ™[ÛÜ[ÛƒBˆÜ[Ûˆ˜[YOH‘“Ô—ÔĞSH‘›ÜˆØ[OÛÜ[ÛƒBˆÜ[Ûˆ˜[YOH”ÒÔ•ÔÕVH”ÚÜİ^OÛÜ[ÛƒBˆÜÙ[XİƒBˆÑ›Ü›PÛÛ›ÛƒBˆ›Ü›Q\ØÜš\[ÛƒBˆÚÛÜÙHÚ]\ˆ[İH\™H™[[™ËÙ[[™ËÜˆÙ™™\š[™ÈH›Ü\H›ÜˆÚÜİ^\ËƒBˆÑ›Ü›Q\ØÜš\[ÛƒBˆ›Ü›SY\ÜØYÙHÏƒBˆÑ›Ü›R][OƒBˆ
+_CBˆÏƒBƒBˆÚ\ÑY][ÙH	‰ˆ›Ü›QšY[BˆÛÛ›Û^Ù›Ü›K˜ÛÛ›ÛCBˆ˜[YOH˜]˜Z[Xš[]HƒBˆ™[™\^ÊÈšY[JHOˆ
+Bˆ›Ü›R][HÛ\ÜÓ˜[YOHœ›İ[™Y[›Û™H›Ü™\ˆ›Ü™\‹VÈÙYYH™Ë]Ú]HMƒBˆ›Ü›SX™[“\İ[™È]˜Z[Xš[]OÑ›Ü›SX™[ƒBˆ›Ü›PÛÛ›ÛƒBˆÙ[XİË‹‹™šY[HÛ\ÜÓ˜[YOHšLLHËY[›İ[™Y[›Û™H›Ü™\ˆ™ËX˜XÚÙÜ›İ[™LÈ^\ÛHƒBˆÜ[Ûˆ˜[YOHURSP“H]˜Z[X›OÛÜ[ÛƒBˆÜ[Ûˆ˜[YOH•SURSP“H•[˜]˜Z[X›OÛÜ[ÛƒBˆÜ[Ûˆ˜[YOH”ÓÓ”ÛÛÛÜ[ÛƒBˆÜÙ[XİƒBˆÑ›Ü›PÛÛ›ÛƒBˆ›Ü›Q\ØÜš\[Û•\]H\ÈÚ[ˆH›Ü\H\È™[Y›ÈÛ™Ù\ˆ]˜Z[X›KÜˆÛÛˆš\Ú]ÜœÈÚ[ÙYHHÛX\ˆİ]\ÈX™[ÛˆH\İ[™ËÑ›Ü›Q\ØÜš\[ÛƒBˆ›Ü›SY\ÜØYÙHÏƒBˆÑ›Ü›R][OƒBˆ
+_CBˆÏŸCBƒBˆ›Ü›QšY[BˆÛÛ›Û^Ù›Ü›K˜ÛÛ›ÛCBˆ˜[YOHœ›Ü\PØ]YÛÜHƒBˆ™[™\^ÊÈšY[JHOˆ
+Bˆ›Ü›R][OƒBˆ›Ü›SX™[”›Ü\HØ]YÛÜOÑ›Ü›SX™[ƒBˆ›Ü›PÛÛ›ÛƒBˆÙ[XİË‹‹™šY[HÛÚ[™ÙO^Ê]™[
+HOˆÃBˆÛÛœİØ]YÛÜHH]™[\™Ù]˜[YH\È”‘TÒQS•PSˆÓÓSQTÒPSˆ“S‘ÃBˆšY[›ÛÚ[™ÙJØ]YÛÜJNÃBˆÛÛœİš\œİ\HHØ]YÛÜHOOH”‘TÒQS•PSˆÈ\\Y[ˆˆØ]YÛÜHOOHÓÓSQTÒPSˆÈ“Ù™šXÙHÜXÙHˆˆ“[™ÃBˆ›Ü›KœÙ]˜[YJœ›Ü\U\H‹š\œİ\KÈÚİ[˜[Y]NˆYHJNÃBˆYˆ
+Ø]YÛÜHOOH“S‘ŠHÃBˆ›Ü›KœÙ]˜[YJ˜™Y›ÛÛ\È‹ÈÚİ[˜[Y]NˆYHJNÃBˆ›Ü›KœÙ]˜[YJ˜˜]›ÛÛ\È‹ÈÚİ[˜[Y]NˆYHJNÃBˆH[ÙHYˆ
+Ø]ÚY›Ü\PØ]YÛÜHOOH”‘TÒQS•PSŠHÃBˆ›Ü›KœÙ]˜[YJ˜™Y›ÛÛ\È‹ˆˆ\È[šÛ›İÛˆ\È[X™\‹ÈÚİ[˜[Y]NˆYHJNÃBˆ›Ü›KœÙ]˜[YJ˜˜]›ÛÛ\È‹ˆˆ\È[šÛ›İÛˆ\È[X™\‹ÈÚİ[˜[Y]NˆYHJNÃBˆCBˆ_HÛ\ÜÓ˜[YOHšLLHËY[›Ü™\ˆ›Ü™\‹VÈÙYYH™Ë]Ú]HLÈ^\ÛHİ][™K[›Û™H›Øİ\Î˜›Ü™\‹VÈÌÌ˜×HƒBˆÜ[Ûˆ˜[YOH”‘TÒQS•PS”™\ÚY[X[ÛÜ[ÛƒBˆÜ[Ûˆ˜[YOHÓÓSQTÒPSÛÛ[Y\˜ÚX[ÛÜ[ÛƒBˆÜ[Ûˆ˜[YOH“S‘“[™ÛÜ[ÛƒBˆÜÙ[XİƒBˆÑ›Ü›PÛÛ›ÛƒBˆ›Ü›Q\ØÜš\[ÛÚÛÜÙHHØ]YÛÜH]™\İ\ØÜšX™\È\È\İ[™ËÑ›Ü›Q\ØÜš\[ÛƒBˆ›Ü›SY\ÜØYÙHÏƒBˆÑ›Ü›R][OƒBˆ
+_CBˆÏƒBˆ›Ü›QšY[BˆÛÛ›Û^Ù›Ü›K˜ÛÛ›ÛCBˆ˜[YOHœ›Ü\U\HƒBˆ™[™\^ÊÈšY[JHOˆÃBˆÛÛœİÜ[ÛœÈHØ]ÚY›Ü\PØ]YÛÜHOOHÓÓSQTÒPSƒBˆÈÈ“Ù™šXÙHÜXÙH‹”™]Z[ÚÜ‹”ÚİÜ›ÛÛH‹•Ø\™Zİ\ÙH‹’[™\İšX[ÜXÙH‹ÛË]ÛÜšÚ[™ÈÜXÙH‹\Ú[™\ÜÈ™[Z\Ù\È—CBˆˆØ]ÚY›Ü\PØ]YÛÜHOOH“S‘ƒBˆÈÈ“[™—CBˆˆÈ\\Y[‹™YÚ]\ˆ‹”Ú[™ÛH›ÛÛH‹“XZ\ÛÛ™]H‹•İÛšİ\ÙH‹[™Ø[İÈ‹•š[H‹’İ\ÙH‹”Ú\™YXØÛÛ[[Ù][Ûˆ—NÃBˆ™]\›ˆ›Ü›R][OƒBˆ›Ü›SX™[”›Ü\H\OÑ›Ü›SX™[ƒBˆ›Ü›PÛÛ›ÛƒBˆÙ[XİË‹‹™šY[HÛÚ[™ÙO^Ê]™[
+HOˆÃBˆÛÛœİ™^\HH]™[\™Ù]˜[YNÃBˆšY[›ÛÚ[™ÙJ™^\JNÃBˆYˆ
+™^\HOOH“[™ŠHÃBˆ›Ü›KœÙ]˜[YJ˜™Y›ÛÛ\È‹ÈÚİ[˜[Y]NˆYHJNÃBˆ›Ü›KœÙ]˜[YJ˜˜]›ÛÛ\È‹ÈÚİ[˜[Y]NˆYHJNÃBˆH[ÙHYˆ
+šY[˜[YHOOH“[™ŠHÃBˆ›Ü›KœÙ]˜[YJ˜™Y›ÛÛ\È‹ˆˆ\È[šÛ›İÛˆ\È[X™\‹ÈÚİ[˜[Y]NˆYHJNÃBˆ›Ü›KœÙ]˜[YJ˜˜]›ÛÛ\È‹ˆˆ\È[šÛ›İÛˆ\È[X™\‹ÈÚİ[˜[Y]NˆYHJNÃBˆCBˆ_HÛ\ÜÓ˜[YOHšLLHËY[›Ü™\ˆ›Ü™\‹VÈÙYYH™Ë]Ú]HLÈ^\ÛHİ][™K[›Û™H›Øİ\Î˜›Ü™\‹VÈÌÌ˜×HƒBˆÛÜ[ÛœË›X\
+
+\JHOˆÜ[ÛˆÙ^O^İ\_H˜[YO^İ\_Oİ\_OÛÜ[ÛŠ_CBˆÜÙ[XİƒBˆÑ›Ü›PÛÛ›ÛƒBˆ›Ü›SY\ÜØYÙHÏƒBˆÑ›Ü›R][OÃBˆ_CBˆÏƒBƒBˆ›Ü›QšY[BˆÛÛ›Û^Ù›Ü›K˜ÛÛ›ÛCBˆ˜[YOHœÛ™S[X™\ˆƒBˆ™[™\^ÊÈšY[JHOˆ
+Bˆ›Ü›R][OƒBˆ›Ü›SX™[”Û™H[X™\ˆÜ[ˆÛ\ÜÓ˜[YOH^[]]YY›Ü™YÜ›İ[™ŠÜ[Û˜[
+OÜÜ[Ñ›Ü›SX™[ƒBˆ›Ü›PÛÛ›ÛƒBˆ[œ]\OH[ˆXÙZÛ\H™K™Ë‹ÌLŒÍMÎÜˆ
+ÌMÌLŒÍMÎˆË‹‹™šY[H˜[YO^ÙšY[˜[YHÏÈˆŸHİ\™\ÜÒY˜][Û•Ø\›š[™ÈÏƒBˆÑ›Ü›PÛÛ›ÛƒBˆ›Ü›Q\ØÜš\[ÛÛÛXİÛ™H[X™\ˆ›Üˆ[\™\İY\Y\ËÑ›Ü›Q\ØÜš\[ÛƒBˆ›Ü›SY\ÜØYÙHÏƒBˆÑ›Ü›R][OƒBˆ
+_CBˆÏƒBƒBˆØØ[“X[˜YÙT\™\ÛÛXİÈ	‰ˆ
+BˆÙXİ[ÛˆÛ\ÜÓ˜[YOHœ™[]]™Hİ™\™›İËZY[ˆ›İ[™YL›Ü™\‹Lˆ›Ü™\‹VÈØŒÎ×H™ËYÜ˜YY[]ËXœˆœ›ÛKVÈÙ™™NHšXKVÈÙ™™™×HËVÈÙŒYMÙ—HMHÚYİËVÌÌLœÌÍ\Ü™Ø˜JLKKKŒLÊWHYœMÈƒBˆ]ˆÛ\ÜÓ˜[YOH˜XœÛÛ]H[œÙ]^KLYLËLKH™ËYÜ˜YY[]ËXˆœ›ÛKVÈÙXM™WHšXKVÈØNØÌÌ—HËVÈÍÌLŒHˆÏƒBˆˆÛ\ÜÓ˜[YOH^[È›Û\Ù[ZX›Û^VÈÌÎ˜ŒNH”›Ü\H\™\ˆ]Z[ÈÜ[ˆÛ\ÜÓ˜[YOH^^È\\˜Ø\ÙH˜XÚÚ[™Ë]ÚY\İ^VÈÍÍMLYWH“Ü[Û˜[0­È[\›˜[ÜÜ[ÚƒBˆÛ\ÜÓ˜[YOH›]Lˆ^\ÛHXY[™ËMˆ^VÈÍ˜X—H”š]˜]HÈ][X˜KQš[™\ˆ[™™]™\ˆÚİÛˆÛˆX›XÈ\İ[™ÜËÜƒBˆ]ˆÛ\ÜÓ˜[YOH›]MHÜšYØ\LÈÛN™ÜšYXÛÛËLÈƒBˆ]Ûˆ\OH˜]ÛˆˆÛÛXÚÏ^Ê
+HOˆÈÙ]\™\“[ÙJ››Û™HŠNÈÙ]Ù[XİY\™\ÛÛXİY
+ˆŠNÈ_HÛ\ÜÓ˜[YOHœ›İ[™Y^›Ü™\ˆ›Ü™\‹VÈÙXÎXNWH™Ë]Ú]HLÈ^[Y^\ÛH^VÈÍÍLYWH“›È\™\Ü[ˆÛ\ÜÓ˜[YOH˜›ØÚÈ^^È“X]™H›[šÏÜÜ[Ø]ÛƒBˆ]Ûˆ\OH˜]ÛˆˆÛÛXÚÏ^Ê
+HOˆÙ]\™\“[ÙJ™^\İ[™ÈŠ_HÛ\ÜÓ˜[YOHœ›İ[™Y^›Ü™\ˆ›Ü™\‹VÈÙXÎXNWH™Ë]Ú]HLÈ^[Y^\ÛH^VÈÍÍLYWH•\ÙH^\İ[™ÏÜ[ˆÛ\ÜÓ˜[YOH˜›ØÚÈ^^È”™]\ÙHÜˆ\]OÜÜ[Ø]ÛƒBˆ]Ûˆ\OH˜]ÛˆˆÛÛXÚÏ^Ê
+HOˆÈÙ]\™\“[ÙJ›™]ÈŠNÈÙ]Ù[XİY\™\ÛÛXİY
+ˆŠNÈÙ]\™\‘]Z[ÊÈÛÛ\[S˜[YNˆˆ‹ÛÛXİ˜[YNˆˆ‹Û™Nˆˆ‹Ú]Ø\ˆˆ‹[XZ[ˆˆˆJNÈ_HÛ\ÜÓ˜[YOHœ›İ[™Y^›Ü™\ˆ›Ü™\‹VÈÙXÎXNWH™Ë]Ú]HLÈ^[Y^\ÛH^VÈÍÍLYWHY™]ÈÛÛXİÜ[ˆÛ\ÜÓ˜[YOH˜›ØÚÈ^^È‘[\ˆ]Z[È\™OÜÜ[Ø]ÛƒBˆÙ]ƒBˆÜ\™\“[ÙHOOH™^\İ[™Èˆ	‰ˆ]ˆÛ\ÜÓ˜[YOH›]MX™[Û\ÜÓ˜[YOH›X‹Lˆ›ØÚÈ^\ÛH›Û[YY][H^VÈÍÍLYWH”Ø]™Y\™\ˆÛÛXİÛX™[Ù[Xİ˜[YO^ÜÙ[XİY\™\ÛÛXİYHÛÚ[™ÙO^Ê]™[
+HOˆÈÛÛœİYH]™[\™Ù]˜[YNÈÙ]Ù[XİY\™\ÛÛXİY
+Y
+NÈÛÛœİÛÛXİH\™\ÛÛXİË™š[™
+
+][JHOˆ][KšYOOHY
+NÈYˆ
+ÛÛXİ
+HÙ]\™\‘]Z[ÊÈÛÛ\[S˜[YNˆÛÛXİ˜ÛÛ\[S˜[YHˆ‹ÛÛXİ˜[YNˆÛÛXİ˜ÛÛXİ˜[YHˆ‹Û™NˆÛÛXİœÛ™Hˆ‹Ú]Ø\ˆÛÛXİÚ]Ø\ˆ‹[XZ[ˆÛÛXİ™[XZ[ˆˆJNÈ_HÛ\ÜÓ˜[YOHšLLHËY[›İ[™Y[È›Ü™\ˆ›Ü™\‹VÈÙÌYH™Ë]Ú]HLÈ^\ÛHÜ[Ûˆ˜[YOHˆÚÛÜÙHHÛÛXİÛÜ[ÛÜ\™\ÛÛXİË›X\
+
+ÛÛXİ
+HOˆÜ[ÛˆÙ^O^ØÛÛXİšYH˜[YO^ØÛÛXİšYOØÛÛXİ˜ÛÛ\[S˜[Y_^ØÛÛXİ˜ÛÛXİ˜[YHÈˆ8 %ˆ
+ÈÛÛXİ˜ÛÛXİ˜[YHˆˆŸOÛÜ[ÛŠ_OÜÙ[XİÜ\™\ÛÛXİË›[™İOOH	‰ˆÛ\ÜÓ˜[YOH›]Lˆ^\ÛH^VÈÍÎMŒÍ—H“›ÈØ]™YÛÛXİÈY]ˆÚÛÜÙHY™]ÈÛÛXİÈÜ™X]HÛ™H\™KÜŸOÙ]ŸCBˆÊ\™\“[ÙHOOH›™]Èˆ
+\™\“[ÙHOOH™^\İ[™Èˆ	‰ˆÙ[XİY\™\ÛÛXİY
+JH	‰ˆ]ˆÛ\ÜÓ˜[YOH›]MÜšYØ\M›İ[™Y^›Ü™\ˆ›Ü™\‹VÈÙÍXWH™Ë]Ú]KÎLMÛN™ÜšYXÛÛËLˆÊŞÚÙ^Nˆ˜ÛÛ\[S˜[YH‹X™[ˆYÙ[˜ŞHÈÛÛ\[H˜[YH‹™\]Z\™YY_KÚÙ^Nˆ˜ÛÛXİ˜[YH‹X™[ˆÛÛXİ\œÛÛˆ‹™\]Z\™Y™˜[Ù_KÚÙ^NˆœÛ™H‹X™[ˆ”Û™H[X™\ˆ‹™\]Z\™Y™˜[Ù_KÚÙ^NˆÚ]Ø\‹X™[ˆ•Ú]Ğ\[X™\ˆ‹™\]Z\™Y™˜[Ù_KÚÙ^Nˆ™[XZ[‹X™[ˆ‘[XZ[Y™\ÜÈ‹™\]Z\™Y™˜[Ù_WH\ÈÛÛœİ
+K›X\
+
+šY[
+HOˆX™[Ù^O^ÙšY[šÙ^_HÛ\ÜÓ˜[YOH˜›ØÚÈÜXÙK^KLKH^\ÛH›Û[YY][H^VÈÍÍLYWHÙšY[›X™[^ÙšY[œ™\]Z\™Y	‰ˆˆ
+ˆŸO[œ]™\]Z\™Y^ÈHYšY[œ™\]Z\™YH\O^ÙšY[šÙ^HOOH™[XZ[ˆÈ™[XZ[ˆˆ^ŸH˜[YO^Ü\™\‘]Z[ÖÙšY[šÙ^W_HÛÚ[™ÙO^Ê]™[
+HOˆÙ]\™\‘]Z[Ê
+İ\œ™[
+HOˆ
+È‹‹˜İ\œ™[ÙšY[šÙ^WNˆ]™[\™Ù]˜[YHJJ_HÛ\ÜÓ˜[YOHšLLHËY[›İ[™Y[È›Ü™\ˆ›Ü™\‹VÈÙÌYH™Ë]Ú]HLÈ^\ÛHˆÏÛX™[Š_OÙ]ŸCBˆÛ\ÜÓ˜[YOH›]M›İ[™Y[È›Ü™\ˆ›Ü™\‹VÈØÍØŒÙ—KÍŒ™ËVÈÙÙY×KÎLÈKL‹H^^ÈXY[™ËMH^VÈÍ™NLÍ×H¼'å$ˆš]˜]H[\›˜[[™›Ü›X][Ûˆ8 %™]™\ˆÚİÛˆÈ[˜[ËÜƒBˆÜÙXİ[ÛƒBˆ
+_CBˆ]ˆÛ\ÜÓ˜[YO^ØÜšYÜšYXÛÛËLHØ\M	İØ]ÚY›Ü\U\HOOH“[™ˆØ]ÚY›Ü\PØ]YÛÜHOOHÓÓSQTÒPSˆÈ›Y™ÜšYXÛÛËLˆˆˆ›Y™ÜšYXÛÛËLÈŸXOƒBˆ›Ü›QšY[BˆÛÛ›Û^Ù›Ü›K˜ÛÛ›ÛCBˆ˜[YOHœšXÙHƒBˆ™[™\^ÊÈšY[JHOˆ
+Bˆ›Ü›R][OƒBˆ›Ü›SX™[İØ]ÚY\İ[™Õ\HOOH	Ñ“Ô—ÔĞSIÈÈ	ÔØ[HšXÙH
+ÑTÊIÈˆØ]ÚY\İ[™Õ\HOOH	ÔÒÔ•ÔÕVIÈÈ	ÓšYÚHšXÙH
+ÑTÊIÈˆ	Ó[ÛH™[
+ÑTÊIßOÑ›Ü›SX™[ƒBˆ›Ü›PÛÛ›ÛƒBˆ[œ]\OH›[X™\ˆˆXÙZÛ\^İØ]ÚY\İ[™Õ\HOOH	Ñ“Ô—ÔĞSIÈÈ	ÙK™Ë‹ML	ÈˆØ]ÚY\İ[™Õ\HOOH	ÔÒÔ•ÔÕVIÈÈ	ÙK™Ë‹L	Èˆ	ÙK™Ë‹L	ßHË‹‹™šY[H˜[YO^ÙšY[˜[YHÏÈˆŸHİ\™\ÜÒY˜][Û•Ø\›š[™ÈÏƒBˆÑ›Ü›PÛÛ›ÛƒBˆ›Ü›SY\ÜØYÙHÏƒBˆÑ›Ü›R][OƒBˆ
+_CBˆÏƒBˆİØ]ÚY›Ü\PØ]YÛÜHOOH”‘TÒQS•PSˆ	‰ˆØ]ÚY›Ü\U\HOOH“[™ˆ	‰ˆ›Ü›QšY[BˆÛÛ›Û^Ù›Ü›K˜ÛÛ›ÛCBˆ˜[YOH˜™Y›ÛÛ\ÈƒBˆ™[™\^ÊÈšY[JHOˆ
+Bˆ›Ü›R][OƒBˆ›Ü›SX™[™Y›ÛÛ\ÏÑ›Ü›SX™[ƒBˆ›Ü›PÛÛ›ÛƒBˆ[œ]\OH›[X™\ˆˆXÙZÛ\H™K™Ë‹ˆ
+›ÜˆİY[ÊHˆË‹‹™šY[HZ[HŒˆ˜[YO^ÙšY[˜[YHÏÈˆŸHİ\™\ÜÒY˜][Û•Ø\›š[™ËÏƒBˆÑ›Ü›PÛÛ›ÛƒBˆ›Ü›SY\ÜØYÙHÏƒBˆÑ›Ü›R][OƒBˆ
+_CBˆÏŸCBˆİØ]ÚY›Ü\U\HOOH“[™ˆ	‰ˆ›Ü›QšY[BˆÛÛ›Û^Ù›Ü›K˜ÛÛ›ÛCBˆ˜[YOH˜˜]›ÛÛ\ÈƒBˆ™[™\^ÊÈšY[JHOˆ
+Bˆ›Ü›R][OƒBˆ›Ü›SX™[˜]›ÛÛ\ÏÑ›Ü›SX™[ƒBˆ›Ü›PÛÛ›ÛƒBˆ[œ]\OH›[X™\ˆˆXÙZÛ\H™K™Ë‹HˆË‹‹™šY[HZ[HŒHˆ˜[YO^ÙšY[˜[YHÏÈˆŸHİ\™\ÜÒY˜][Û•Ø\›š[™ËÏƒBˆÑ›Ü›PÛÛ›ÛƒBˆ›Ü›SY\ÜØYÙHÏƒBˆÑ›Ü›R][OƒBˆ
+_CBˆÏŸCBˆÙ]ƒBƒBˆİØ]ÚY\İ[™Õ\HOOH	ÔÒÔ•ÔÕVIÈ	‰ˆ
+Bˆ]ˆÛ\ÜÓ˜[YOHœ›İ[™Y[›Û™H›Ü™\ˆ™ËXØ\™MHÚYİË\ÛHYœMˆƒBˆˆÛ\ÜÓ˜[YOH^X˜\ÙH›Û\Ù[ZX›Û”ÚÜ\İ^H]Z[ÏÚƒBˆÛ\ÜÓ˜[YOH›]LH^\ÛH^[]]YY›Ü™YÜ›İ[™“Ü[Û˜[]Z[È›Üˆ\›š\ÚYÛY^KÙ\šXÙYÜˆZ\˜›˜‹\İ[Hİ^\ËÜƒBˆ]ˆÛ\ÜÓ˜[YOH›]MHÜšYØ\MY™ÜšYXÛÛËLÈƒBˆ›Ü›QšY[ÛÛ›Û^Ù›Ü›K˜ÛÛ›ÛH˜[YOHœÚÜİ^SZ[“šYÚÈˆ™[™\^ÊÈšY[JHOˆ
+Bˆ›Ü›R][O›Ü›SX™[“Z[š[][HšYÚÏÑ›Ü›SX™[›Ü›PÛÛ›Û[œ]\OH›[X™\ˆˆZ[HŒHˆXÙZÛ\H™K™Ë‹HˆË‹‹™šY[H˜[YO^ÙšY[˜[YHÏÈˆŸHÏÑ›Ü›PÛÛ›Û›Ü›SY\ÜØYÙHÏÑ›Ü›R][OƒBˆ
+_HÏƒBˆ›Ü›QšY[ÛÛ›Û^Ù›Ü›K˜ÛÛ›ÛH˜[YOHœÚÜİ^SX^šYÚÈˆ™[™\^ÊÈšY[JHOˆ
+Bˆ›Ü›R][O›Ü›SX™[“X^[][HšYÚÈÜ[ˆÛ\ÜÓ˜[YOH^[]]YY›Ü™YÜ›İ[™ŠÜ[Û˜[
+OÜÜ[Ñ›Ü›SX™[›Ü›PÛÛ›Û[œ]\OH›[X™\ˆˆZ[HŒHˆXÙZÛ\H™K™Ë‹ÌˆË‹‹™šY[H˜[YO^ÙšY[˜[YHÏÈˆŸHÏÑ›Ü›PÛÛ›Û›Ü›SY\ÜØYÙHÏÑ›Ü›R][OƒBˆ
+_HÏƒBˆ›Ü›QšY[ÛÛ›Û^Ù›Ü›K˜ÛÛ›ÛH˜[YOH›X^İY\İÈˆ™[™\^ÊÈšY[JHOˆ
+Bˆ›Ü›R][O›Ü›SX™[“X^[][HİY\İÈÜ[ˆÛ\ÜÓ˜[YOH^[]]YY›Ü™YÜ›İ[™ŠÜ[Û˜[
+OÜÜ[Ñ›Ü›SX™[›Ü›PÛÛ›Û[œ]\OH›[X™\ˆˆZ[HŒHˆXÙZÛ\H™K™Ë‹ˆË‹‹™šY[H˜[YO^ÙšY[˜[YHÏÈˆŸHÏÑ›Ü›PÛÛ›Û›Ü›SY\ÜØYÙHÏÑ›Ü›R][OƒBˆ
+_HÏƒBˆ›Ü›QšY[ÛÛ›Û^Ù›Ü›K˜ÛÛ›ÛH˜[YOH˜ÛX[š[™Ñ™YHˆ™[™\^ÊÈšY[JHOˆ
+Bˆ›Ü›R][O›Ü›SX™[ÛX[š[™È™YH
+ÑTÊHÜ[ˆÛ\ÜÓ˜[YOH^[]]YY›Ü™YÜ›İ[™ŠÜ[Û˜[
+OÜÜ[Ñ›Ü›SX™[›Ü›PÛÛ›Û[œ]\OH›[X™\ˆˆZ[HŒˆXÙZÛ\H™K™Ë‹LˆË‹‹™šY[H˜[YO^ÙšY[˜[YHÏÈˆŸHÏÑ›Ü›PÛÛ›Û›Ü›SY\ÜØYÙHÏÑ›Ü›R][OƒBˆ
+_HÏƒBˆ›Ü›QšY[ÛÛ›Û^Ù›Ü›K˜ÛÛ›ÛH˜[YOHœÙXİ\š]Q\ÜÚ]ˆ™[™\^ÊÈšY[JHOˆ
+Bˆ›Ü›R][O›Ü›SX™[”ÙXİ\š]H\ÜÚ]
+ÑTÊHÜ[ˆÛ\ÜÓ˜[YOH^[]]YY›Ü™YÜ›İ[™ŠÜ[Û˜[
+OÜÜ[Ñ›Ü›SX™[›Ü›PÛÛ›Û[œ]\OH›[X™\ˆˆZ[HŒˆXÙZÛ\H™K™Ë‹LˆË‹‹™šY[H˜[YO^ÙšY[˜[YHÏÈˆŸHÏÑ›Ü›PÛÛ›Û›Ü›SY\ÜØYÙHÏÑ›Ü›R][OƒBˆ
+_HÏƒBˆÙ]ƒBˆÙ]ƒBˆ
+_CBƒBˆ›Ü›QšY[BˆÛÛ›Û^Ù›Ü›K˜ÛÛ›ÛCBˆ˜[YOH˜\™XHƒBˆ™[™\^ÊÈšY[JHOˆ
+Bˆ›Ü›R][OƒBˆ›Ü›SX™[İØ]ÚY›Ü\PØ]YÛÜHOOH“S‘ˆÈ“[™Ú^™H
+Ü]X\™HY]\œÊHˆˆØ]ÚY›Ü\PØ]YÛÜHOOHÓÓSQTÒPSˆÈ‘›ÛÜˆ\™XH
+Ü]X\™HY]\œÊHˆˆ\™XH
+Ü]X\™HY]\œÊHŸHÜ[ˆÛ\ÜÓ˜[YOH^[]]YY›Ü™YÜ›İ[™ŠÜ[Û˜[
+OÜÜ[Ñ›Ü›SX™[ƒBˆ›Ü›PÛÛ›ÛƒBˆ[œ]\OH›[X™\ˆˆXÙZÛ\H™K™Ë‹LˆË‹‹™šY[H˜[YO^ÙšY[˜[YHÏÈˆŸHİ\™\ÜÒY˜][Û•Ø\›š[™ÈÏƒBˆÑ›Ü›PÛÛ›ÛƒBˆ›Ü›Q\ØÜš\[Û‘[\ˆHÚ^™HÙˆH›Ü\KÑ›Ü›Q\ØÜš\[ÛƒBˆ›Ü›SY\ÜØYÙHÏƒBˆÑ›Ü›R][OƒBˆ
+_CBˆÏƒBƒBˆ›Ü›QšY[BˆÛÛ›Û^Ù›Ü›K˜ÛÛ›ÛCBˆ˜[YOH˜[Y[š]Y\ÈƒBˆ™[™\^Ê
+HOˆ
+Bˆ›Ü›R][OƒBˆ]ˆÛ\ÜÓ˜[YOH›X‹MƒBˆ›Ü›SX™[Û\ÜÓ˜[YOH^X˜\ÙH[Y[š]Y\ÏÑ›Ü›SX™[ƒBˆ›Ü›Q\ØÜš\[Û”Ù[Xİ[]˜Z[X›H[Y[š]Y\ËÑ›Ü›Q\ØÜš\[ÛƒBˆÙ]ƒBˆ]ˆÛ\ÜÓ˜[YOH™ÜšYÜšYXÛÛËLˆY™ÜšYXÛÛËLÈØ\MƒBˆØ[Y[š]Y\Ó\İ›X\
+
+][JHOˆ
+Bˆ›Ü›QšY[BˆÙ^O^Ú][_CBˆÛÛ›Û^Ù›Ü›K˜ÛÛ›ÛCBˆ˜[YOH˜[Y[š]Y\ÈƒBˆ™[™\^ÊÈšY[JHOˆÃBˆ™]\›ˆ
+Bˆ›Ü›R][CBˆÙ^O^Ú][_CBˆÛ\ÜÓ˜[YOH™›^›^\›İÈ][\Ë\İ\ÜXÙK^LÈÜXÙK^KLƒBˆƒBˆ›Ü›PÛÛ›ÛƒBˆÚXÚØ›ŞBˆÚXÚÙY^ÙšY[˜[YOËš[˜ÛY\Ê][J_CBˆÛÚXÚÙYÚ[™ÙO^ÊÚXÚÙY
+HOˆÃBˆ™]\›ˆÚXÚÙYBˆÈšY[›ÛÚ[™ÙJË‹‹ŠšY[˜[YH×JK][WJCBˆˆšY[›ÛÚ[™ÙJBˆšY[˜[YOË™š[\ŠBˆ
+˜[YJHOˆ˜[YHOOH][CBˆ
+CBˆ
+CBˆ_CBˆİ\™\ÜÒY˜][Û•Ø\›š[™ÃBˆÏƒBˆÑ›Ü›PÛÛ›ÛƒBˆ›Ü›SX™[Û\ÜÓ˜[YOH™›Û[›Ü›X[ƒBˆÚ][_CBˆÑ›Ü›SX™[ƒBˆÑ›Ü›R][OƒBˆ
+CBˆ_CBˆÏƒBˆ
+J_CBˆÙ]ƒBˆ›Ü›SY\ÜØYÙHÏƒBˆÑ›Ü›R][OƒBˆ
+_CBˆÏƒBƒBˆ›Ü›QšY[BˆÛÛ›Û^Ù›Ü›K˜ÛÛ›ÛCBˆ˜[YOHš[XYÙ\ÈƒBˆ™[™\^Ê
+HOˆ
+Bˆ›Ü›R][OƒBˆ›Ü›SX™[”›Ü\H[XYÙ\ÏÑ›Ü›SX™[ƒBˆ›Ü›PÛÛ›ÛƒBˆ]ƒBˆX’[™^^ÌCBˆÛ‘˜YÓİ™\^Ê]™[
+HOˆÈ]™[œ™]™[Y˜][
+
+NÈ]™[™]U˜[œÙ™\‹™›ÜY™™XİH	ØÛÜIÎÈ_CBˆÛ‘›Ü^Ê]™[
+HOˆÈ]™[œ™]™[Y˜][
+
+NÈ›ÚY›ØÙ\ÜÒ[XYÙQš[\Ê\œ˜^K™œ›ÛJ]™[™]U˜[œÙ™\‹™š[\È×JJNÈ_CBˆÛ”\İO^Ê]™[
+HOˆÃBˆÛÛœİ\İYš[\ÈH\œ˜^K™œ›ÛJ]™[˜Û\›Ø\™]Kš][\ÊCBˆ™š[\Š
+][JHOˆ][KšÚ[™OOH	Ùš[IÈ	‰ˆ][K\Kœİ\ÕÚ]
+	Ú[XYÙKÉÊJCBˆ›X\
+
+][JHOˆ][K™Ù]\Ñš[J
+JCBˆ™š[\Š
+š[JNˆš[H\Èš[HOˆ›ÛÛX[Šš[JJNÃBˆYˆ
+\İYš[\Ë›[™İ
+HÃBˆ]™[œ™]™[Y˜][
+
+NÃBˆ›ÚY›ØÙ\ÜÒ[XYÙQš[\Ê\İYš[\ÊNÃBˆCBˆ_CBˆÛ\ÜÓ˜[YOHœ›İ[™Y^›Ü™\‹Lˆ›Ü™\‹Y\ÚY›Ü™\‹[]]YY›Ü™YÜ›İ[™ÌÌ™Ë[]]YÌŒMˆ^XÙ[\ˆİ][™K[›Û™H˜[œÚ][Û‹XÛÛÜœÈ›Øİ\Î˜›Ü™\‹\š[X\Hİ™\˜›Ü™\‹\š[X\KÍŒƒBˆƒBˆ]ˆÛ\ÜÓ˜[YOH›^X]]È›^X^]Ë^›^XÛÛ][\ËXÙ[\ˆØ\LˆƒBˆ]ˆÛ\ÜÓ˜[YOHœ›İ[™YY[™Ë\š[X\KÌLLÈ^\š[X\HÛYHÛ\ÜÓ˜[YOHšMˆËMˆˆÏÙ]ƒBˆÛ\ÜÓ˜[YOH™›Û[YY][H‘›Ü›Ü\HİÜÈ\™OÜƒBˆÛ\ÜÓ˜[YOH^\ÛH^[]]YY›Ü™YÜ›İ[™“Üˆ\İHHÛÜYY[XYÙH\™HÚ]İ›
+ÕˆÈ8£&ÜƒBˆÛ\ÜÓ˜[YOH^^È^[]]YY›Ü™YÜ›İ[™•\ÈLİÜÈ0­È”Ë‘ËÙX”[™İ\ˆ[XYÙH›Ü›X]ÏÜƒBˆ[œ]Bˆ\OH™š[HƒBˆ][\CBˆXØÙ\Hš[XYÙKÊˆƒBˆÛÚ[™ÙO^Ú[™R[XYÙPÚ[™Ù_CBˆ\ØX›Y^Ú\Õ\ØY[™È
+Ø]ÚY[XYÙ\È	‰ˆØ]ÚY[XYÙ\Ë›[™İHL
+_CBˆÛ\ÜÓ˜[YOH›]LˆX^]Ë^ÈƒBˆİ\™\ÜÒY˜][Û•Ø\›š[™ÃBˆÏƒBˆÙ]ƒBˆÙ]ƒBˆÑ›Ü›PÛÛ›ÛƒBˆ›Ü›Q\ØÜš\[ÛƒBˆİÜÈ\™H™\Ú^™Y[™ÛÛ\™\ÜÙYÚ]İ]Ü›Ü[™Ëˆ˜YÈ[X›˜Z[È™[İÈÈ™[Ü™\ˆ[NÈHš\œİİÈ\ÈHXZ[ˆ[XYÙKƒBˆİØ]ÚY[XYÙ\È	‰ˆØ]ÚY[XYÙ\Ë›[™İHL	‰ˆˆX^[][H[XYÙ\È™XXÚYˆŸCBˆÑ›Ü›Q\ØÜš\[ÛƒBˆ›Ü›SY\ÜØYÙHÏƒBˆÚ\Õ\ØY[™È	‰ˆ
+Bˆ]ˆÛ\ÜÓ˜[YOH™›^][\ËXÙ[\ˆ^\ÛH^[]]YY›Ü™YÜ›İ[™ƒBˆØY\ŒˆÛ\ÜÓ˜[YOH›\‹LˆMËM[š[X]K\Ü[ˆˆÏƒBˆ›ØÙ\ÜÚ[™È[XYÙ\Ë‹‹ƒBˆÙ]ƒBˆ
+_CBˆÑ›Ü›R][OƒBˆ
+_CBˆÏƒBƒBˆİØ]ÚY[XYÙ\È	‰ˆØ]ÚY[XYÙ\Ë›[™İˆ	‰ˆ
+Bˆ]ˆÛ\ÜÓ˜[YOHœÜXÙK^KLˆƒBˆ]ˆÛ\ÜÓ˜[YOH™›^\İYKX™]ÙY[ˆ][\ËXÙ[\ˆƒBˆÛ\ÜÓ˜[YOH^\ÛH›Û[YY][H”›Ü\H[XYÙ\È
+İØ]ÚY[XYÙ\Ë›[™İHÙ[XİY
+NÜƒBˆ]Ûˆ˜\šX[H›İ][™HˆÚ^™OHœÛHˆ\OH˜]ÛˆˆÛÛXÚÏ^Ê
+HOˆ›Ü›KœÙ]˜[YJ	Ú[XYÙ\ÉË×KÈÚİ[˜[Y]NˆYKÚİ[\NˆYHJ_OƒBˆ˜\ÚˆÛ\ÜÓ˜[YOH›\‹LˆMËMˆÏˆÛX\ˆ[[XYÙ\ÃBˆĞ]ÛƒBˆÙ]ƒBˆ]ˆÛ\ÜÓ˜[YOH™ÜšYÜšYXÛÛËLˆØ\MÛN™ÜšYXÛÛËLÈY™ÜšYXÛÛËMƒBˆİØ]ÚY[XYÙ\Ë›X\
+
+\šK[™^
+HOˆ
+Bˆ]ƒBˆÙ^O^İ\šH
+È[™^CBˆ˜YÙØX›CBˆ]KZ[XYÙKZ[™^^Ú[™^CBˆÛ‘˜YÔİ\^Ê]™[
+HOˆÃBˆ]™[™]U˜[œÙ™\‹œÙ]]J	İ^ÜZ[‰Ëİš[™Ê[™^
+JNÃBˆ]™[™]U˜[œÙ™\‹œÙ]]J	Ø\XØ][Û‹Ş[][X˜Yš[™\‹Z[XYÙK[Ü™\‰Ë	İYIÊNÃBˆ]™[™]U˜[œÙ™\‹™Y™™Xİ[İÙYH	Û[İ™IÎÃBˆ_CBˆÛ‘˜YÓİ™\^Ê]™[
+HOˆÈ]™[œ™]™[Y˜][
+
+NÈ]™[™]U˜[œÙ™\‹™›ÜY™™XİH	Û[İ™IÎÈ_CBˆÛ‘›Ü^Ú[™R[XYÙQ›ÜCBˆÛ\ÜÓ˜[YOHœ™[]]™Hİ\œÛÜ‹YÜ˜Xˆİ™\™›İËZY[ˆ›İ[™Y[È›Ü™\ˆ™ËX˜XÚÙÜ›İ[™ÚYİË\ÛHXİ]™N˜İ\œÛÜ‹YÜ˜X˜š[™ÈƒBˆ\šXK[X™[^ØİÈ	Ú[™^
+È_NÈ˜YÈÈ™[Ü™\˜CBˆƒBˆ›Ü\R[XYÙCBˆÜ˜Ï^İ\š_CBˆ[^Ø›Ü\HİÈ	Ú[™^
+È_XCBˆÚ^™\ÏHŠX^]ÚYˆ
+HLË
+X^]ÚYˆÍ
+HÌİË]ÈƒBˆZ[’ZYÚÛ\ÜÓ˜[YOH›Z[‹ZVÌMLHƒBˆX^ZYÚÛ\ÜÓ˜[YOH›X^ZVÌHƒBˆÏƒBˆÚ[™^OOH	‰ˆ
+BˆÜ[ˆÛ\ÜÓ˜[YOH˜XœÛÛ]HYLˆÜLˆ›İ[™YY[™Ë\š[X\HLÈKLH^^È›Û\Ù[ZX›Û^\š[X\KY›Ü™YÜ›İ[™ÚYİÈƒBˆXZ[ˆİÃBˆÜÜ[ƒBˆ
+_CBˆ]ÛƒBˆ\OH˜]ÛˆƒBˆ˜\šX[H™\İXİ]™HƒBˆÚ^™OHšXÛÛˆƒBˆÛ\ÜÓ˜[YOH˜XœÛÛ]HšYÚLˆÜLˆNËNƒBˆÛÛXÚÏ^Ê
+HOˆÃBˆÛÛœİ™^[XYÙ\ÈH
+›Ü›K™Ù]˜[Y\Ê	Ú[XYÙ\ÉÊH×JK™š[\Š
+Ë[XYÙR[™^
+HOˆ[XYÙR[™^OOH[™^
+NÃBˆ›Ü›KœÙ]˜[YJ	Ú[XYÙ\ÉË™^[XYÙ\ËÈÚİ[˜[Y]NˆYKÚİ[\NˆYHJNÃBˆ_CBˆ\šXK[X™[^Ø™[[İ™HİÈ	Ú[™^
+È_XCBˆƒBˆ˜\ÚˆÛ\ÜÓ˜[YOHšMËMˆÏƒBˆĞ]ÛƒBˆÚ[™^OOH	‰ˆ
+Bˆ]ÛƒBˆ\OH˜]ÛˆƒBˆ˜\šX[HœÙXÛÛ™\HƒBˆÚ^™OHœÛHƒBˆÛ\ÜÓ˜[YOH˜XœÛÛ]H›İÛKLˆYLˆšYÚLˆN^^ÈƒBˆÛÛXÚÏ^Ê
+HOˆ[İ™R[XYÙJ[™^
+_CBˆƒBˆÙ]\ÈXZ[ƒBˆĞ]ÛƒBˆ
+_CBˆ]ˆÛ\ÜÓ˜[YOH˜XœÛÛ]H›İÛKLˆšYÚLˆ›İ[™YY[™ËX›XÚËÍÌLˆKLH^^È^]Ú]HÚ[™^
+È_OÙ]ƒBˆÙ]ƒBˆ
+J_CBˆÙ]ƒBˆÙ]ƒBˆ
+_CBƒBƒBˆ]ˆÛ\ÜÓ˜[YOH›X‹MH›İ[™Y[›Û™H›Ü™\ˆ›Ü™\‹\š[X\KÌMH™ËYÜ˜YY[]ËXœˆœ›ÛK\š[X\KÖÌŒWHšXKX˜XÚÙÜ›İ[™ËXXØÙ[ÖÌŒ—HMHƒBˆ]ˆÛ\ÜÓ˜[YOH™›^][\Ë\İ\Ø\LÈƒBˆ]ˆÛ\ÜÓ˜[YOH™›^NHËNHÚš[šËL][\ËXÙ[\ˆ\İYKXÙ[\ˆ›İ[™Y[›Û™H™Ë\š[X\KÌL^\š[X\HÜ\šÛ\ÈÛ\ÜÓ˜[YOHšMËMˆÏÙ]ƒBˆ]ƒBˆÛ\ÜÓ˜[YOH^\ÛH›Û\Ù[ZX›Û•Ø[[Ü™Hš\ÚXš[]OÏÜƒBˆÛ\ÜÓ˜[YOH›]LH^\ÛHXY[™ËMˆ^[]]YY›Ü™YÜ›İ[™“Û˜ÙH[İ\ˆ\İ[™È\ÈXİ]™K[İHØ[ˆ™\]Y\İÜÛœÛÜ™YXÙ[Y[ÈÚ]™H]Y][Û˜[š\ÚXš[]H[ˆ™[]˜[ÙX\˜Ú\ËÜƒBˆH™Y^Ü›Ü\RYÑY]È	ËÜ›Û[İOÜ›Ü\OIÈ
+È›Ü\RYÑY]ˆ	ËÜ›Û[İIßHÛ\ÜÓ˜[YOH›]LÈ[›[™KY›^^\ÛH›Û\Ù[ZX›Û^\š[X\H[™\›[™K[Ù™œÙ]Mİ™\[™\›[™H•šY]ÈÜÛœÛÜ™YXÙ[Y[Ü[ÛœÏØOƒBˆÙ]ƒBˆÙ]ƒBˆÙ]ƒBƒBˆ]Ûˆ\OHœİX›Z]ˆÛ\ÜÓ˜[YOHËY[ˆ\ØX›Y^Ú\ÓØY[™È\Õ\ØY[™ßOƒBˆÚ\ÓØY[™ÈÈ
+BˆƒBˆØY\ŒˆÛ\ÜÓ˜[YOH›\‹LˆMËM[š[X]K\Ü[ˆˆÏƒBˆÚ\ÑY][ÙHÈ	Õ\][™È›Ü\K‹‹‰Èˆ	Ó\İ[™È›Ü\K‹‹‰ßCBˆÏƒBˆ
+Hˆ
+Bˆ\ÑY][ÙHÈ	Õ\]H›Ü\IÈˆ	Ó\İ›Ü\IÃBˆ
+_CBˆĞ]ÛƒBˆÙ›Ü›OƒBˆÑ›Ü›OƒBˆĞØ\™ÛÛ[ƒBˆĞØ\™ƒBˆÙ]ƒBˆÙ]ƒBˆ
+NÃBŸCB

@@ -243,6 +243,13 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     }
     if ('price' in rawData) data.price = getNumber(rawData.price);
     if ('listingType' in rawData) data.listingType = getString(rawData.listingType, 'FOR_RENT');
+    if ('availability' in rawData) {
+      const availability = getString(rawData.availability).toUpperCase();
+      if (!['AVAILABLE', 'UNAVAILABLE', 'SOLD'].includes(availability)) {
+        return NextResponse.json({ message: 'Choose a valid listing availability.' }, { status: 400 });
+      }
+      data.availability = availability;
+    }
     if ('pricePeriod' in rawData) data.pricePeriod = getString(rawData.pricePeriod, 'MONTH');
     if ('shortStayMinNights' in rawData) data.shortStayMinNights = getOptionalNumber(rawData.shortStayMinNights) ?? null;
     if ('shortStayMaxNights' in rawData) data.shortStayMaxNights = getOptionalNumber(rawData.shortStayMaxNights) ?? null;
@@ -427,7 +434,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         action: 'PROPERTY_UPDATED',
         entityType: 'Property',
         entityId: id,
-        details: { actorUserId: user?.id ?? null, actorEmail: user?.email ?? 'admin' },
+        details: { actorUserId: user?.id ?? null, actorEmail: user?.email ?? 'admin', ...(data.availability ? { availability: data.availability } : {}) },
       },
     }).catch((error) => console.error('PROPERTY_UPDATE_AUDIT_FAILED', error));
 
