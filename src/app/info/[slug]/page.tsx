@@ -76,7 +76,7 @@ const pages = {
     description: 'For questions, feedback or problems with the platform.',
     sections: [
       ['Property problems', 'Use the Report a Listing option on the relevant property page when your concern relates to a specific listing.'],
-      ['Website problems', 'If something on the website is not working correctly, please report the problem through the available website reporting/contact channel.'],
+      ['Email us', 'For questions, feedback or help with the website, email info@nyumba-finder.com.'],
       ['Feedback', 'We welcome practical feedback that helps make rental searches easier, clearer and more useful for ordinary renters in Kenya.'],
     ],
   },
@@ -152,7 +152,13 @@ export default async function InfoPage({ params }: { params: Promise<{ slug: str
               </span>
               <div>
                 <h2 className="text-base font-semibold text-foreground">{heading}</h2>
-                <p className="mt-2 text-sm leading-6 text-muted-foreground">{body}</p>
+                <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                  {slug === 'contact' && heading === 'Email us' ? (
+                    <>For questions, feedback or help with the website, email{' '}
+                      <a className="font-medium text-foreground underline underline-offset-4" href="mailto:info@nyumba-finder.com">info@nyumba-finder.com</a>.
+                    </>
+                  ) : body}
+                </p>
               </div>
             </div>
           </section>
@@ -173,3 +179,4 @@ export default async function InfoPage({ params }: { params: Promise<{ slug: str
     </div>
   );
 }
+
