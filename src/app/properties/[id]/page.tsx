@@ -549,14 +549,14 @@ export default function PropertyDetailPage({ params: paramsProp }: { params: Pro
                       setReportDescription('');
                       const notices = data.notifications;
                       const inApp = notices?.inAppCreated > 0
-                        ? 'Responsible accounts have been notified in NyumbaFinder.'
-                        : 'Your report was received, but account notifications could not be created.';
+                        ? 'Report received. The responsible NyumbaFinder accounts have been notified.'
+                        : 'Report received, but in-app notifications could not be created.';
                       const email = notices?.emailConfigured
                         ? notices.emailSent > 0
-                          ? ` ${notices.emailSent} email alert${notices.emailSent === 1 ? '' : 's'} sent.`
-                          : notices.emailFailed > 0 ? ' Some email alerts could not be sent.' : ''
-                        : ' Email alerts are not configured.';
-                      setReportMessage(inApp + email);
+                          ? `Email notifications sent: ${notices.emailSent}.`
+                          : notices.emailFailed > 0 ? 'Some email notifications could not be sent.' : ''
+                        : 'Email notifications are not configured.';
+                      setReportMessage([inApp, email].filter(Boolean).join('\n'));
                     } catch (reason) {
                       setReportError(reason instanceof Error ? reason.message : 'Unable to submit report. Please try again.');
                     } finally {
@@ -567,7 +567,7 @@ export default function PropertyDetailPage({ params: paramsProp }: { params: Pro
                   {reportBusy ? 'Sending report…' : reportSent ? 'Report submitted' : 'Submit report'}
                 </Button>
                 {reportError && <p role="alert" className="text-sm text-red-700">{reportError}</p>}
-                {reportMessage && <p role="status" className="text-sm leading-5 text-[#315c3d]">{reportMessage}</p>}
+                {reportMessage && <p role="status" className="whitespace-pre-line text-sm leading-5 text-[#315c3d]">{reportMessage}</p>}
               </div>
             </section>
           </aside>
@@ -603,4 +603,3 @@ export default function PropertyDetailPage({ params: paramsProp }: { params: Pro
     </main>
   );
 }
-
