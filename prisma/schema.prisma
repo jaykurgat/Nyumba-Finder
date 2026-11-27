@@ -25,6 +25,12 @@ enum PropertyStatus {
   EXPIRED
 }
 
+enum PropertyAvailability {
+  AVAILABLE
+  UNAVAILABLE
+  SOLD
+}
+
 enum PromotionStatus {
   DRAFT
   ACTIVE
@@ -166,6 +172,7 @@ model Property {
   propertyCategory String @default("RESIDENTIAL")
   propertyType String @default("Apartment")
   status       PropertyStatus @default(ACTIVE)
+  availability PropertyAvailability @default(AVAILABLE)
   propertyImages PropertyImage[]
   externalListings ExternalListing[]
   promotions   PropertyPromotion[]

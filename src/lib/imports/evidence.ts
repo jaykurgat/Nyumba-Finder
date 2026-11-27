@@ -52,4 +52,3 @@ export function normalizeExtractionEvidence(value: {
 
   return { confidence, fieldEvidence, missingFields, contradictions };
 }
-

@@ -49,6 +49,7 @@ export async function GET(request: NextRequest) {
       area: property.sizeSqm ?? undefined,
       amenities: property.amenities,
       phoneNumber: property.phoneNumber ?? undefined,
+      availability: property.availability,
       latitude: property.latitude ?? undefined,
       longitude: property.longitude ?? undefined,
     }));

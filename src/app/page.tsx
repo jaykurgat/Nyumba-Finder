@@ -17,6 +17,7 @@ type FeaturedHome = {
   price: number;
   bedrooms: number;
   images?: string[];
+  availability?: 'AVAILABLE' | 'UNAVAILABLE' | 'SOLD';
 };
 
 const formatPrice = (price: number) => new Intl.NumberFormat('en-KE', {
@@ -101,7 +102,8 @@ export default function Home() {
           <div className="relative min-h-[350px] overflow-hidden bg-[#dfe4d8] lg:min-h-[560px]">
             {featuredHomes[0]?.images?.[0] ? (
               <Link href={`/properties/${featuredHomes[0].id}`} className="group absolute inset-0">
-                <img src={featuredHomes[0].images![0]} alt={featuredHomes[0].title} className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.025]" />
+                <img src={featuredHomes[0].images![0]} alt={featuredHomes[0].title} className={`h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.025] ${featuredHomes[0].availability && featuredHomes[0].availability !== 'AVAILABLE' ? 'grayscale brightness-90' : ''}`} />
+                {featuredHomes[0].availability && featuredHomes[0].availability !== 'AVAILABLE' && <span className="absolute left-5 top-5 rounded-md border border-red-200 bg-red-700 px-4 py-2 text-sm font-extrabold tracking-[0.14em] text-white shadow-lg">{featuredHomes[0].availability === 'SOLD' ? 'SOLD' : 'UNAVAILABLE'}</span>}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/5 to-transparent" />
                 <div className="absolute bottom-0 left-0 right-0 p-5 text-white sm:p-7">
                   <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/75">From our listings</p>

@@ -51,6 +51,7 @@ const toProperty = (data: {
   area: data.sizeSqm ?? undefined,
   amenities: data.amenities,
   phoneNumber: data.phoneNumber ?? undefined,
+  availability: (data as any).availability ?? "AVAILABLE",
   latitude: data.latitude ?? undefined,
   longitude: data.longitude ?? undefined,
 });
@@ -205,6 +206,7 @@ export async function GET(request: NextRequest) {
         propertyCategory: row.propertyCategory === "RESIDENTIAL" && row.propertyType === "Land" ? "LAND" : row.propertyCategory ?? (row.propertyType === "Land" ? "LAND" : "RESIDENTIAL"),
         propertyType: row.propertyType,
         status: row.status,
+        availability: row.availability,
         isSponsored: Boolean(promotion),
         promotionId: promotion?.id,
         promotionLabel: promotion ? 'Sponsored' : undefined,

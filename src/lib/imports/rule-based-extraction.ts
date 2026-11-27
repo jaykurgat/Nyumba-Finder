@@ -141,4 +141,3 @@ export function extractRuleBasedProperty(content: string, sourceUrl: string): Ru
     confidence, missingFields, fieldEvidence, contradictions, seoTitle, metaDescription,
   };
 }
-

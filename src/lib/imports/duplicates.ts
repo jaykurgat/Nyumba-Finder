@@ -33,4 +33,3 @@ export function isLikelyDuplicateProperty(
   }
   return true;
 }
-

@@ -7,4 +7,3 @@ The detail URL is retained as the listing identity under test. The detail page i
 Additional fixtures should include their source URL, capture date, capture method, a compact snapshot, and manually reviewed expected fields. Keep third-party content limited to what is needed to reproduce importer behavior.
 
 `conflicting-details.synthetic.html` is a deliberately constructed edge case, not a source-site capture. The title says three bedrooms while the body says four; expected behavior is to preserve both pieces of evidence, flag a contradiction, and keep the import in private review.
-

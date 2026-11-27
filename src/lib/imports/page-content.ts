@@ -74,4 +74,3 @@ export function normalizePropertyContent(input: string) {
   }
   return combined.slice(0, MAX_OUTPUT_CHARS);
 }
-

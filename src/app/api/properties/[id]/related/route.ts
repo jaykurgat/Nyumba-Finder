@@ -23,6 +23,7 @@ type Candidate = {
   bathrooms: number;
   sizeSqm: number | null;
   propertyType: string;
+  availability: 'AVAILABLE' | 'UNAVAILABLE' | 'SOLD';
   countyId: string | null;
   townId: string | null;
   areaId: string | null;
@@ -124,7 +125,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
       orderBy: { createdAt: 'desc' },
       select: {
         id: true, title: true, location: true, price: true, listingType: true, pricePeriod: true,
-        bedrooms: true, bathrooms: true, sizeSqm: true, propertyType: true, countyId: true, townId: true,
+        bedrooms: true, bathrooms: true, sizeSqm: true, propertyType: true, availability: true, countyId: true, townId: true,
         areaId: true, locationNodeId: true, latitude: true, longitude: true, amenities: true, images: true,
         locationNode: { select: { id: true, parentId: true, countyId: true, latitude: true, longitude: true, level: true } },
         propertyImages: { select: { id: true }, orderBy: { createdAt: 'asc' }, take: 1 },
@@ -191,6 +192,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
         bathrooms: candidate.bathrooms,
         area: candidate.sizeSqm ?? undefined,
         propertyType: candidate.propertyType,
+        availability: candidate.availability,
         distanceKm: distance,
         images: candidate.propertyImages.length
           ? candidate.propertyImages.map((image) => '/api/properties/' + candidate.id + '?image=' + image.id)

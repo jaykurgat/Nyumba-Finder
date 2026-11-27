@@ -49,14 +49,16 @@ async function fetchPropertyById(id: string): Promise<Property | null> {
   }
 }
 
-function ImageCarousel({ images, title }: { images: string[]; title: string }) {
+function ImageCarousel({ images, title, statusLabel }: { images: string[]; title: string; statusLabel: string | null }) {
   const effectiveImages = images?.filter((src) =>
     src.startsWith('data:') || src.startsWith('http') || src.startsWith('/')
   ) ?? [];
+  const unavailable = Boolean(statusLabel);
 
   if (effectiveImages.length === 0) {
     return (
-      <div className="overflow-hidden rounded-none border bg-muted shadow-sm">
+      <div className="relative overflow-hidden rounded-none border bg-muted shadow-sm">
+        {statusLabel && <span className="absolute left-4 top-4 z-20 rounded-md border border-red-200 bg-red-700 px-4 py-2 text-sm font-extrabold tracking-[0.14em] text-white shadow-lg">{statusLabel}</span>}
         <PropertyImage
           src="https://placehold.co/1200x800.png"
           alt={title + ' - No Image Available'}
@@ -64,6 +66,7 @@ function ImageCarousel({ images, title }: { images: string[]; title: string }) {
           priority
           minHeightClassName="min-h-[240px] md:min-h-[400px]"
           maxHeightClassName="max-h-[56vh]"
+          imageClassName={unavailable ? 'grayscale brightness-90' : undefined}
         />
       </div>
     );
@@ -71,7 +74,8 @@ function ImageCarousel({ images, title }: { images: string[]; title: string }) {
 
   return (
     <div className="space-y-3">
-      <Carousel className="w-full overflow-hidden rounded-none border bg-background shadow-sm">
+      <Carousel className="relative w-full overflow-hidden rounded-none border bg-background shadow-sm">
+        {statusLabel && <span className="absolute left-4 top-4 z-20 rounded-md border border-red-200 bg-red-700 px-4 py-2 text-sm font-extrabold tracking-[0.14em] text-white shadow-lg">{statusLabel}</span>}
         <CarouselContent>
           {effectiveImages.map((src, index) => (
             <CarouselItem key={src + index}>
@@ -82,6 +86,7 @@ function ImageCarousel({ images, title }: { images: string[]; title: string }) {
                 priority={index === 0}
                 minHeightClassName="min-h-[300px] md:min-h-[500px]"
                 maxHeightClassName="max-h-[72vh]"
+                imageClassName={unavailable ? 'grayscale brightness-90' : undefined}
               />
             </CarouselItem>
           ))}
@@ -305,7 +310,7 @@ export default function PropertyDetailPage({ params: paramsProp }: { params: Pro
 
         <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_300px] xl:grid-cols-[minmax(0,1fr)_320px]">
           <div className="space-y-3">
-            <ImageCarousel images={property.images || []} title={property.title} />
+            <ImageCarousel images={property.images || []} title={property.title} statusLabel={property.availability === 'SOLD' ? 'SOLD' : property.availability === 'UNAVAILABLE' ? 'UNAVAILABLE' : null} />
 
             <section className="rounded-none border bg-background shadow-sm">
               <div className="border-b px-4 py-4 md:px-5">
@@ -315,6 +320,7 @@ export default function PropertyDetailPage({ params: paramsProp }: { params: Pro
                   </div>
                   <div className="min-w-0">
                     <h1 className="text-xl font-semibold leading-tight tracking-tight md:text-2xl">{property.title}</h1>
+                    {property.availability && property.availability !== 'AVAILABLE' && <span className="mt-2 inline-flex rounded-full border border-red-200 bg-red-700 px-3 py-1 text-xs font-extrabold tracking-[0.12em] text-white">{property.availability === 'SOLD' ? 'SOLD' : 'UNAVAILABLE'}</span>}
                     <div className="mt-1.5 flex items-center gap-1.5 text-sm text-muted-foreground">
                       <MapPin className="h-4 w-4 shrink-0 text-primary" />
                       <span>{property.location}</span>

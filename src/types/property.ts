@@ -25,6 +25,7 @@ export interface Property {
   propertyCategory?: "RESIDENTIAL" | "COMMERCIAL" | "LAND";
   propertyType?: string;
   status?: string;
+  availability?: "AVAILABLE" | "UNAVAILABLE" | "SOLD";
   canEdit?: boolean;
   isSponsored?: boolean;
   promotionId?: string;
