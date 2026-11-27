@@ -27,9 +27,12 @@ export function ReportNotifications({ audience }: Props) {
     const rect = rootRef.current?.getBoundingClientRect();
     if (!rect) return;
     const top = rect.bottom + 8;
+    const panelWidth = Math.min(390, window.innerWidth - 24);
+    const preferredRight = window.innerWidth - rect.right;
+    const maxRight = window.innerWidth - panelWidth - 12;
     setPanelPosition({
       top,
-      right: Math.max(12, window.innerWidth - rect.right),
+      right: Math.min(Math.max(12, preferredRight), maxRight),
       maxHeight: Math.max(220, window.innerHeight - top - 12),
     });
   }, []);
