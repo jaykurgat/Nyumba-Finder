@@ -1,10 +1,8 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { LogOut, UserRound, Mail, ShieldCheck } from "lucide-react";
-import { ReportNotifications } from "@/components/notifications/ReportNotifications";
+import { UserRound, Mail, ShieldCheck } from "lucide-react";
 
 type AccountUser = {
   email: string | null;
@@ -13,27 +11,9 @@ type AccountUser = {
 };
 
 export function AccountDashboard({ user }: { user: AccountUser }) {
-  const router = useRouter();
   const search = useSearchParams();
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
   const email = user.email || "No email address on file";
   const name = user.profile?.displayName || [user.profile?.firstName, user.profile?.lastName].filter(Boolean).join(" ") || user.email?.split("@")[0] || "there";
-
-  async function signOut() {
-    setBusy(true);
-    setError("");
-    try {
-      const response = await fetch("/api/auth/logout", { method: "POST" });
-      if (!response.ok) throw new Error("Could not sign out. Please try again.");
-      router.replace("/account?mode=login");
-      router.refresh();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not sign out. Please try again.");
-    } finally {
-      setBusy(false);
-    }
-  }
 
   return (
     <section className="mx-auto w-full max-w-2xl py-10 sm:py-16">
@@ -42,7 +22,6 @@ export function AccountDashboard({ user }: { user: AccountUser }) {
         <h1 className="mt-2 text-3xl font-semibold tracking-tight">Welcome, {name}</h1>
         <p className="mt-2 text-sm leading-6 text-muted-foreground">You are signed in to NyumbaFinder.</p>
       </div>
-      <ReportNotifications audience="account" />
       {search.get("welcome") === "sent" && <p role="status" className="mb-4 rounded-none border border-green-200 bg-green-50 p-3 text-sm text-green-800">Your account is ready. A welcome email has been sent to {email}.</p>}
       {search.get("welcome") === "failed" && <p role="status" className="mb-4 rounded-none border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">Your account is ready, but the welcome email could not be sent. You can continue using NyumbaFinder; please try again later if you need the email.</p>}
       <div className="rounded-none border bg-card p-5 shadow-sm sm:p-7">
@@ -65,12 +44,8 @@ export function AccountDashboard({ user }: { user: AccountUser }) {
           <span><span className="block text-sm font-semibold text-[#2f4234]">{user.accessRole === "SUPERLANDLORD" ? "Manage listings" : "My listings"}</span><span className="mt-0.5 block text-xs text-[#71806f]">Edit property details, photos and availability</span></span>
           <span aria-hidden="true" className="text-lg text-[#537358]">→</span>
         </Link>
-        {error && <p role="alert" className="mt-4 rounded-none border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p>}
-        <button type="button" onClick={signOut} disabled={busy} className="mt-6 inline-flex h-10 items-center justify-center gap-2 rounded-none border px-4 text-sm font-medium transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60">
-          <LogOut className="h-4 w-4" />{busy ? "Signing out…" : "Sign out"}
-        </button>
+        <p className="mt-5 border-t border-[#edf0ea] pt-4 text-xs text-[#788279]">Account settings and sign out are available from the account menu in the top navigation.</p>
       </div>
     </section>
   );
 }
-

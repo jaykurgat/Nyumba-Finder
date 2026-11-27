@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ReportNotifications } from "@/components/notifications/ReportNotifications";
 
 type Dashboard = {
@@ -44,7 +44,16 @@ export default function AdminDashboard() {
   const [data, setData] = useState<Dashboard | null>(null);
   const [error, setError] = useState("");
   const [query, setQuery] = useState("");
-  const [expanded, setExpanded] = useState<string[]>(["Property management", "People & enquiries"]);
+  const [openGroup, setOpenGroup] = useState<string | null>(null);
+  const menuRootRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!openGroup) return;
+    function dismiss(event: PointerEvent) {
+      if (event.target instanceof Node && !menuRootRef.current?.contains(event.target)) setOpenGroup(null);
+    }
+    document.addEventListener("pointerdown", dismiss);
+    return () => document.removeEventListener("pointerdown", dismiss);
+  }, [openGroup]);
   useEffect(() => {
     fetch("/api/admin/dashboard").then(async (r) => {
       const body = await r.json();
@@ -76,6 +85,7 @@ export default function AdminDashboard() {
             <svg aria-hidden="true" viewBox="0 0 24 24" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#7a867d]" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 4.2 4.2"/></svg>
             <input value={query} onChange={e => setQuery(e.target.value)} placeholder="Find an admin menu…" aria-label="Search admin menus" className="w-full rounded-lg border border-[#dfe4dc] bg-[#fafbf8] py-2 pl-9 pr-3 text-sm outline-none transition focus:border-[#6b9275] focus:bg-white" />
           </div>
+          <ReportNotifications audience="admin" />
           <button onClick={logout} className="ml-auto rounded-lg border border-[#dfe4dc] px-3 py-2 text-sm font-medium hover:bg-[#f7f8f5]">Sign out</button>
         </div>
       </header>
@@ -86,29 +96,27 @@ export default function AdminDashboard() {
           <p className="text-xs text-[#778278]">Admin workspace · {groups.reduce((n, g) => n + g.items.length, 0)} tools</p>
         </div>
 
-        <div className="mb-5">
-          <ReportNotifications audience="admin" />
-        </div>
-
         <section aria-label="Listing statistics" className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
           {cards.map(({ key, label }) => <div key={key} className="rounded-xl border border-[#e2e6df] bg-white px-4 py-3 shadow-[0_1px_2px_rgba(25,40,28,0.03)]"><p className="text-xs font-medium text-[#748076]">{label}</p><p className="mt-1 text-2xl font-semibold tracking-tight tabular-nums">{data[key]}</p></div>)}
         </section>
 
         <div className="mt-5 grid items-start gap-5 xl:grid-cols-[minmax(0,1.35fr)_minmax(300px,.85fr)]">
-          <section className="overflow-hidden rounded-xl border border-[#e2e6df] bg-white">
-            <div className="border-b border-[#edf0ea] px-4 py-3"><h2 className="font-semibold">Admin menus</h2><p className="mt-0.5 text-xs text-[#788279]">Grouped by task. Search by menu name or what you need to do.</p></div>
-            <div className="divide-y divide-[#edf0ea]">
+          <section className="rounded-xl border border-[#e2e6df] bg-white">
+            <div className="border-b border-[#edf0ea] px-4 py-3"><h2 className="font-semibold">Admin menus</h2><p className="mt-0.5 text-xs text-[#788279]">Point to a category or select it to open its tools.</p></div>
+            <div ref={menuRootRef} className="flex flex-wrap gap-2 p-3">
               {filteredGroups.map(group => {
-                const open = Boolean(query.trim()) || expanded.includes(group.title);
-                return <section key={group.title}>
-                  <button aria-expanded={open} onClick={() => setExpanded(prev => prev.includes(group.title) ? prev.filter(v => v !== group.title) : [...prev, group.title])} className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left hover:bg-[#fafbf8]">
-                    <span className="min-w-0"><span className="block text-sm font-semibold">{group.title}</span><span className="mt-0.5 block text-xs text-[#788279]">{group.description}</span></span>
-                    <span className="flex shrink-0 items-center gap-2 text-xs text-[#788279]"><span>{group.items.length}</span><span aria-hidden="true" className={"transition-transform " + (open ? "rotate-180" : "")}>⌄</span></span>
+                const open = openGroup === group.title;
+                return <div key={group.title} className="relative" onMouseEnter={() => setOpenGroup(group.title)} onMouseLeave={() => setOpenGroup(null)} onFocus={() => setOpenGroup(group.title)} onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setOpenGroup(null); }} onKeyDown={event => { if (event.key === 'Escape') setOpenGroup(null); }}>
+                  <button aria-expanded={open} aria-haspopup="true" onClick={() => setOpenGroup(group.title)} className={'inline-flex min-h-10 items-center gap-2 rounded-lg border px-3 text-left text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#86a08a] ' + (open ? 'border-[#bfd0c0] bg-[#f0f5ef] text-[#315c3d]' : 'border-[#e5e9e3] bg-white text-[#506052] hover:bg-[#f8faf7]')}>
+                    {group.title}<span className="rounded-full bg-white/80 px-1.5 py-0.5 text-[10px] text-[#788279]">{group.items.length}</span><span aria-hidden="true" className={'text-[#849184] transition-transform ' + (open ? 'rotate-180' : '')}>⌄</span>
                   </button>
-                  {open && <div className="grid gap-2 px-3 pb-3 sm:grid-cols-2">{group.items.map(item => <Link key={item.href} href={item.href} className="group rounded-lg border border-[#edf0ea] px-3 py-3 transition hover:border-[#bfd0c0] hover:bg-[#f7faf6]"><span className="flex items-center justify-between gap-2 text-sm font-semibold">{item.label}<span className="text-[#8a9a8b] transition group-hover:translate-x-0.5">↗</span></span><span className="mt-1 block text-xs leading-5 text-[#788279]">{item.description}</span></Link>)}</div>}
-                </section>;
+                  {open && <div className="absolute left-0 top-full z-30 w-[min(88vw,355px)] overflow-hidden rounded-xl border border-[#e1e7df] bg-white p-1.5 shadow-[0_16px_38px_rgba(26,43,31,.16)]">
+                    <p className="px-3 pb-2 pt-2 text-[10px] leading-4 text-[#7a867c]">{group.description}</p>
+                    {group.items.map(item => <Link key={item.href} href={item.href} onClick={() => setOpenGroup(null)} className="group flex items-start justify-between gap-3 rounded-lg px-3 py-2.5 transition hover:bg-[#f4f7f2] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#86a08a]"><span><span className="block text-xs font-semibold text-[#34463a]">{item.label}</span><span className="mt-0.5 block text-[10px] leading-4 text-[#7a867c]">{item.description}</span></span><span aria-hidden="true" className="mt-0.5 text-xs text-[#98a397] transition group-hover:translate-x-0.5 group-hover:text-[#477653]">↗</span></Link>)}
+                  </div>}
+                </div>;
               })}
-              {filteredGroups.length === 0 && <p className="px-4 py-8 text-center text-sm text-[#788279]">No admin menus match “{query}”. Try a different word.</p>}
+              {filteredGroups.length === 0 && <p className="w-full px-4 py-8 text-center text-sm text-[#788279]">No admin menus match “{query}”. Try a different word.</p>}
             </div>
           </section>
 
@@ -123,4 +131,3 @@ export default function AdminDashboard() {
     </main>
   );
 }
-

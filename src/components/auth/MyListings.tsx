@@ -3,7 +3,6 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { CalendarDays, ExternalLink, Home, Plus, RefreshCw } from 'lucide-react';
-import { ReportNotifications } from '@/components/notifications/ReportNotifications';
 
 type Listing = {
   id: string; title: string; location: string; price: number; propertyType: string; bedrooms: number;
@@ -72,10 +71,6 @@ export function MyListings() {
           </div>
         </header>
 
-        <div className="mt-5">
-          <ReportNotifications audience="account" />
-        </div>
-
         {error && <div role="alert" className="mt-5 rounded-xl border border-red-200 bg-white px-4 py-3 text-sm text-red-700">{error}{error.includes('sign in') && <Link href="/account?mode=login" className="ml-2 font-semibold underline">Sign in</Link>}</div>}
         {loading ? <div className="mt-6 rounded-xl border border-[#e3e7e0] bg-white p-6 text-sm text-[#687566]">Loading listings…</div> : !error && listings.length === 0 ? (
           <div className="mt-6 rounded-2xl border border-dashed border-[#d7dfd5] bg-white px-5 py-12 text-center shadow-[0_8px_28px_rgba(42,61,43,.04)]">
@@ -122,4 +117,3 @@ export function MyListings() {
     </main>
   );
 }
-
