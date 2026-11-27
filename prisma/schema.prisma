@@ -87,6 +87,7 @@ model User {
   passwordResetTokens PasswordResetToken[]
   properties          Property[]
   savedProperties     SavedProperty[]
+  reportNotifications PropertyReportNotification[] @relation("PropertyReportNotificationRecipient")
 
   @@index([status])
   @@index([createdAt])
@@ -248,10 +249,30 @@ model PropertyReport {
   reporterHash  String
   createdAt     DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
+  notifications PropertyReportNotification[]
 
   @@index([propertyId])
   @@index([status, createdAt])
   @@unique([propertyId, reporterHash])
+}
+
+model PropertyReportNotification {
+  id               String         @id @default(uuid()) @db.Uuid
+  reportId         String         @db.Uuid
+  report           PropertyReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  recipientUserId  String?        @db.Uuid
+  recipientUser    User?          @relation("PropertyReportNotificationRecipient", fields: [recipientUserId], references: [id], onDelete: Cascade)
+  recipientKey     String
+  recipientRole    String
+  title            String
+  message          String
+  href             String
+  readAt           DateTime?
+  createdAt        DateTime       @default(now())
+
+  @@unique([reportId, recipientKey])
+  @@index([recipientUserId, readAt, createdAt])
+  @@index([recipientRole, readAt, createdAt])
 }
 
 model ImportSource {

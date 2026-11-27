@@ -2,6 +2,7 @@ import { createHash, randomUUID } from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { allowRateLimitedRequest, hasValidRequestOrigin } from '@/lib/security';
+import { notifyPropertyReport } from '@/lib/property-report-notifications';
 
 const ALLOWED_REPORT_TYPES = new Set(['Incorrect information', 'No longer available', 'Duplicate listing', 'Wrong location', 'Possible scam', 'Inappropriate content']);
 const SERIOUS_REPORT_TYPES = new Set(['Possible scam', 'Inappropriate content']);
@@ -72,10 +73,23 @@ export async function POST(request: NextRequest) {
       ]);
     }
 
+    let notificationSummary = { inAppCreated: 0, emailSent: 0, emailFailed: 0, emailConfigured: false };
+    try {
+      notificationSummary = await notifyPropertyReport({
+        id: report.id,
+        propertyId,
+        type,
+        description,
+      });
+    } catch (error) {
+      console.error('PROPERTY_REPORT_NOTIFICATION_PIPELINE_FAILED', { reportId: report.id, error });
+    }
+
     const response = NextResponse.json({
       reportId: report.id,
       message: needsReview ? 'Report submitted. This listing has been flagged for review.' : 'Report submitted successfully.',
       flaggedForReview: needsReview,
+      notifications: notificationSummary,
     }, { status: 201 });
 
     if (reporter.isNew) {
@@ -95,3 +109,4 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ message: 'Unable to submit report.' }, { status: 500 });
   }
 }
+

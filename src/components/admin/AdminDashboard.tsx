@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { ReportNotifications } from "@/components/notifications/ReportNotifications";
 
 type Dashboard = {
   total: number; active: number; pending: number; suspended: number; rejected: number; promotions: number;
@@ -85,6 +86,10 @@ export default function AdminDashboard() {
           <p className="text-xs text-[#778278]">Admin workspace · {groups.reduce((n, g) => n + g.items.length, 0)} tools</p>
         </div>
 
+        <div className="mb-5">
+          <ReportNotifications audience="admin" />
+        </div>
+
         <section aria-label="Listing statistics" className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
           {cards.map(({ key, label }) => <div key={key} className="rounded-xl border border-[#e2e6df] bg-white px-4 py-3 shadow-[0_1px_2px_rgba(25,40,28,0.03)]"><p className="text-xs font-medium text-[#748076]">{label}</p><p className="mt-1 text-2xl font-semibold tracking-tight tabular-nums">{data[key]}</p></div>)}
         </section>
@@ -118,3 +123,4 @@ export default function AdminDashboard() {
     </main>
   );
 }
+

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { LogOut, UserRound, Mail, ShieldCheck } from "lucide-react";
+import { ReportNotifications } from "@/components/notifications/ReportNotifications";
 
 type AccountUser = {
   email: string | null;
@@ -41,6 +42,7 @@ export function AccountDashboard({ user }: { user: AccountUser }) {
         <h1 className="mt-2 text-3xl font-semibold tracking-tight">Welcome, {name}</h1>
         <p className="mt-2 text-sm leading-6 text-muted-foreground">You are signed in to NyumbaFinder.</p>
       </div>
+      <ReportNotifications audience="account" />
       {search.get("welcome") === "sent" && <p role="status" className="mb-4 rounded-none border border-green-200 bg-green-50 p-3 text-sm text-green-800">Your account is ready. A welcome email has been sent to {email}.</p>}
       {search.get("welcome") === "failed" && <p role="status" className="mb-4 rounded-none border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">Your account is ready, but the welcome email could not be sent. You can continue using NyumbaFinder; please try again later if you need the email.</p>}
       <div className="rounded-none border bg-card p-5 shadow-sm sm:p-7">

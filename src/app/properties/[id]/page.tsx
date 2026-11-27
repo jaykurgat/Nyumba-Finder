@@ -170,6 +170,9 @@ export default function PropertyDetailPage({ params: paramsProp }: { params: Pro
   const [reportType, setReportType] = useState('Incorrect information');
   const [reportDescription, setReportDescription] = useState('');
   const [reportSent, setReportSent] = useState(false);
+  const [reportBusy, setReportBusy] = useState(false);
+  const [reportError, setReportError] = useState('');
+  const [reportMessage, setReportMessage] = useState('');
   const [canPromoteListing, setCanPromoteListing] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
   const [saveBusy, setSaveBusy] = useState(false);
@@ -525,25 +528,46 @@ export default function PropertyDetailPage({ params: paramsProp }: { params: Pro
                 <Button
                   variant="outline"
                   className="h-9 w-full rounded-none sm:w-auto"
-                  disabled={reportSent}
+                  disabled={reportSent || reportBusy}
                   onClick={async () => {
-                    const response = await fetch('/api/property-reports', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({
-                        propertyId: property.id,
-                        type: reportType,
-                        description: reportDescription,
-                      }),
-                    });
-                    if (response.ok) {
+                    setReportBusy(true);
+                    setReportError('');
+                    setReportMessage('');
+                    try {
+                      const response = await fetch('/api/property-reports', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                          propertyId: property.id,
+                          type: reportType,
+                          description: reportDescription,
+                        }),
+                      });
+                      const data = await response.json();
+                      if (!response.ok) throw new Error(data.message || 'Unable to submit report. Please try again.');
                       setReportSent(true);
                       setReportDescription('');
+                      const notices = data.notifications;
+                      const inApp = notices?.inAppCreated > 0
+                        ? 'Responsible accounts have been notified in NyumbaFinder.'
+                        : 'Your report was received, but account notifications could not be created.';
+                      const email = notices?.emailConfigured
+                        ? notices.emailSent > 0
+                          ? ` ${notices.emailSent} email alert${notices.emailSent === 1 ? '' : 's'} sent.`
+                          : notices.emailFailed > 0 ? ' Some email alerts could not be sent.' : ''
+                        : ' Email alerts are not configured.';
+                      setReportMessage(inApp + email);
+                    } catch (reason) {
+                      setReportError(reason instanceof Error ? reason.message : 'Unable to submit report. Please try again.');
+                    } finally {
+                      setReportBusy(false);
                     }
                   }}
                 >
-                  {reportSent ? 'Report submitted' : 'Submit report'}
+                  {reportBusy ? 'Sending report…' : reportSent ? 'Report submitted' : 'Submit report'}
                 </Button>
+                {reportError && <p role="alert" className="text-sm text-red-700">{reportError}</p>}
+                {reportMessage && <p role="status" className="text-sm leading-5 text-[#315c3d]">{reportMessage}</p>}
               </div>
             </section>
           </aside>
@@ -579,3 +603,4 @@ export default function PropertyDetailPage({ params: paramsProp }: { params: Pro
     </main>
   );
 }
+
