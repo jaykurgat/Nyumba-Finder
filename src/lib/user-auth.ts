@@ -37,9 +37,10 @@ export async function getCurrentUser() {
   if (!parsed) return null;
   const user = await prisma.user.findUnique({
     where: { id: parsed.userId },
-    select: { id: true, email: true, status: true, updatedAt: true, profile: { select: { displayName: true, firstName: true, lastName: true, avatarUrl: true } } },
+    select: { id: true, email: true, status: true, accessRole: true, updatedAt: true, profile: { select: { displayName: true, firstName: true, lastName: true, avatarUrl: true } } },
   });
   // Any User-row change (including suspension or password reset) invalidates sessions issued before it.
   return user?.status === 'ACTIVE' && user.updatedAt.getTime() <= parsed.issuedAt ? user : null;
 }
 export function randomToken() { return randomBytes(32).toString('hex'); }
+

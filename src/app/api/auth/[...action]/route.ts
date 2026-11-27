@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createHash, randomBytes, scrypt as scryptCallback, timingSafeEqual } from 'node:crypto';
 import { promisify } from 'node:util';
 import { prisma } from '@/lib/prisma';
+import { SUPERLANDLORD_EMAILS } from '@/lib/listing-access';
 import { createUserSessionToken, randomToken, verifyUserSessionToken, USER_COOKIE, USER_SESSION_TTL } from '@/lib/user-auth';
 import { sendAuthEmail } from '@/lib/auth-email';
 import { getEmailStudioState, renderPremiumEmail } from '@/lib/email-studio';
@@ -56,6 +57,7 @@ export async function POST(request: NextRequest, context: Context) {
     const firstName = typeof body.firstName === 'string' ? body.firstName.trim().slice(0, 80) : '';
     const lastName = typeof body.lastName === 'string' ? body.lastName.trim().slice(0, 80) : '';
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return json('Enter a valid email address.', 400);
+    if (SUPERLANDLORD_EMAILS.has(email)) return json('This account is reserved. Sign in with its existing credentials or contact NyumbaFinder support.', 403);
     // Reserve the legacy-listing manager address so nobody can claim it with public password registration.
     // The address can still be created through Google sign-in, which requires Google's verified-email claim.
     if (email === 'info@nyumba-finder.com') return json('This email is reserved for NyumbaFinder management. Sign in with Google using that verified address or contact support.', 403);
@@ -93,6 +95,9 @@ export async function POST(request: NextRequest, context: Context) {
     const user = await prisma.user.findUnique({ where: { email }, select: { id: true, passwordHash: true, status: true } });
     const valid = user?.passwordHash ? await verifyPassword(password, user.passwordHash).catch(() => false) : false;
     if (!user || !valid || user.status !== 'ACTIVE') return json('Email or password is incorrect.', 401);
+    if (SUPERLANDLORD_EMAILS.has(email)) {
+      await prisma.user.update({ where: { id: user.id }, data: { accessRole: 'SUPERLANDLORD' } });
+    }
     return setSession(NextResponse.json({ authenticated: true }), user.id);
   }
   if (action === 'logout') {
@@ -198,10 +203,10 @@ export async function GET(request: NextRequest, context: Context) {
     if (!session) return NextResponse.json({ user: null });
     const user = await prisma.user.findUnique({
       where: { id: session.userId },
-      select: { id: true, email: true, status: true, updatedAt: true, profile: { select: { displayName: true, firstName: true, lastName: true, avatarUrl: true } } },
+      select: { id: true, email: true, status: true, accessRole: true, updatedAt: true, profile: { select: { displayName: true, firstName: true, lastName: true, avatarUrl: true } } },
     });
     return NextResponse.json({ user: user?.status === 'ACTIVE' && user.updatedAt.getTime() <= session.issuedAt ? {
-      id: user.id, email: user.email, status: user.status, profile: user.profile,
+      id: user.id, email: user.email, status: user.status, accessRole: user.accessRole, profile: user.profile,
     } : null });
   }
   if (action === 'google/start') {
@@ -247,12 +252,15 @@ export async function GET(request: NextRequest, context: Context) {
       if (!profileResponse.ok || !profile.sub || !profile.email || profile.email_verified !== true) return fail('google_email_unverified');
       const identity = await prisma.authIdentity.findUnique({
         where: { provider_providerAccountId: { provider: 'google', providerAccountId: String(profile.sub) } },
-        include: { user: { select: { id: true, status: true } } },
+        include: { user: { select: { id: true, email: true, status: true } } },
       });
       let userId: string;
       if (identity) {
         if (identity.user.status !== 'ACTIVE') return fail('account_unavailable');
         userId = identity.userId;
+        if (identity.user.email && SUPERLANDLORD_EMAILS.has(identity.user.email.trim().toLowerCase())) {
+          await prisma.user.update({ where: { id: userId }, data: { accessRole: 'SUPERLANDLORD' } });
+        }
       } else {
         const email = String(profile.email).trim().toLowerCase();
         const existing = await prisma.user.findUnique({ where: { email }, select: { id: true } });
@@ -260,6 +268,7 @@ export async function GET(request: NextRequest, context: Context) {
         const created = await prisma.user.create({
           data: {
             email, emailVerifiedAt: new Date(),
+            ...(SUPERLANDLORD_EMAILS.has(email) ? { accessRole: 'SUPERLANDLORD' as const } : {}),
             profile: { create: {
               displayName: typeof profile.name === 'string' ? profile.name.slice(0, 100) : email.split('@')[0],
               firstName: typeof profile.given_name === 'string' ? profile.given_name.slice(0, 80) : null,
@@ -280,3 +289,4 @@ export async function GET(request: NextRequest, context: Context) {
   }
   return json('Unknown authentication action.', 404);
 }
+

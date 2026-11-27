@@ -5,6 +5,8 @@ import { useEffect, useState } from 'react';
 
 type Row = {
   id: string; title: string; location: string; price: number; bedrooms: number; propertyType: string; status: string; availability: 'AVAILABLE' | 'UNAVAILABLE' | 'SOLD';
+  owner: { id: string; email: string | null; name: string | null; accountCreatedAt: string } | null;
+  listingCreatedAt: string; listingUpdatedAt: string;
   images: string[]; partnerContactId: string | null; partnerContact: { id: string; companyName: string; contactName: string | null; phone: string | null; whatsapp: string | null; email: string | null } | null; promotion: { id: string; package: string; status: string; boost: number } | null;
 };
 type PartnerOption = { id: string; companyName: string; contactName: string | null };
@@ -81,10 +83,11 @@ export default function AdminProperties() {
         {error && <p className="mt-4 text-sm text-destructive">{error}</p>}
         <div className="mt-6 overflow-x-auto border bg-background">
           <table className="w-full min-w-[900px] text-sm">
-            <thead className="border-b bg-muted/40 text-left"><tr><th className="p-3">Property</th><th className="p-3">Location</th><th className="p-3">Price</th><th className="p-3">Review status</th><th className="p-3">Availability</th><th className="p-3">Partner source</th><th className="p-3">Promotion</th><th className="p-3">Actions</th></tr></thead>
+            <thead className="border-b bg-muted/40 text-left"><tr><th className="p-3">Property</th><th className="p-3">Listed by</th><th className="p-3">Location</th><th className="p-3">Price</th><th className="p-3">Review status</th><th className="p-3">Availability</th><th className="p-3">Partner source</th><th className="p-3">Promotion</th><th className="p-3">Actions</th></tr></thead>
             <tbody className="divide-y">
               {rows.map((row) => <tr key={row.id}>
-                <td className="p-3"><Link className="font-medium hover:text-primary" href={'/properties/' + row.id}>{row.title}</Link><div className="text-xs text-muted-foreground">{row.propertyType} · {row.bedrooms === 0 ? 'Studio' : row.bedrooms + ' bed'}</div></td>
+                <td className="p-3"><Link className="font-medium hover:text-primary" href={'/properties/' + row.id}>{row.title}</Link><div className="text-xs text-muted-foreground">{row.propertyType} · {row.bedrooms === 0 ? 'Studio' : row.bedrooms + ' bed'}</div><div className="mt-1 text-[10px] text-muted-foreground">Listed {new Date(row.listingCreatedAt).toLocaleDateString()} · Updated {new Date(row.listingUpdatedAt).toLocaleDateString()}</div></td>
+                <td className="p-3">{row.owner ? <><div>{row.owner.name || 'Account holder'}</div><div className="text-xs text-muted-foreground">{row.owner.email || row.owner.id}</div><div className="text-[10px] text-muted-foreground">Account ID {row.owner.id}</div><div className="text-[10px] text-muted-foreground">Account since {new Date(row.owner.accountCreatedAt).toLocaleDateString()}</div></> : <span className="text-xs text-muted-foreground">Legacy / unlinked</span>}</td>
                 <td className="p-3">{row.location}</td>
                 <td className="p-3">KES {row.price.toLocaleString()}</td>
                 <td className="p-3"><select value={row.status} onChange={(e) => updateStatus(row.id, e.target.value)} className="h-9 border bg-background px-2 text-xs">{statuses.map((status) => <option key={status}>{status}</option>)}</select></td>
@@ -100,3 +103,4 @@ export default function AdminProperties() {
     </main>
   );
 }
+

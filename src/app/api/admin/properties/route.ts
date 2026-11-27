@@ -18,6 +18,7 @@ export async function GET(request: NextRequest) {
         partnerContact: { select: { id: true, companyName: true, contactName: true, phone: true, whatsapp: true, email: true } },
         propertyImages: { select: { id: true }, orderBy: { createdAt: 'asc' } },
         promotions: { orderBy: { createdAt: 'desc' }, take: 1 },
+        owner: { select: { id: true, email: true, createdAt: true, profile: { select: { displayName: true, firstName: true, lastName: true } } } },
       },
       orderBy: { updatedAt: 'desc' },
       take: 200,
@@ -31,6 +32,8 @@ export async function GET(request: NextRequest) {
       propertyType: property.propertyType,
       status: property.status,
       availability: property.availability,
+      listingCreatedAt: property.createdAt,
+      listingUpdatedAt: property.updatedAt,
       partnerContactId: property.partnerContactId,
       partnerContact: property.partnerContact,
       images: property.propertyImages.map((image) => '/api/properties/' + property.id + '?image=' + image.id),
@@ -44,6 +47,12 @@ export async function GET(request: NextRequest) {
       } : null,
       createdAt: property.createdAt,
       updatedAt: property.updatedAt,
+      owner: property.owner ? {
+        id: property.owner.id,
+        email: property.owner.email,
+        name: property.owner.profile?.displayName || [property.owner.profile?.firstName, property.owner.profile?.lastName].filter(Boolean).join(' ') || null,
+        accountCreatedAt: property.owner.createdAt,
+      } : null,
     })));
   } catch (error) {
     if (error instanceof Error && error.message === 'UNAUTHORIZED_ADMIN') return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
@@ -101,3 +110,4 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ message: 'Unable to delete property.' }, { status: 500 });
   }
 }
+

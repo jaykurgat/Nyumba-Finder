@@ -2,10 +2,12 @@
 
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
 import { LogOut, UserRound, Mail, ShieldCheck } from "lucide-react";
 
 type AccountUser = {
   email: string | null;
+  accessRole?: string;
   profile: { displayName: string | null; firstName: string | null; lastName: string | null; avatarUrl: string | null } | null;
 };
 
@@ -57,6 +59,10 @@ export function AccountDashboard({ user }: { user: AccountUser }) {
           <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
           <p>Your NyumbaFinder account is active. You can use this account to sign in again with your registered method.</p>
         </div>
+        <Link href="/my-listings" className="mt-4 flex items-center justify-between rounded-xl border border-[#dfe5dc] bg-white px-4 py-3 transition hover:border-[#9eaf9d] hover:bg-[#fafbf9]">
+          <span><span className="block text-sm font-semibold text-[#2f4234]">{user.accessRole === "SUPERLANDLORD" ? "Manage listings" : "My listings"}</span><span className="mt-0.5 block text-xs text-[#71806f]">Edit property details, photos and availability</span></span>
+          <span aria-hidden="true" className="text-lg text-[#537358]">→</span>
+        </Link>
         {error && <p role="alert" className="mt-4 rounded-none border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p>}
         <button type="button" onClick={signOut} disabled={busy} className="mt-6 inline-flex h-10 items-center justify-center gap-2 rounded-none border px-4 text-sm font-medium transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60">
           <LogOut className="h-4 w-4" />{busy ? "Signing out…" : "Sign out"}
@@ -65,3 +71,4 @@ export function AccountDashboard({ user }: { user: AccountUser }) {
     </section>
   );
 }
+

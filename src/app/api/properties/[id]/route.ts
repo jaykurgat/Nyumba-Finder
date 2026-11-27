@@ -3,8 +3,9 @@ import { prisma } from '@/lib/prisma';
 import type { Property } from '@/types/property';
 import { getCurrentUser } from '@/lib/user-auth';
 import { isAdminSession } from '@/lib/admin-auth';
-import { isSupportedImage } from '@/lib/security';
+import { hasValidRequestOrigin, isSupportedImage } from '@/lib/security';
 import { deletePropertyImages, storePropertyImage } from '@/lib/property-image-storage';
+import { isSuperlandlord } from '@/lib/listing-access';
 
 const getString = (value: unknown, defaultValue = '') => typeof value === 'string' ? value : defaultValue;
 const getOptionalString = (value: unknown) => typeof value === 'string' && value.trim() !== '' ? value : undefined;
@@ -39,6 +40,32 @@ const toProperty = (data: any): Property => ({
 
 const getId = async (params: Promise<{ id: string }>) => (await params).id;
 
+export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    if (!hasValidRequestOrigin(request)) return NextResponse.json({ message: 'Invalid request origin.' }, { status: 403 });
+    const user = await getCurrentUser();
+    const admin = await isAdminSession();
+    if (!user && !admin) return NextResponse.json({ message: 'Please sign in to update this listing.' }, { status: 401 });
+    const id = await getId(params);
+    const current = await prisma.property.findUnique({ where: { id }, select: { id: true, ownerId: true } });
+    if (!current) return NextResponse.json({ message: 'Property not found.' }, { status: 404 });
+    const superlandlord = isSuperlandlord(user);
+    if (!admin && !superlandlord && current.ownerId !== user?.id) return NextResponse.json({ message: 'You can only update listings from your own account.' }, { status: 403 });
+    const body = await request.json().catch(() => ({}));
+    const availability = typeof body.availability === 'string' ? body.availability : '';
+    if (!['AVAILABLE', 'UNAVAILABLE', 'SOLD'].includes(availability)) return NextResponse.json({ message: 'Choose a valid availability status.' }, { status: 400 });
+    const property = await prisma.property.update({ where: { id }, data: { availability: availability as 'AVAILABLE' | 'UNAVAILABLE' | 'SOLD' }, select: { id: true, availability: true } });
+    await prisma.auditLog.create({ data: {
+      action: 'PROPERTY_AVAILABILITY_UPDATED', entityType: 'Property', entityId: id,
+      details: { availability, changedByUserId: user?.id ?? null },
+    } });
+    return NextResponse.json({ propertyId: property.id, availability: property.availability });
+  } catch (error) {
+    console.error('API_ROUTE_ERROR: [PATCH /api/properties/:id]', error);
+    return NextResponse.json({ message: 'Unable to update availability.' }, { status: 500 });
+  }
+}
+
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const id = await getId(params);
@@ -52,9 +79,9 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
     const user = await getCurrentUser();
     const admin = await isAdminSession();
-    const isLegacyManager = user?.email?.trim().toLowerCase() === 'info@nyumba-finder.com';
-    // Legacy rows have no trustworthy historical owner. Keep them manageable by admin and the reserved management account only.
-    const canManage = admin || (!!user && accessRecord.ownerId === user.id) || (accessRecord.ownerId === null && isLegacyManager);
+    const superlandlord = isSuperlandlord(user);
+    // Unlinked legacy listings are manageable by platform admins and Superlandlords.
+    const canManage = admin || superlandlord || (!!user && accessRecord.ownerId === user.id);
     const canManagePartnerContact = admin || (!!user && new Set([
       'jaykurgat1@gmail.com',
       'jaykurgat@gmail.com',
@@ -87,6 +114,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       include: {
         locationNode: true,
         county: { select: { name: true } },
+        owner: { select: { id: true, email: true, createdAt: true, profile: { select: { displayName: true, firstName: true, lastName: true } } } },
         externalListings: { where: { status: 'ACTIVE' }, select: { imageUrls: true }, orderBy: { createdAt: 'asc' }, take: 1 },
       },
     });
@@ -121,6 +149,18 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         : (property.externalListings[0]?.imageUrls ?? []),
       }),
       canEdit: canManage,
+      ...(admin || superlandlord ? { listingMetadata: {
+        listedBy: property.owner ? {
+          userId: property.owner.id,
+          email: property.owner.email,
+          name: property.owner.profile?.displayName || [property.owner.profile?.firstName, property.owner.profile?.lastName].filter(Boolean).join(' ') || null,
+          accountCreatedAt: property.owner.createdAt,
+        } : null,
+        listingId: property.id,
+        createdAt: property.createdAt,
+        updatedAt: property.updatedAt,
+        status: property.status,
+      } } : {}),
       ...(canManage && canManagePartnerContact ? {
         partnerContactId: property.partnerContactId ?? null,
         partnerContact: property.partnerContactId ? await prisma.partnerContact.findUnique({ where: { id: property.partnerContactId }, select: { id: true, companyName: true, contactName: true, phone: true, whatsapp: true, email: true } }) : null,
@@ -139,11 +179,11 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
     const user = await getCurrentUser();
     const admin = await isAdminSession();
+    const superlandlord = isSuperlandlord(user);
     if (!user && !admin) return NextResponse.json({ message: 'Please sign in to edit a property.' }, { status: 401 });
     const accessRecord = await prisma.property.findUnique({ where: { id }, select: { id: true, ownerId: true } });
     if (!accessRecord) return NextResponse.json({ message: 'Property not found.' }, { status: 404 });
-    const isLegacyManager = user?.email?.trim().toLowerCase() === 'info@nyumba-finder.com';
-    if (!admin && accessRecord.ownerId !== user?.id && !(accessRecord.ownerId === null && isLegacyManager)) {
+    if (!admin && !superlandlord && accessRecord.ownerId !== user?.id) {
       return NextResponse.json({ message: 'You can only edit properties listed from your own account.' }, { status: 403 });
     }
 
@@ -460,11 +500,11 @@ export async function DELETE(_request: NextRequest, { params }: { params: Promis
     if (!id) return NextResponse.json({ message: 'Property ID is required' }, { status: 400 });
     const user = await getCurrentUser();
     const admin = await isAdminSession();
+    const superlandlord = isSuperlandlord(user);
     if (!user && !admin) return NextResponse.json({ message: 'Please sign in to delete a property.' }, { status: 401 });
     const accessRecord = await prisma.property.findUnique({ where: { id }, select: { id: true, ownerId: true } });
     if (!accessRecord) return NextResponse.json({ message: 'Property not found.' }, { status: 404 });
-    const isLegacyManager = user?.email?.trim().toLowerCase() === 'info@nyumba-finder.com';
-    if (!admin && accessRecord.ownerId !== user?.id && !(accessRecord.ownerId === null && isLegacyManager)) {
+    if (!admin && !superlandlord && accessRecord.ownerId !== user?.id) {
       return NextResponse.json({ message: 'You can only delete properties listed from your own account.' }, { status: 403 });
     }
     const propertyImages = await prisma.propertyImage.findMany({
@@ -488,3 +528,4 @@ export async function DELETE(_request: NextRequest, { params }: { params: Promis
     return NextResponse.json({ message: 'Error deleting property.' }, { status: 500 });
   }
 }
+
