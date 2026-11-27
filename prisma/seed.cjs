@@ -799,10 +799,17 @@ async function main() {
     }
   }
 
-  console.log(`Seeded ${counties.length} Kenyan counties, county-capital nodes and curated rental-market locations.`);
+  const superlandlordEmails = ['jaykurgat1@gmail.com', 'jaykurgat@gmail.com'];
+  const promoted = await prisma.user.updateMany({
+    where: { email: { in: superlandlordEmails } },
+    data: { accessRole: 'SUPERLANDLORD' },
+  });
+
+  console.log(`Seeded ${counties.length} Kenyan counties, county-capital nodes and curated rental-market locations. Enabled Superlandlord access for ${promoted.count} configured accounts.`);
 }
 
 main().catch((error) => {
   console.error(error);
   process.exit(1);
 }).finally(() => prisma.$disconnect());
+
