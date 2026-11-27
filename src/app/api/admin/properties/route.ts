@@ -29,17 +29,17 @@ export async function GET(request: NextRequest) {
     const properties = await prisma.property.findMany({
       where,
       include: {
-        owner: { select: { id: true, email: true, createdAt: true, profile: { select: { displayName: true, firstName: true, lastName: true } } } },
+        owner: { select: { email: true, profile: { select: { displayName: true, firstName: true, lastName: true } } } },
       },
       orderBy: { updatedAt: 'desc' },
       ...(params.get('format') === 'csv' ? {} : { skip: (page - 1) * pageSize, take: pageSize }),
     });
     if (params.get('format') === 'csv') {
       const cell = (value: unknown) => '"' + (value == null ? '' : value instanceof Date ? value.toISOString() : String(value)).replaceAll('"', '""') + '"';
-      const header = ['Property', 'Location', 'Price KES', 'Type', 'Bedrooms', 'Review status', 'Availability', 'Listed at', 'Updated at', 'Listing owner', 'Owner email', 'Listing ID'];
+      const header = ['Property', 'Location', 'Price KES', 'Type', 'Bedrooms', 'Review status', 'Availability', 'Listed at', 'Listing owner', 'Owner email'];
       const lines = properties.map((property) => {
         const ownerName = property.owner?.profile?.displayName || [property.owner?.profile?.firstName, property.owner?.profile?.lastName].filter(Boolean).join(' ') || '';
-        return [property.title, property.location, property.price, property.propertyType, property.bedrooms === 0 ? 'Studio' : property.bedrooms, property.status, property.availability, property.createdAt, property.updatedAt, ownerName || (property.owner ? 'Account holder' : 'Unlinked'), property.owner?.email || '', property.id].map(cell).join(',');
+        return [property.title, property.location, property.price, property.propertyType, property.bedrooms === 0 ? 'Studio' : property.bedrooms, property.status, property.availability, property.createdAt, ownerName || (property.owner ? 'Account holder' : 'Unlinked'), property.owner?.email || ''].map(cell).join(',');
       });
       return new NextResponse([header.map(cell).join(','), ...lines].join('\r\n'), {
         headers: { 'Content-Type': 'text/csv; charset=utf-8', 'Content-Disposition': 'attachment; filename="nyumbafinder-listings.csv"', 'Cache-Control': 'no-store' },
@@ -55,14 +55,9 @@ export async function GET(request: NextRequest) {
       status: property.status,
       availability: property.availability,
       listingCreatedAt: property.createdAt,
-      listingUpdatedAt: property.updatedAt,
-      createdAt: property.createdAt,
-      updatedAt: property.updatedAt,
       owner: property.owner ? {
-        id: property.owner.id,
         email: property.owner.email,
         name: property.owner.profile?.displayName || [property.owner.profile?.firstName, property.owner.profile?.lastName].filter(Boolean).join(' ') || null,
-        accountCreatedAt: property.owner.createdAt,
       } : null,
     })), total, page, pageSize });
   } catch (error) {

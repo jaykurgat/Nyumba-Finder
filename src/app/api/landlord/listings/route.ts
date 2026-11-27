@@ -46,17 +46,17 @@ export async function GET(request: Request) {
     const listings = await prisma.property.findMany({
       where,
       include: {
-        owner: { select: { id: true, email: true, createdAt: true, profile: { select: { displayName: true, firstName: true, lastName: true } } } },
+        owner: { select: { email: true, profile: { select: { displayName: true, firstName: true, lastName: true } } } },
       },
       orderBy: { updatedAt: 'desc' },
       ...(params.get('format') === 'csv' ? {} : { skip: (page - 1) * pageSize, take: pageSize }),
     });
     const view = admin ? 'ADMIN' : isSuperlandlord(user) ? 'SUPERLANDLORD' : 'LANDLORD';
     if (params.get('format') === 'csv') {
-      const header = ['Property', 'Location', 'Price KES', 'Type', 'Bedrooms', 'Review status', 'Availability', 'Listed at', 'Updated at', 'Listing owner', 'Owner email', 'Listing ID'];
+      const header = ['Property', 'Location', 'Price KES', 'Type', 'Bedrooms', 'Review status', 'Availability', 'Listed at', 'Listing owner', 'Owner email'];
       const lines = listings.map((item) => {
         const ownerName = item.owner?.profile?.displayName || [item.owner?.profile?.firstName, item.owner?.profile?.lastName].filter(Boolean).join(' ') || '';
-        return [item.title, item.location, item.price, item.propertyType, item.bedrooms === 0 ? 'Studio' : item.bedrooms, item.status, item.availability, item.createdAt, item.updatedAt, ownerName || (item.owner ? 'Account holder' : 'Unlinked'), item.owner?.email || '', item.id].map(csvCell).join(',');
+        return [item.title, item.location, item.price, item.propertyType, item.bedrooms === 0 ? 'Studio' : item.bedrooms, item.status, item.availability, item.createdAt, ownerName || (item.owner ? 'Account holder' : 'Unlinked'), item.owner?.email || ''].map(csvCell).join(',');
       });
       return new NextResponse([header.map(csvCell).join(','), ...lines].join('\r\n'), {
         headers: { 'Content-Type': 'text/csv; charset=utf-8', 'Content-Disposition': 'attachment; filename="nyumbafinder-listings.csv"', 'Cache-Control': 'no-store' },
@@ -68,15 +68,12 @@ export async function GET(request: Request) {
         id: item.id, title: item.title, location: item.location, price: item.price,
         propertyType: item.propertyType, bedrooms: item.bedrooms, status: item.status,
         availability: item.availability,
-        createdAt: item.createdAt, updatedAt: item.updatedAt,
+        createdAt: item.createdAt,
         ...(canSeeAll ? { metadata: {
-          ownerId: item.ownerId,
           listedBy: item.owner ? {
             name: item.owner.profile?.displayName || [item.owner.profile?.firstName, item.owner.profile?.lastName].filter(Boolean).join(' ') || null,
             email: item.owner.email,
-            accountCreatedAt: item.owner.createdAt,
           } : null,
-          listingId: item.id,
         } } : {}),
       })),
     });

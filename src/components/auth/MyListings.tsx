@@ -6,8 +6,8 @@ import { Download, ExternalLink, Home, Plus, RefreshCw, Search } from 'lucide-re
 
 type Listing = {
   id: string; title: string; location: string; price: number; propertyType: string; bedrooms: number;
-  status: string; availability: 'AVAILABLE' | 'UNAVAILABLE' | 'SOLD'; createdAt: string; updatedAt: string;
-  metadata?: { ownerId: string | null; listingId: string; listedBy: { name: string | null; email: string | null; accountCreatedAt: string } | null };
+  status: string; availability: 'AVAILABLE' | 'UNAVAILABLE' | 'SOLD'; createdAt: string;
+  metadata?: { listedBy: { name: string | null; email: string | null } | null };
 };
 type View = 'LANDLORD' | 'SUPERLANDLORD' | 'ADMIN';
 

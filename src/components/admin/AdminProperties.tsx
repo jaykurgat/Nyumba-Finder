@@ -6,8 +6,8 @@ import { Download, Search } from 'lucide-react';
 
 type Row = {
   id: string; title: string; location: string; price: number; bedrooms: number; propertyType: string; status: string; availability: 'AVAILABLE' | 'UNAVAILABLE' | 'SOLD';
-  owner: { id: string; email: string | null; name: string | null; accountCreatedAt: string } | null;
-  listingCreatedAt: string; listingUpdatedAt: string;
+  owner: { email: string | null; name: string | null } | null;
+  listingCreatedAt: string;
 };
 
 const statuses = ['DRAFT', 'PENDING_REVIEW', 'ACTIVE', 'REJECTED', 'SUSPENDED', 'EXPIRED'];
