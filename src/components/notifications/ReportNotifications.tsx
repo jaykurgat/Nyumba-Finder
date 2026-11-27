@@ -32,7 +32,11 @@ export function ReportNotifications({ audience }: Props) {
     }
   }, []);
 
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    void load();
+    const refreshId = window.setInterval(() => { void load(); }, 60_000);
+    return () => window.clearInterval(refreshId);
+  }, [load]);
 
   const unreadCount = items.filter((item) => !item.readAt).length;
 
@@ -85,7 +89,7 @@ export function ReportNotifications({ audience }: Props) {
       </header>
       {error ? <p role="alert" className="px-4 py-4 text-sm text-red-700">{error}</p>
         : items.length === 0 ? <p className="px-4 py-5 text-sm text-[#788279]">You’re all caught up. New listing reports will appear here.</p>
-          : <div className="divide-y divide-[#edf0ea]">{items.slice(0, 8).map((item) => (
+          : <div className="divide-y divide-[#edf0ea]">{items.map((item) => (
             <div key={item.id} className={'flex items-start gap-3 px-4 py-3 ' + (item.readAt ? 'bg-white' : 'bg-[#f7faf6]')}>
               <span className={'mt-1 h-2 w-2 shrink-0 rounded-full ' + (item.readAt ? 'bg-[#d8ded6]' : 'bg-[#df7547]')} aria-hidden="true" />
               <div className="min-w-0 flex-1">
