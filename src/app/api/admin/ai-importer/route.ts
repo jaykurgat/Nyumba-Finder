@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireAdmin } from '@/lib/require-admin';
-import { reviewChecklist, type ReviewImage } from '@/lib/imports/review-checklist';
+import { earlyPublishReadiness, reviewChecklist } from '@/lib/imports/review-checklist';
 import { isLikelyDuplicateProperty } from '@/lib/imports/duplicates';
 
 export const runtime = 'nodejs';
@@ -215,17 +215,17 @@ export async function PATCH(request: NextRequest) {
     }
     if (external.status === 'POSSIBLE_DUPLICATE') return NextResponse.json({ message: 'Review the possible duplicate against the existing property before importing it.' }, { status: 409 });
     const review = external.rawData && typeof external.rawData === 'object' ? (external.rawData as any).quickImport ?? {} : {};
-    const recordedImages: ReviewImage[] = [
-      ...(external.reviewImages ?? []).map(image => ({ id: image.id, kind: image.kind as ReviewImage['kind'], permission: image.reusePermitted })),
-      ...(Array.isArray(review.imageAssets) ? (review.imageAssets as ReviewImage[]).filter(image => image.url) : external.source.redisplayAllowed ? external.imageUrls.map(url => ({ url, kind: 'PROPERTY' as const, permission: true })) : []),
-    ];
-    const checklist = reviewChecklist({ ...external, manualSourceException: review.manualSourceException, images: recordedImages, duplicateChecked: review.duplicateChecked, administratorVerified: review.administratorVerified });
-    if (!checklist.complete) return NextResponse.json({ message: 'Complete every review checklist item, including one permitted property photo, before approval.', checklist }, { status: 400 });
-    if (!external.price || external.price <= 0) return NextResponse.json({ message: 'A valid asking price is required before approval.' }, { status: 400 });
-    if (!external.location?.trim()) return NextResponse.json({ message: 'A verified location is required before approval.' }, { status: 400 });
+    const checklist = reviewChecklist({ ...external, manualSourceException: review.manualSourceException, images: [
+      ...(external.reviewImages ?? []).map(image => ({ id: image.id, kind: image.kind as 'PROPERTY' | 'LOGO' | 'BANNER' | 'UNRELATED', permission: image.reusePermitted })),
+      ...(Array.isArray(review.imageAssets) ? review.imageAssets.filter((image: any) => image.url) : external.source.redisplayAllowed ? external.imageUrls.map(url => ({ url, kind: 'PROPERTY' as const, permission: true })) : []),
+    ], duplicateChecked: review.duplicateChecked, administratorVerified: review.administratorVerified });
+    const publishReadiness = earlyPublishReadiness({ ...external, possibleDuplicate: external.status === 'POSSIBLE_DUPLICATE' });
+    if (!publishReadiness.complete) return NextResponse.json({ message: 'A title, valid price and location are needed before publishing. Possible duplicates must be resolved first.', checks: publishReadiness.checks }, { status: 400 });
+    if (external.price == null || !external.location?.trim()) return NextResponse.json({ message: 'A valid price and location are required before publishing.' }, { status: 400 });
+    const publishPrice = external.price;
 
     const candidates = await prisma.property.findMany({
-      where: { status: { in: ['ACTIVE', 'EXPIRED', 'SUSPENDED'] }, price: { gte: external.price * 0.95, lte: external.price * 1.05 }, ...(external.bedrooms != null ? { bedrooms: external.bedrooms } : {}) },
+      where: { status: { in: ['ACTIVE', 'EXPIRED', 'SUSPENDED'] }, price: { gte: publishPrice * 0.95, lte: publishPrice * 1.05 }, ...(external.bedrooms != null ? { bedrooms: external.bedrooms } : {}) },
       select: { title: true, location: true, price: true, bedrooms: true }, take: 100,
     });
     if (candidates.some(candidate => isLikelyDuplicateProperty(candidate, external))) return NextResponse.json({ message: 'A matching property exists. Resolve the possible duplicate before approval.' }, { status: 409 });
@@ -262,7 +262,7 @@ export async function PATCH(request: NextRequest) {
         title: external.title,
         description: external.description || '',
         location: locationText,
-        price: external.price,
+        price: publishPrice,
         listingType,
         pricePeriod,
         bedrooms: propertyCategory === 'LAND' ? 0 : Math.max(0, Math.trunc(external.bedrooms ?? 0)),
@@ -285,8 +285,9 @@ export async function PATCH(request: NextRequest) {
       },
     });
     await prisma.externalListing.update({ where: { id }, data: { status: 'IMPORTED', importedAt: new Date(), propertyId: property.id } });
-    await prisma.auditLog.create({ data: { action: 'AI_IMPORTED_PROPERTY_APPROVED', entityType: 'Property', entityId: property.id, details: { externalListingId: id, sourceId: external.sourceId, sourceUrl: external.sourceUrl, aiAssisted: true } } });
-    return NextResponse.json({ message: 'Listing approved and published.', propertyId: property.id });
+    const incompleteChecks = checklist.checks.filter(check => !check.complete).map(check => check.label);
+    await prisma.auditLog.create({ data: { action: 'AI_IMPORTED_PROPERTY_APPROVED', entityType: 'Property', entityId: property.id, details: { externalListingId: id, sourceId: external.sourceId, sourceUrl: external.sourceUrl, aiAssisted: true, publishedBeforeReviewCompletion: incompleteChecks.length > 0, remainingReviewChecks: incompleteChecks } } });
+    return NextResponse.json({ message: incompleteChecks.length ? 'Listing published. You can continue adding details and permitted photos from the property page.' : 'Listing approved and published.', propertyId: property.id, remainingReviewChecks: incompleteChecks });
   } catch (error) {
     if (error instanceof Error && error.message === 'UNAUTHORIZED_ADMIN') return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     console.error('AI_IMPORTER_REVIEW', error);
@@ -313,3 +314,4 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ message: 'Unable to remove source.' }, { status: 500 });
   }
 }
+

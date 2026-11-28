@@ -7,7 +7,7 @@ import { generateGeminiJson } from '../../src/lib/imports/gemini.ts';
 import { isLikelyDuplicateProperty } from '../../src/lib/imports/duplicates.ts';
 import { normalizeExtractionEvidence } from '../../src/lib/imports/evidence.ts';
 import { extractRuleBasedProperty } from '../../src/lib/imports/rule-based-extraction.ts';
-import { reviewChecklist } from '../../src/lib/imports/review-checklist.ts';
+import { earlyPublishReadiness, reviewChecklist } from '../../src/lib/imports/review-checklist.ts';
 import { discoverPropertyImages, downloadPublicImage } from '../../src/lib/imports/source-images.ts';
 
 const fixtureRoot = new URL('../fixtures/', import.meta.url);
@@ -367,12 +367,20 @@ test('photo reuse permission is retained separately and lack of a photo blocks a
   assert.equal(reviewChecklist({ title: 'Home', description: 'Description', propertyType: 'House', price: 100, location: 'Nairobi', sourceUrl: 'https://source.example/1', duplicateChecked: true, administratorVerified: true, images: [] }).complete, false);
 });
 
-test('approval checklist requires fields, source or exception, duplicate review and admin verification', () => {
+test('review completeness checklist tracks required fields, source, duplicate review and administrator verification', () => {
   const full = { title: 'Home', description: 'Description', propertyType: 'House', price: 100, location: 'Nairobi', manualSourceException: true, images: [{ url: 'https://img.example/a.jpg', kind: 'PROPERTY', permission: true }], duplicateChecked: true, administratorVerified: true };
   assert.equal(reviewChecklist(full).complete, true);
   assert.equal(reviewChecklist({ ...full, manualSourceException: false, sourceUrl: '' }).complete, false);
   assert.equal(reviewChecklist({ ...full, duplicateChecked: false }).complete, false);
   assert.equal(reviewChecklist({ ...full, administratorVerified: false }).complete, false);
+});
+
+test('publishing can happen before optional review steps, once core public listing fields exist', () => {
+  assert.equal(earlyPublishReadiness({ title: 'Apartment', price: 115_000, location: 'Lavington, Nairobi' }).complete, true);
+  assert.equal(earlyPublishReadiness({ title: 'Apartment', price: 115_000, location: 'Lavington, Nairobi', possibleDuplicate: true }).complete, false);
+  assert.equal(earlyPublishReadiness({ title: '', price: 115_000, location: 'Lavington, Nairobi' }).complete, false);
+  assert.equal(earlyPublishReadiness({ title: 'Apartment', price: null, location: 'Lavington, Nairobi' }).complete, false);
+  assert.equal(earlyPublishReadiness({ title: 'Apartment', price: 115_000, location: '' }).complete, false);
 });
 
 test('saving extracted data does not make another Gemini request', async () => {
@@ -413,3 +421,4 @@ test('uploaded and retrieved review photos count only after permission and prope
   assert.equal(reviewChecklist({ ...base, images: [{ id: 'db-image-id', kind: 'PROPERTY', permission: false }] }).complete, false);
   assert.equal(reviewChecklist({ ...base, images: [{ id: 'db-image-id', kind: 'LOGO', permission: true }] }).complete, false);
 });
+

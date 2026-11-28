@@ -24,6 +24,7 @@ export default function ReviewCompletionPanel({ listing, onSaved, onPublish }: {
   const photoCount = assets.filter(asset => asset.kind === "PROPERTY" && asset.permission && (!!asset.id || /^https:\/\//i.test(asset.url))).length;
   const completion = [!!listing.title.trim(), !!listing.description.trim(), !!listing.propertyType?.trim(), listing.price != null && listing.price > 0, !!listing.location.trim(), !!sourceUrl.trim() || manualException, photoCount > 0, duplicateChecked, verified];
   const completedCount = completion.filter(Boolean).length;
+  const nextCheck = ["Add a title", "Add a description", "Choose a property type", "Enter a valid price", "Add the property location", "Add a source URL or document the manual-source exception", "Add at least one property photo and confirm reuse rights", "Check for duplicate listings", "Verify the property details and photos"].find((_, index) => !completion[index]);
 
   async function addImage() {
     if (!imageUrl.trim()) return;
@@ -89,15 +90,16 @@ export default function ReviewCompletionPanel({ listing, onSaved, onPublish }: {
       }) });
       const data = await response.json();
       if (!response.ok) throw new Error(data.message || "Could not save the review checklist.");
-      setMessage("Review checklist saved."); onSaved();
+      setMessage("Progress saved. This listing stays private in the review queue until you choose to publish it."); onSaved();
       setSaved(true);
     } catch (error) { setMessage(error instanceof Error ? error.message : "Could not save the review checklist."); }
     finally { setBusy(false); }
   }
 
   return <section className="mt-3 space-y-2 rounded-lg border border-[#dce4da] bg-[#f8faf7] p-3">
-    <p className="text-xs font-semibold">Next step: add property images</p>
-    <p className="text-[10px] text-[#718076]">Keep this listing in review while you complete its details. Publishing is optional and becomes available after every required check passes.</p>
+    <p className="text-xs font-semibold">Complete this listing review</p>
+    <p className="text-[10px] text-[#718076]">Save progress whenever you like. Publishing is available at this stage too: it needs a saved title, asking price and location. You can finish the photos, source details and remaining checks later from the property page. Only photos with confirmed reuse permission will appear publicly.</p>
+    {nextCheck && <p className="rounded-md bg-white px-2 py-1.5 text-[10px] font-medium text-[#526456]">Next to complete: {nextCheck}.</p>}
     <p className="text-[11px] text-[#526456]">{completedCount} of {completion.length} checks complete · {photoCount} valid photos (3 recommended)</p>
     <div className="h-1.5 overflow-hidden rounded bg-[#e6ece4]"><div className="h-full bg-[#668c6c]" style={{ width: `${completedCount / completion.length * 100}%` }} /></div>
     <ul className="grid gap-1 text-[10px] text-[#526456] sm:grid-cols-2">{["Title", "Description", "Property type", "Valid price", "Location", "Source URL or documented exception", "Property photo with reuse permission", "Duplicate check", "Administrator verification"].map((label, index) => <li key={label}>{completion[index] ? "✓" : "○"} {label}</li>)}</ul>
@@ -109,18 +111,19 @@ export default function ReviewCompletionPanel({ listing, onSaved, onPublish }: {
     {assets.map((asset, index) => <div key={index} className="flex flex-wrap items-center gap-2 rounded bg-white p-2 text-[10px]">
       {asset.id && <img src={asset.url} alt="Selected property photo" className="h-10 w-14 rounded object-cover" />}<span className="min-w-0 flex-1 truncate">{asset.sourceUrl || asset.url}</span>
       <select aria-label="Image classification" value={asset.kind} onChange={event => { setAssets(current => current.map((value, i) => i === index ? { ...value, kind: event.target.value as Asset["kind"] } : value)); setSaved(false); }} className="rounded border px-1 py-1"><option value="PROPERTY">Property photo</option><option value="LOGO">Logo</option><option value="BANNER">Banner</option><option value="UNRELATED">Unrelated</option></select>
-      <label className="flex items-center gap-1"><input type="checkbox" checked={asset.permission} onChange={event => { setAssets(current => current.map((value, i) => i === index ? { ...value, permission: event.target.checked } : value)); setSaved(false); }} />Reuse permission</label>
+      <label className="flex items-center gap-1" title="Only confirm this if NyumbaFinder owns this photo or has permission to display it publicly."><input type="checkbox" checked={asset.permission} onChange={event => { setAssets(current => current.map((value, i) => i === index ? { ...value, permission: event.target.checked } : value)); setSaved(false); }} />We may display this photo</label>
       <button type="button" aria-label="Move image earlier" disabled={index === 0} onClick={() => { setAssets(current => { const next = [...current]; [next[index - 1], next[index]] = [next[index], next[index - 1]]; return next; }); setSaved(false); }}>↑</button>
       <button type="button" aria-label="Move image later" disabled={index === assets.length - 1} onClick={() => { setAssets(current => { const next = [...current]; [next[index + 1], next[index]] = [next[index], next[index + 1]]; return next; }); setSaved(false); }}>↓</button>
       <button type="button" onClick={() => void removeImage(asset, index)} className="text-red-700">Remove</button>
     </div>)}
-    <p className="text-[10px] text-[#718076]">At least one permitted property photo is required; three are recommended. Logos, banners and unrelated images do not count. Images are stored with the listing review in PostgreSQL.</p>
+    <p className="text-[10px] text-[#718076]">Only photos marked as authorized for NyumbaFinder to display will be shown publicly. Confirm only photos we own or have permission to reuse. A source website’s access approval does not automatically grant photo rights. Three permitted photos are recommended. Logos, banners and unrelated images do not count.</p>
     <label className="block text-[11px] font-medium">Next: add or confirm the source URL
       <input type="url" value={sourceUrl} onChange={event => { setSourceUrl(event.target.value); setSaved(false); }} placeholder="https://…" className="mt-1 w-full rounded border border-[#dce4da] bg-white px-2 py-2 text-xs" />
     </label>
     <label className="flex items-start gap-2 text-[11px]"><input type="checkbox" checked={manualException} onChange={event => { setManualException(event.target.checked); setSaved(false); }} className="mt-0.5" />Document a manual-source exception (use only when no source URL exists)</label>
     <label className="flex items-start gap-2 text-[11px]"><input type="checkbox" checked={duplicateChecked} onChange={event => { setDuplicateChecked(event.target.checked); setSaved(false); }} className="mt-0.5" />I checked for duplicate listings</label>
     <label className="flex items-start gap-2 text-[11px]"><input type="checkbox" checked={verified} onChange={event => { setVerified(event.target.checked); setSaved(false); }} className="mt-0.5" />I verified the property details and photos</label>
-    <div className="flex flex-wrap items-center gap-2"><button type="button" disabled={busy} onClick={() => void save()} className="rounded bg-[#284b35] px-3 py-2 text-[11px] font-semibold text-white disabled:opacity-50">{busy ? "Saving…" : "Save and continue review"}</button><button type="button" disabled={!completion.every(Boolean) || !saved || busy} onClick={onPublish} title={!completion.every(Boolean) ? "Complete all required review checks first" : !saved ? "Save the checklist before publishing" : ""} className="rounded border border-[#54765b] px-3 py-2 text-[11px] font-semibold text-[#365f40] disabled:cursor-not-allowed disabled:opacity-40">Publish (optional)</button><span role="status" className="text-[10px] text-[#526456]">{message}</span></div>
+    <div className="flex flex-wrap items-center gap-2"><button type="button" disabled={busy} onClick={() => void save()} className="rounded bg-[#284b35] px-3 py-2 text-[11px] font-semibold text-white disabled:opacity-50">{busy ? "Saving…" : "Save review progress"}</button><button type="button" disabled={busy} onClick={onPublish} title="Publish with the saved title, price and location. You can edit and add photos afterward." className="rounded border border-[#54765b] px-3 py-2 text-[11px] font-semibold text-[#365f40] disabled:cursor-not-allowed disabled:opacity-40">Publish now and edit later</button><span role="status" className="text-[10px] text-[#526456]">{message}</span></div>
   </section>;
 }
+
